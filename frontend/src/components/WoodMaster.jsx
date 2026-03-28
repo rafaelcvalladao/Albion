@@ -35,9 +35,9 @@ export default function WoodMaster() {
   const [err, setErr] = useState(null);
   const [showSchedule, setShowSchedule] = useState(false);
   const [schedule, setSchedule] = useState(null);
-  const [showStrategy, setShowStrategy] = useState(false);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
   const [strategy, setStrategy] = useState(null);
-  const [modalLoading, setModalLoading] = useState(false);
+  const [strategyLoading, setStrategyLoading] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(STORAGE, JSON.stringify(cfg));
@@ -67,6 +67,27 @@ export default function WoodMaster() {
       setLoading(false);
     }
   }, [cfg]);
+
+  const runStrategy = useCallback(async () => {
+    setStrategyLoading(true);
+    try {
+      const data = await strategyWood({
+        taxaNpc: cfg.taxaNpc,
+        spec: cfg.spec,
+        buyOrder: cfg.buyOrder,
+        bonusFortSterling: cfg.bonusFortSterling,
+      });
+      setStrategy(data);
+    } catch (e) {
+      setStrategy({ error: e.message || String(e) });
+    } finally {
+      setStrategyLoading(false);
+    }
+  }, [cfg]);
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([runCalculate(), runStrategy()]);
+  }, [runCalculate, runStrategy]);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,9 +120,33 @@ export default function WoodMaster() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- usa cfg atual em cada disparo destes campos
   }, [cfg.tier, cfg.buyOrder, cfg.foco, cfg.bonusFortSterling]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setStrategyLoading(true);
+    strategyWood({
+      taxaNpc: cfg.taxaNpc,
+      spec: cfg.spec,
+      buyOrder: cfg.buyOrder,
+      bonusFortSterling: cfg.bonusFortSterling,
+    })
+      .then((data) => {
+        if (!cancelled) setStrategy(data);
+      })
+      .catch((e) => {
+        if (!cancelled) setStrategy({ error: e.message || String(e) });
+      })
+      .finally(() => {
+        if (!cancelled) setStrategyLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- taxa/spec atualizados no refresh ou blur
+  }, [cfg.buyOrder, cfg.bonusFortSterling]);
+
   const openSchedule = async () => {
     setShowSchedule(true);
-    setModalLoading(true);
+    setScheduleLoading(true);
     setSchedule(null);
     try {
       const data = await scheduleWood(cfg.tier);
@@ -109,26 +154,7 @@ export default function WoodMaster() {
     } catch (e) {
       setSchedule({ error: e.message || String(e) });
     } finally {
-      setModalLoading(false);
-    }
-  };
-
-  const openStrategy = async () => {
-    setShowStrategy(true);
-    setModalLoading(true);
-    setStrategy(null);
-    try {
-      const data = await strategyWood({
-        taxaNpc: cfg.taxaNpc,
-        spec: cfg.spec,
-        buyOrder: cfg.buyOrder,
-        bonusFortSterling: cfg.bonusFortSterling,
-      });
-      setStrategy(data);
-    } catch (e) {
-      setStrategy({ error: e.message || String(e) });
-    } finally {
-      setModalLoading(false);
+      setScheduleLoading(false);
     }
   };
 
@@ -145,7 +171,7 @@ export default function WoodMaster() {
               type="text"
               value={cfg.taxaNpc}
               onChange={(e) => setCfg({ ...cfg, taxaNpc: e.target.value })}
-              onBlur={runCalculate}
+              onBlur={refreshAll}
             />
           </label>
           {SPEC_KEYS.map(({ key, label }) => (
@@ -155,7 +181,7 @@ export default function WoodMaster() {
                 type="text"
                 value={cfg.spec[key] ?? ""}
                 onChange={(e) => setSpec(key, e.target.value)}
-                onBlur={runCalculate}
+                onBlur={refreshAll}
               />
             </label>
           ))}
@@ -193,79 +219,97 @@ export default function WoodMaster() {
             />
             Bónus Fort Sterling
           </label>
-          <button type="button" className="btn btn-primary" onClick={runCalculate} disabled={loading}>
-            {loading ? "A carregar…" : "Refresh preços"}
+          <button type="button" className="btn btn-primary" onClick={refreshAll} disabled={loading || strategyLoading}>
+            {loading || strategyLoading ? "A carregar…" : "Refresh preços"}
           </button>
           <button type="button" className="btn btn-secondary" onClick={openSchedule}>
             Horários (UTC)
           </button>
-          <button type="button" className="btn btn-secondary" onClick={openStrategy}>
-            Estratégia completa
-          </button>
         </div>
       </aside>
 
-      <section className="panel" style={{ flex: 1, minWidth: 0 }}>
-        <h2>Resultados</h2>
-        {err && <p className="error">{err}</p>}
-        {result && (
-          <>
-            <p className="mono" style={{ marginTop: 0, color: "var(--accent)" }}>
-              Estratégia: {result.strategy} | RRR: {result.rrrPercent?.toFixed(1)}%
-            </p>
-            {result.rows?.map((row) => (
-              <div key={row.nivel} style={{ marginBottom: "1.25rem" }}>
-                <p className="mono" style={{ color: "var(--accent)", margin: "0 0 0.35rem" }}>
-                  --- {row.nivel} (Vol: {row.volumeFs24h?.toLocaleString("pt-PT")} un/24h FS) ---
-                </p>
-                <div className="table-wrap">
-                  <table className="result-table">
-                    <thead>
-                      <tr>
-                        <th>Cidade</th>
-                        <th>Tronco</th>
-                        <th>{colAntLabel}</th>
-                        <th>Tábua</th>
-                        <th>Lucro</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>Lymhurst</td>
-                        <td>{row.lymhurst.tronco?.toLocaleString("pt-PT") ?? "—"}</td>
-                        <td>{row.lymhurst.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</td>
-                        <td>{row.lymhurst.tabua?.toLocaleString("pt-PT") ?? "—"}</td>
-                        <td>{Number.isFinite(row.lymhurst.lucro) ? row.lymhurst.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) : "—"}</td>
-                      </tr>
-                      <tr>
-                        <td>Fort Sterling</td>
-                        <td>{row.fortSterling.tronco?.toLocaleString("pt-PT") ?? "—"}</td>
-                        <td>{row.fortSterling.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</td>
-                        <td>{row.fortSterling.tabua?.toLocaleString("pt-PT") ?? "—"}</td>
-                        <td>{Number.isFinite(row.fortSterling.lucro) ? row.fortSterling.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) : "—"}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <p
-                  className="mono"
-                  style={{
-                    margin: "0.35rem 0 0",
-                    color: row.otimizado > 0 ? "var(--accent-2)" : undefined,
-                  }}
-                >
-                  Otimizado (compra/venda): {Number.isFinite(row.otimizado) ? row.otimizado.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) : "—"} prata
-                </p>
-                {row.foco && (
-                  <p className="mono" style={{ margin: "0.25rem 0 0", color: "var(--foco)" }}>
-                    &gt; Foco: {row.foco.unidades?.toFixed(1)} un | {row.foco.prataPorFoco?.toFixed(2)} Prata/Foco
+      <div className="wood-results-row">
+        <section className="panel wood-results-main">
+          <h2>Resultados</h2>
+          {err && <p className="error">{err}</p>}
+          {result && (
+            <>
+              <p className="mono" style={{ marginTop: 0, color: "var(--accent)" }}>
+                Estratégia: {result.strategy} | RRR: {result.rrrPercent?.toFixed(1)}%
+              </p>
+              {result.rows?.map((row) => (
+                <div key={row.nivel} style={{ marginBottom: "1.25rem" }}>
+                  <p className="mono" style={{ color: "var(--accent)", margin: "0 0 0.35rem" }}>
+                    --- {row.nivel} (Vol: {row.volumeFs24h?.toLocaleString("pt-PT")} un/24h FS) ---
                   </p>
-                )}
-              </div>
-            ))}
-          </>
-        )}
-      </section>
+                  <div className="table-wrap">
+                    <table className="result-table">
+                      <thead>
+                        <tr>
+                          <th>Cidade</th>
+                          <th>Tronco</th>
+                          <th>{colAntLabel}</th>
+                          <th>Tábua</th>
+                          <th>Lucro</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Lymhurst</td>
+                          <td>{row.lymhurst.tronco?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td>{row.lymhurst.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td>{row.lymhurst.tabua?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td>{Number.isFinite(row.lymhurst.lucro) ? row.lymhurst.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) : "—"}</td>
+                        </tr>
+                        <tr>
+                          <td>Fort Sterling</td>
+                          <td>{row.fortSterling.tronco?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td>{row.fortSterling.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td>{row.fortSterling.tabua?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td>{Number.isFinite(row.fortSterling.lucro) ? row.fortSterling.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) : "—"}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p
+                    className="mono"
+                    style={{
+                      margin: "0.35rem 0 0",
+                      color: row.otimizado > 0 ? "var(--accent-2)" : undefined,
+                    }}
+                  >
+                    Otimizado (compra/venda): {Number.isFinite(row.otimizado) ? row.otimizado.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) : "—"} prata
+                  </p>
+                  {row.foco && (
+                    <p className="mono" style={{ margin: "0.25rem 0 0", color: "var(--foco)" }}>
+                      &gt; Foco: {row.foco.unidades?.toFixed(1)} un | {row.foco.prataPorFoco?.toFixed(2)} Prata/Foco
+                    </p>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
+        </section>
+
+        <aside className="panel wood-strategy-panel" aria-label="Estratégia completa">
+          <h2 style={{ position: "sticky", top: 0, background: "var(--surface)", zIndex: 1, paddingBottom: "0.35rem" }}>
+            Estratégia completa
+          </h2>
+          <p style={{ margin: "0 0 0.75rem", fontSize: "0.8rem", color: "var(--muted)" }}>
+            Top 7 com volume (todas as tiers). Atualiza ao mudar buy order / bónus ou com Refresh.
+          </p>
+          {strategyLoading && <p className="mono" style={{ color: "var(--muted)" }}>A carregar…</p>}
+          {strategy?.error && <p className="error">{strategy.error}</p>}
+          {strategy && !strategy.error && (
+            <>
+              <StrategyTable title="GLOBAL: Lucro com foco (prata/foco)" rows={strategy.globalFoco} prataFormat="foco" compact />
+              <StrategyTable title="GLOBAL: Giro de fama (lucro un.)" rows={strategy.globalFama} prataFormat="int" compact />
+              <StrategyTable title="FS local: Lucro com foco (prata/foco)" rows={strategy.fsLocalFoco} prataFormat="foco" compact />
+              <StrategyTable title="FS local: Giro de fama (lucro un.)" rows={strategy.fsLocalFama} prataFormat="int" compact />
+            </>
+          )}
+        </aside>
+      </div>
 
       {showSchedule && (
         <div className="modal-backdrop" role="presentation" onClick={() => setShowSchedule(false)}>
@@ -276,7 +320,7 @@ export default function WoodMaster() {
                 ×
               </button>
             </header>
-            {modalLoading && <p>A carregar…</p>}
+            {scheduleLoading && <p>A carregar…</p>}
             {schedule?.error && <p className="error">{schedule.error}</p>}
             {schedule?.blocos?.map((b) => (
               <div key={b.titulo} style={{ marginBottom: "1rem" }}>
@@ -311,36 +355,14 @@ export default function WoodMaster() {
         </div>
       )}
 
-      {showStrategy && (
-        <div className="modal-backdrop" role="presentation" onClick={() => setShowStrategy(false)}>
-          <div className="modal" role="dialog" aria-labelledby="strat-title" onClick={(e) => e.stopPropagation()}>
-            <header>
-              <h3 id="strat-title">Análise estratégica — Top 7 com volume</h3>
-              <button type="button" className="modal-close" onClick={() => setShowStrategy(false)} aria-label="Fechar">
-                ×
-              </button>
-            </header>
-            {modalLoading && <p>A carregar…</p>}
-            {strategy?.error && <p className="error">{strategy.error}</p>}
-            {strategy && !strategy.error && (
-              <>
-                <StrategyTable title="GLOBAL: Lucro com foco (prata/foco)" rows={strategy.globalFoco} prataFormat="foco" />
-                <StrategyTable title="GLOBAL: Giro de fama (lucro un.)" rows={strategy.globalFama} prataFormat="int" />
-                <StrategyTable title="FS local: Lucro com foco (prata/foco)" rows={strategy.fsLocalFoco} prataFormat="foco" />
-                <StrategyTable title="FS local: Giro de fama (lucro un.)" rows={strategy.fsLocalFama} prataFormat="int" />
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-function StrategyTable({ title, rows, prataFormat }) {
+function StrategyTable({ title, rows, prataFormat, compact }) {
   if (!rows?.length) return null;
   return (
-    <div className="strategy-block">
+    <div className={`strategy-block${compact ? " strategy-block--compact" : ""}`}>
       <h4>{title}</h4>
       <div className="table-wrap">
         <table className="result-table">
@@ -348,7 +370,7 @@ function StrategyTable({ title, rows, prataFormat }) {
             <tr>
               <th>Item</th>
               <th>Lucro</th>
-              <th>Volume (24h)</th>
+              <th>Vol. 24h</th>
             </tr>
           </thead>
           <tbody>
