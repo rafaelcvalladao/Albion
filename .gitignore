@@ -43,3 +43,9 @@ $RECYCLE.BIN/
 
 # Logs locais
 *.log
+
+# Node / webapp
+node_modules/
+frontend/dist/
+backend/node_modules/
+frontend/node_modules/

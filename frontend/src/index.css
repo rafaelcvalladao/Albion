@@ -1,0 +1,46 @@
+:root {
+  --bg: #121212;
+  --surface: #1c1c1c;
+  --border: #2d2d2d;
+  --text: #e8e8e8;
+  --muted: #9aa0a6;
+  --accent: #3498db;
+  --accent-2: #2ecc71;
+  --danger: #e74c3c;
+  --foco: #9b59b6;
+  --font: "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "Consolas", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.45;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--accent);
+}
