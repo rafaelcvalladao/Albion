@@ -3,7 +3,17 @@ import { fetchHistory, fetchPrices } from "./albionClient.js";
 export const NIVEIS = ["", "_LEVEL1@1", "_LEVEL2@2", "_LEVEL3@3", "_LEVEL4@4"];
 
 const FOCO_BASE = { T4: 41, T5: 103, T6: 257, T7: 643, T8: 1607 };
+/** Fama base por craft (refino madeira → tábuas), por tier .0 — multiplicador de enchant igual ao foco. */
+const FAMA_BASE = { T4: 22, T5: 56, T6: 140, T7: 350, T8: 875 };
+const MULT_ENCHANT = [1, 1.5, 2.5, 5, 10];
+
 const LOCATIONS_WOOD = ["Lymhurst", "FortSterling"];
+
+function famaRefinoPorCraft(tSel, idxN) {
+  const base = FAMA_BASE[tSel] ?? 22;
+  const mult = MULT_ENCHANT[idxN] ?? 1;
+  return Math.round(base * mult);
+}
 
 export function calcularRrrManual(foco, bonusCity) {
   if (bonusCity) return foco ? 0.539 : 0.367;
@@ -123,9 +133,13 @@ export async function processarWood(body) {
     const multNivel = [1, 1.5, 2.5, 5, 10][idxN];
     const fReal = fBase * multNivel * 0.5 ** (spTotal / 10000);
 
+    const famaRefino = famaRefinoPorCraft(tSel, idxN);
+
     const row = {
       nivel: `${tSel}${enc}`,
       enc,
+      qtTronco: qt,
+      famaRefino,
       volumeFs24h: getVol(volMap, "Fort Sterling", iP),
       lymhurst: {
         tronco: lh[0],

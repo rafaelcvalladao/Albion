@@ -337,6 +337,17 @@ table.result-table {
   font-size: 0.75rem;
 }
 
+.result-card__vol-num {
+  color: var(--text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-table__fama {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
 .otimizado-line {
   margin: 0.5rem 0 0;
   font-family: var(--mono);
@@ -403,20 +414,43 @@ table.result-table {
   margin-bottom: 1.1rem;
 }
 
-.strategy-block h4 {
-  margin: 0 0 0.5rem;
-  color: var(--text-secondary);
-  font-size: 0.72rem;
-  font-weight: 700;
+.strategy-section-title {
+  margin: 0 0 0.55rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 800;
   font-family: var(--font);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.strategy-section-title--foco {
+  color: #facc15;
+  border-color: rgba(250, 204, 21, 0.35);
+  background: linear-gradient(180deg, rgba(250, 204, 21, 0.12) 0%, rgba(250, 204, 21, 0.04) 100%);
+  box-shadow: inset 0 1px 0 rgba(250, 204, 21, 0.15);
+}
+
+.strategy-section-title--fama {
+  color: #fb923c;
+  border-color: rgba(251, 146, 60, 0.38);
+  background: linear-gradient(180deg, rgba(251, 146, 60, 0.14) 0%, rgba(251, 146, 60, 0.05) 100%);
+  box-shadow: inset 0 1px 0 rgba(251, 146, 60, 0.18);
+}
+
+.strategy-table-vol {
+  font-weight: 700;
+  color: var(--text);
 }
 
 /* Estratégia completa (painel direito): fonte maior, colunas mais juntas */
-.wood-strategy-panel .strategy-block--compact h4 {
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
+.wood-strategy-panel .strategy-block--compact .strategy-section-title {
+  font-size: 0.875rem;
+  padding: 0.55rem 0.7rem;
 }
 
 /* Meio-termo: tabela usa a largura do painel, colunas equilibradas (nem só conteúdo nem 100% “vazio”) */

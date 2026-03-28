@@ -26,6 +26,7 @@ function loadConfig() {
     buyOrder: false,
     foco: false,
     bonusFortSterling: true,
+    showLymhurst: false,
   };
 }
 
@@ -160,6 +161,7 @@ export default function WoodMaster() {
   };
 
   const colAntLabel = cfg.tier === "T4" ? "Tábua T3" : "Tábua Ant.";
+  const showLy = cfg.showLymhurst ?? false;
 
   return (
     <div className="wood-layout">
@@ -220,6 +222,14 @@ export default function WoodMaster() {
             />
             Bónus Fort Sterling
           </label>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={cfg.showLymhurst ?? false}
+              onChange={(e) => setCfg({ ...cfg, showLymhurst: e.target.checked })}
+            />
+            Lymhurst
+          </label>
           <button type="button" className="btn btn-primary" onClick={refreshAll} disabled={loading || strategyLoading}>
             {loading || strategyLoading ? "A carregar…" : "Refresh preços"}
           </button>
@@ -241,12 +251,19 @@ export default function WoodMaster() {
                 <span className="summary-strip__label">RRR</span>
                 <span className="summary-strip__value">{result.rrrPercent?.toFixed(1)}%</span>
               </div>
-              {result.rows?.map((row) => (
+              {result.rows?.map((row) => {
+                const q = row.qtTronco ?? 0;
+                const thTronco = `Tronco (${q}×)`;
+                const thAnt = `${colAntLabel} (1×)`;
+                return (
                 <article key={row.nivel} className="result-card">
                   <h3 className="result-card__title">
                     <span className="result-card__tier">{row.nivel}</span>
                     <span className="result-card__vol">
-                      Vol. FS 24h: {row.volumeFs24h?.toLocaleString("pt-PT")} un
+                      Vol. FS 24h:{" "}
+                      <strong className="result-card__vol-num">
+                        {row.volumeFs24h?.toLocaleString("pt-PT")} un
+                      </strong>
                     </span>
                   </h3>
                   <div className="table-wrap">
@@ -254,13 +271,15 @@ export default function WoodMaster() {
                       <thead>
                         <tr>
                           <th>Cidade</th>
-                          <th>Tronco</th>
-                          <th>{colAntLabel}</th>
+                          <th>{thTronco}</th>
+                          <th>{thAnt}</th>
                           <th>Tábua</th>
                           <th>Lucro</th>
+                          <th>Fama</th>
                         </tr>
                       </thead>
                       <tbody>
+                        {showLy && (
                         <tr>
                           <td>Lymhurst</td>
                           <td className="tabular-nums">{row.lymhurst.tronco?.toLocaleString("pt-PT") ?? "—"}</td>
@@ -271,7 +290,11 @@ export default function WoodMaster() {
                               ? row.lymhurst.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
                               : "—"}
                           </td>
+                          <td className="tabular-nums result-table__fama">
+                            {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
+                          </td>
                         </tr>
+                        )}
                         <tr>
                           <td>Fort Sterling</td>
                           <td className="tabular-nums">{row.fortSterling.tronco?.toLocaleString("pt-PT") ?? "—"}</td>
@@ -281,6 +304,9 @@ export default function WoodMaster() {
                             {Number.isFinite(row.fortSterling.lucro)
                               ? row.fortSterling.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
                               : "—"}
+                          </td>
+                          <td className="tabular-nums result-table__fama">
+                            {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
                           </td>
                         </tr>
                       </tbody>
@@ -303,7 +329,8 @@ export default function WoodMaster() {
                     </p>
                   )}
                 </article>
-              ))}
+              );
+              })}
             </>
           )}
         </section>
@@ -319,10 +346,10 @@ export default function WoodMaster() {
           {strategy?.error && <p className="error">{strategy.error}</p>}
           {strategy && !strategy.error && (
             <>
-              <StrategyTable title="GLOBAL: Lucro com foco (prata/foco)" rows={strategy.globalFoco} compact />
-              <StrategyTable title="GLOBAL: Giro de fama (lucro un.)" rows={strategy.globalFama} compact />
-              <StrategyTable title="FS local: Lucro com foco (prata/foco)" rows={strategy.fsLocalFoco} compact />
-              <StrategyTable title="FS local: Giro de fama (lucro un.)" rows={strategy.fsLocalFama} compact />
+              <StrategyTable title="Local com Foco" kind="foco" rows={strategy.fsLocalFoco} compact />
+              <StrategyTable title="Local: Fama" kind="fama" rows={strategy.fsLocalFama} compact />
+              <StrategyTable title="Global com Foco" kind="foco" rows={strategy.globalFoco} compact />
+              <StrategyTable title="Global: Fama" kind="fama" rows={strategy.globalFama} compact />
             </>
           )}
         </aside>
@@ -374,11 +401,19 @@ export default function WoodMaster() {
   );
 }
 
-function StrategyTable({ title, rows, compact }) {
+function StrategyTable({ title, kind, rows, compact }) {
   if (!rows?.length) return null;
+  const headClass =
+    kind === "foco"
+      ? "strategy-section-title strategy-section-title--foco"
+      : kind === "fama"
+        ? "strategy-section-title strategy-section-title--fama"
+        : "strategy-section-title";
   return (
     <div className={`strategy-block${compact ? " strategy-block--compact" : ""}`}>
-      <h4>{title}</h4>
+      <div className={headClass} role="heading" aria-level={3}>
+        {title}
+      </div>
       <div className="table-wrap">
         <table className="result-table">
           <thead>
@@ -395,7 +430,7 @@ function StrategyTable({ title, rows, compact }) {
                 <td className={profitClass(r.lucro)}>
                   {Math.round(r.lucro).toLocaleString("pt-PT")}
                 </td>
-                <td className="tabular-nums">{r.volume?.toLocaleString("pt-PT") ?? "—"}</td>
+                <td className="tabular-nums strategy-table-vol">{r.volume?.toLocaleString("pt-PT") ?? "—"}</td>
               </tr>
             ))}
           </tbody>
