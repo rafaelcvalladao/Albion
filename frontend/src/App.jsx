@@ -9,7 +9,10 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Calculadora Albion</h1>
+        <div className="app-brand">
+          <h1>Calculadora Albion</h1>
+          <p className="app-tagline">Refino e mercado</p>
+        </div>
         <nav className="tabs" aria-label="Secções">
           <button
             type="button"

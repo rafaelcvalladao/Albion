@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { calculateWood, scheduleWood, strategyWood } from "../api.js";
+import { profitClass } from "../utils/profit.js";
 
 const SPEC_KEYS = [
   { key: "t4", label: "Bétula (T4)" },
@@ -161,8 +162,8 @@ export default function WoodMaster() {
   const colAntLabel = cfg.tier === "T4" ? "Tábua T3" : "Tábua Ant.";
 
   return (
-    <div className="wood-layout" style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
-      <aside className="panel" style={{ flex: "0 0 280px" }}>
+    <div className="wood-layout">
+      <aside className="panel panel--sidebar wood-sidebar">
         <h2>Configurações</h2>
         <div className="form-grid">
           <label>
@@ -234,14 +235,20 @@ export default function WoodMaster() {
           {err && <p className="error">{err}</p>}
           {result && (
             <>
-              <p className="mono" style={{ marginTop: 0, color: "var(--accent)" }}>
-                Estratégia: {result.strategy} | RRR: {result.rrrPercent?.toFixed(1)}%
-              </p>
+              <div className="summary-strip">
+                <span className="summary-strip__label">Ordem</span>
+                <span className="summary-strip__value">{result.strategy}</span>
+                <span className="summary-strip__label">RRR</span>
+                <span className="summary-strip__value">{result.rrrPercent?.toFixed(1)}%</span>
+              </div>
               {result.rows?.map((row) => (
-                <div key={row.nivel} style={{ marginBottom: "1.25rem" }}>
-                  <p className="mono" style={{ color: "var(--accent)", margin: "0 0 0.35rem" }}>
-                    --- {row.nivel} (Vol: {row.volumeFs24h?.toLocaleString("pt-PT")} un/24h FS) ---
-                  </p>
+                <article key={row.nivel} className="result-card">
+                  <h3 className="result-card__title">
+                    <span className="result-card__tier">{row.nivel}</span>
+                    <span className="result-card__vol">
+                      Vol. FS 24h: {row.volumeFs24h?.toLocaleString("pt-PT")} un
+                    </span>
+                  </h3>
                   <div className="table-wrap">
                     <table className="result-table">
                       <thead>
@@ -256,56 +263,66 @@ export default function WoodMaster() {
                       <tbody>
                         <tr>
                           <td>Lymhurst</td>
-                          <td>{row.lymhurst.tronco?.toLocaleString("pt-PT") ?? "—"}</td>
-                          <td>{row.lymhurst.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</td>
-                          <td>{row.lymhurst.tabua?.toLocaleString("pt-PT") ?? "—"}</td>
-                          <td>{Number.isFinite(row.lymhurst.lucro) ? row.lymhurst.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) : "—"}</td>
+                          <td className="tabular-nums">{row.lymhurst.tronco?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td className="tabular-nums">{row.lymhurst.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td className="tabular-nums">{row.lymhurst.tabua?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td className={profitClass(row.lymhurst.lucro)}>
+                            {Number.isFinite(row.lymhurst.lucro)
+                              ? row.lymhurst.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
+                              : "—"}
+                          </td>
                         </tr>
                         <tr>
                           <td>Fort Sterling</td>
-                          <td>{row.fortSterling.tronco?.toLocaleString("pt-PT") ?? "—"}</td>
-                          <td>{row.fortSterling.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</td>
-                          <td>{row.fortSterling.tabua?.toLocaleString("pt-PT") ?? "—"}</td>
-                          <td>{Number.isFinite(row.fortSterling.lucro) ? row.fortSterling.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) : "—"}</td>
+                          <td className="tabular-nums">{row.fortSterling.tronco?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td className="tabular-nums">{row.fortSterling.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td className="tabular-nums">{row.fortSterling.tabua?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td className={profitClass(row.fortSterling.lucro)}>
+                            {Number.isFinite(row.fortSterling.lucro)
+                              ? row.fortSterling.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
+                              : "—"}
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
-                  <p
-                    className="mono"
-                    style={{
-                      margin: "0.35rem 0 0",
-                      color: row.otimizado > 0 ? "var(--accent-2)" : undefined,
-                    }}
-                  >
-                    Otimizado (compra/venda): {Number.isFinite(row.otimizado) ? row.otimizado.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) : "—"} prata
+                  <p className="otimizado-line">
+                    <span className="otimizado-line__label">Otimizado (compra/venda)</span>
+                    <span className={profitClass(row.otimizado)}>
+                      {Number.isFinite(row.otimizado)
+                        ? `${row.otimizado.toLocaleString("pt-PT", { maximumFractionDigits: 0 })} prata`
+                        : "—"}
+                    </span>
                   </p>
                   {row.foco && (
-                    <p className="mono" style={{ margin: "0.25rem 0 0", color: "var(--foco)" }}>
-                      &gt; Foco: {row.foco.unidades?.toFixed(1)} un | {row.foco.prataPorFoco?.toFixed(2)} Prata/Foco
+                    <p className="foco-line">
+                      Foco: <span className="tabular-nums">{row.foco.unidades?.toFixed(1)}</span> un ·{" "}
+                      <span className={profitClass(row.foco.prataPorFoco)}>
+                        {row.foco.prataPorFoco?.toFixed(2)} prata/foco
+                      </span>
                     </p>
                   )}
-                </div>
+                </article>
               ))}
             </>
           )}
         </section>
 
         <aside className="panel wood-strategy-panel" aria-label="Estratégia completa">
-          <h2 style={{ position: "sticky", top: 0, background: "var(--surface)", zIndex: 1, paddingBottom: "0.35rem" }}>
-            Estratégia completa
-          </h2>
-          <p style={{ margin: "0 0 0.75rem", fontSize: "0.8rem", color: "var(--muted)" }}>
+          <div className="strategy-panel__head">
+            <h2>Estratégia completa</h2>
+          </div>
+          <p className="strategy-hint">
             Top 7 com volume (todas as tiers). Atualiza ao mudar buy order / bónus ou com Refresh.
           </p>
-          {strategyLoading && <p className="mono" style={{ color: "var(--muted)" }}>A carregar…</p>}
+          {strategyLoading && <p className="mono strategy-hint">A carregar…</p>}
           {strategy?.error && <p className="error">{strategy.error}</p>}
           {strategy && !strategy.error && (
             <>
-              <StrategyTable title="GLOBAL: Lucro com foco (prata/foco)" rows={strategy.globalFoco} prataFormat="foco" compact />
-              <StrategyTable title="GLOBAL: Giro de fama (lucro un.)" rows={strategy.globalFama} prataFormat="int" compact />
-              <StrategyTable title="FS local: Lucro com foco (prata/foco)" rows={strategy.fsLocalFoco} prataFormat="foco" compact />
-              <StrategyTable title="FS local: Giro de fama (lucro un.)" rows={strategy.fsLocalFama} prataFormat="int" compact />
+              <StrategyTable title="GLOBAL: Lucro com foco (prata/foco)" rows={strategy.globalFoco} compact />
+              <StrategyTable title="GLOBAL: Giro de fama (lucro un.)" rows={strategy.globalFama} compact />
+              <StrategyTable title="FS local: Lucro com foco (prata/foco)" rows={strategy.fsLocalFoco} compact />
+              <StrategyTable title="FS local: Giro de fama (lucro un.)" rows={strategy.fsLocalFama} compact />
             </>
           )}
         </aside>
@@ -323,10 +340,8 @@ export default function WoodMaster() {
             {scheduleLoading && <p>A carregar…</p>}
             {schedule?.error && <p className="error">{schedule.error}</p>}
             {schedule?.blocos?.map((b) => (
-              <div key={b.titulo} style={{ marginBottom: "1rem" }}>
-                <h4 className="mono" style={{ color: "var(--accent)", margin: "0 0 0.5rem" }}>
-                  {b.titulo}
-                </h4>
+              <div key={b.titulo} className="schedule-block">
+                <h4>{b.titulo}</h4>
                 <div className="table-wrap">
                   <table className="result-table">
                     <thead>
@@ -359,7 +374,7 @@ export default function WoodMaster() {
   );
 }
 
-function StrategyTable({ title, rows, prataFormat, compact }) {
+function StrategyTable({ title, rows, compact }) {
   if (!rows?.length) return null;
   return (
     <div className={`strategy-block${compact ? " strategy-block--compact" : ""}`}>
@@ -377,10 +392,10 @@ function StrategyTable({ title, rows, prataFormat, compact }) {
             {rows.map((r) => (
               <tr key={r.item}>
                 <td>{r.item}</td>
-                <td className={r.lucro > 0 ? "row-lucro-pos" : undefined}>
-                  {prataFormat === "foco" ? r.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) : r.lucro.toFixed(2)}
+                <td className={profitClass(r.lucro)}>
+                  {Math.round(r.lucro).toLocaleString("pt-PT")}
                 </td>
-                <td>{r.volume?.toLocaleString("pt-PT") ?? "—"}</td>
+                <td className="tabular-nums">{r.volume?.toLocaleString("pt-PT") ?? "—"}</td>
               </tr>
             ))}
           </tbody>

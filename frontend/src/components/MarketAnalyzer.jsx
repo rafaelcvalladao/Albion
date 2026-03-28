@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { marketCategories, marketOpportunities } from "../api.js";
+import { profitClass } from "../utils/profit.js";
 
 export default function MarketAnalyzer() {
   const [categories, setCategories] = useState([]);
@@ -53,19 +54,12 @@ export default function MarketAnalyzer() {
   return (
     <div className="panel">
       <h2>Arbitragem entre cidades seguras</h2>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "1rem",
-          alignItems: "flex-end",
-          marginBottom: "1rem",
-        }}
-      >
+      <p className="strategy-hint">
+        Compara preços entre cidades seguras; lucro líquido estimado após taxa de venda (~6,5%).
+      </p>
+      <div className="market-toolbar">
         <label>
-          <span style={{ display: "block", fontSize: "0.85rem", color: "var(--muted)", marginBottom: "0.25rem" }}>
-            Categoria
-          </span>
+          <span>Categoria</span>
           <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
             {(categories.length ? categories : ["Armas"]).map((c) => (
               <option key={c} value={c}>
@@ -75,9 +69,7 @@ export default function MarketAnalyzer() {
           </select>
         </label>
         <label>
-          <span style={{ display: "block", fontSize: "0.85rem", color: "var(--muted)", marginBottom: "0.25rem" }}>
-            Atualizado há no máx. (h)
-          </span>
+          <span>Atualizado há no máx. (h)</span>
           <select value={maxHoras} onChange={(e) => setMaxHoras(e.target.value)}>
             {["2", "6", "12", "24", "48"].map((h) => (
               <option key={h} value={h}>
@@ -111,10 +103,10 @@ export default function MarketAnalyzer() {
                 <td>{op.id.replaceAll("_", " ")}</td>
                 <td>{op.origem}</td>
                 <td>{op.destino}</td>
-                <td>{op.compra?.toLocaleString("pt-PT")}</td>
-                <td>{op.venda?.toLocaleString("pt-PT")}</td>
-                <td className={op.lucro > 0 ? "row-lucro-pos" : undefined}>{op.lucro?.toLocaleString("pt-PT", { maximumFractionDigits: 0 })}</td>
-                <td>{op.media7d} / dia</td>
+                <td className="tabular-nums">{op.compra?.toLocaleString("pt-PT")}</td>
+                <td className="tabular-nums">{op.venda?.toLocaleString("pt-PT")}</td>
+                <td className={profitClass(op.lucro)}>{op.lucro?.toLocaleString("pt-PT", { maximumFractionDigits: 0 })}</td>
+                <td className="tabular-nums">{op.media7d} / dia</td>
                 <td style={{ fontSize: "0.72rem" }}>{op.atualizacaoDest}</td>
               </tr>
             ))}
@@ -122,7 +114,7 @@ export default function MarketAnalyzer() {
         </table>
       </div>
       {!loading && rows.length === 0 && !err && (
-        <p style={{ color: "var(--muted)", marginTop: "0.75rem" }}>Carregue uma pesquisa para ver oportunidades.</p>
+        <p className="market-empty">Carregue uma pesquisa para ver oportunidades.</p>
       )}
     </div>
   );
