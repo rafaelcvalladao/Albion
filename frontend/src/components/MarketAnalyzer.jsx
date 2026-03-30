@@ -6,6 +6,10 @@ export default function MarketAnalyzer() {
   const [categories, setCategories] = useState([]);
   const [categoria, setCategoria] = useState("Armas");
   const [maxHoras, setMaxHoras] = useState("6");
+  const [quality, setQuality] = useState("1");
+  const [usarBuyOrder, setUsarBuyOrder] = useState(false);
+  const [taxaVenda, setTaxaVenda] = useState("6.5");
+  const [teleportRate, setTeleportRate] = useState("0.0075");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
   const [rows, setRows] = useState([]);
@@ -21,15 +25,21 @@ export default function MarketAnalyzer() {
       })
       .catch(() =>
         setCategories([
+          "Todos",
           "Armas",
           "Armaduras",
           "Elmos",
           "Botas",
           "Capas",
+          "Escudos",
+          "Luvas",
           "Montarias",
           "Consumíveis",
           "Artefatos",
-          "Etc (Bolsas)",
+          "Bolsas",
+          "Materiais",
+          "Ferragens",
+          "Outros",
         ])
       );
   }, []);
@@ -41,6 +51,10 @@ export default function MarketAnalyzer() {
       const data = await marketOpportunities({
         categoria,
         maxIdadeHoras: parseInt(maxHoras, 10) || 6,
+        quality: parseInt(quality, 10) || 1,
+        usarBuyOrder,
+        taxaVenda: parseFloat(taxaVenda) || 6.5,
+        teleportRate: parseFloat(teleportRate) || 0.0075,
       });
       setRows(data.oportunidades || []);
     } catch (e) {
@@ -55,8 +69,10 @@ export default function MarketAnalyzer() {
     <div className="panel">
       <h2>Arbitragem entre cidades seguras</h2>
       <p className="strategy-hint">
-        Compara preços entre cidades seguras; lucro líquido estimado após taxa de venda (~6,5%).
+        Compara preços entre cidades seguras; lucro líquido estimado com todas as taxas incluídas.
       </p>
+      
+      {/* Linha 1: Categoria e Estado */}
       <div className="market-toolbar">
         <label>
           <span>Categoria</span>
@@ -69,7 +85,16 @@ export default function MarketAnalyzer() {
           </select>
         </label>
         <label>
-          <span>Atualizado há no máx. (h)</span>
+          <span>Estado (Quality)</span>
+          <select value={quality} onChange={(e) => setQuality(e.target.value)}>
+            <option value="1">Normal</option>
+            <option value="2">Bom</option>
+            <option value="3">Excepcional</option>
+            <option value="4">Excelente</option>
+          </select>
+        </label>
+        <label>
+          <span>Dados no máx. (h)</span>
           <select value={maxHoras} onChange={(e) => setMaxHoras(e.target.value)}>
             {["2", "6", "12", "24", "48"].map((h) => (
               <option key={h} value={h}>
@@ -78,35 +103,74 @@ export default function MarketAnalyzer() {
             ))}
           </select>
         </label>
+      </div>
+
+      {/* Linha 2: Checkboxes e Configurações */}
+      <div className="market-toolbar">
+        <label className="market-checkbox">
+          <input
+            type="checkbox"
+            checked={usarBuyOrder}
+            onChange={(e) => setUsarBuyOrder(e.target.checked)}
+          />
+          Considerar Buy Order (compra)
+        </label>
+        <label>
+          <span>Taxa Venda (%)</span>
+          <input
+            type="text"
+            value={taxaVenda}
+            onChange={(e) => setTaxaVenda(e.target.value)}
+            style={{ width: "60px" }}
+          />
+        </label>
+        <label>
+          <span>Teleporte (prata/kg)</span>
+          <input
+            type="text"
+            value={teleportRate}
+            onChange={(e) => setTeleportRate(e.target.value)}
+            style={{ width: "80px" }}
+          />
+        </label>
         <button type="button" className="btn btn-primary" onClick={buscar} disabled={loading}>
           {loading ? "A buscar…" : "Buscar oportunidades"}
         </button>
       </div>
+
       {err && <p className="error">{err}</p>}
       <div className="table-wrap">
         <table className="result-table">
           <thead>
             <tr>
               <th>Item</th>
+              <th>T</th>
+              <th>E</th>
+              <th>Est</th>
               <th>Comprar em</th>
               <th>Vender em</th>
-              <th>P. compra</th>
-              <th>P. venda</th>
-              <th>Lucro (c/ taxa)</th>
+              <th>P. Compra</th>
+              <th>P. Venda</th>
+              <th>Teleporte</th>
+              <th>Lucro Líquido</th>
               <th>Média 7d</th>
-              <th>Última atualização</th>
+              <th>Atualização</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((op) => (
               <tr key={`${op.id}-${op.origem}-${op.destino}`}>
-                <td>{op.id.replaceAll("_", " ")}</td>
+                <td>{op.nomeBase}</td>
+                <td style={{ textAlign: "center" }}>{op.tier}</td>
+                <td style={{ textAlign: "center" }}>{op.encanto}</td>
+                <td style={{ textAlign: "center" }}>{op.estado}</td>
                 <td>{op.origem}</td>
                 <td>{op.destino}</td>
                 <td className="tabular-nums">{op.compra?.toLocaleString("pt-PT")}</td>
                 <td className="tabular-nums">{op.venda?.toLocaleString("pt-PT")}</td>
+                <td className="tabular-nums">{op.custoTeleporte?.toFixed(0)}</td>
                 <td className={profitClass(op.lucro)}>{op.lucro?.toLocaleString("pt-PT", { maximumFractionDigits: 0 })}</td>
-                <td className="tabular-nums">{op.media7d} / dia</td>
+                <td style={{ textAlign: "center" }}>{op.media7d} / dia</td>
                 <td style={{ fontSize: "0.72rem" }}>{op.atualizacaoDest}</td>
               </tr>
             ))}

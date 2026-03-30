@@ -54,13 +54,24 @@ app.get("/api/market/categories", (_req, res) => {
 /** Arbitragem entre cidades seguras */
 app.post("/api/market/opportunities", async (req, res) => {
   try {
-    const { categoria, maxIdadeHoras } = req.body || {};
+    const { 
+      categoria, 
+      maxIdadeHoras,
+      quality = 1,
+      usarBuyOrder = false,
+      taxaVenda = 6.5,
+      teleportRate = 0.0075
+    } = req.body || {};
     if (!categoria || !CATEGORIAS[categoria]) {
       return res.status(400).json({ error: "Categoria inválida ou em falta." });
     }
     const oportunidades = await buscarOportunidades({
       categoria,
       maxIdadeHoras: maxIdadeHoras ?? 6,
+      quality: quality ?? 1,
+      usarBuyOrder: usarBuyOrder ?? false,
+      taxaVenda: taxaVenda ?? 6.5,
+      teleportRate: teleportRate ?? 0.0075
     });
     res.json({ oportunidades });
   } catch (e) {

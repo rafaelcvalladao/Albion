@@ -1,37 +1,80 @@
 import { fetchHistory, fetchPrices } from "./albionClient.js";
 
+// Mapa de pesos dos itens (em kg) para calcular custo de teleporte
+const ITEM_WEIGHTS = {
+  "_MAIN_": 1.5, "_2H_": 2.0, "_RANGED_": 1.5,
+  "_BODY_": 2.5, "_HEAD_": 1.0, "_SHOES_": 0.5, "_CAPE": 0.3, "_GLOVES_": 0.5,
+  "_OFF_": 1.5, "_SHIELD_": 2.0,
+  "_MOUNT_": 7.0,
+  "_POTION_": 0.1, "_MEAL_": 0.2, "_DRINK_": 0.1, "_SPICE_": 0.05, "_HERB_": 0.05,
+  "_RUNE": 0.3, "_SOUL": 0.3, "_RELIC": 0.3, "_BAG": 1.0, "_AMULET_": 0.2, "_RING_": 0.1,
+  "_ORE_": 0.05, "_WOOD_": 0.05, "_LEATHER_": 0.05, "_CLOTH_": 0.02, "_PLANKS": 0.1,
+};
+
+const TELEPORT_RATE_PER_KG = 0.0075;
+
+const QUALITY_NAMES = { 1: "Normal", 2: "Bom", 3: "Excepcional", 4: "Excelente" };
+
 export const CATEGORIAS = {
+  Todos: [],
   Armas: [
-    "_MAIN_BLOODLETTER",
-    "_2H_BOW",
-    "_2H_CARVINGSWORD",
-    "_MAIN_CURSEDSTAFF",
-    "_2H_HALBERD",
-    "_2H_DUALAXE_KEEPER",
-    "_2H_MACE",
+    "_MAIN_BLOODLETTER", "_MAIN_DAGGER", "_MAIN_SWORD", "_MAIN_MACE", "_MAIN_AXE", "_MAIN_HAMMER",
+    "_MAIN_SPEAR", "_MAIN_STAFF", "_MAIN_CURSEDSTAFF", "_MAIN_NATURESTAFF", "_MAIN_FIRESTAFF", "_MAIN_FROSTSTAFF", "_MAIN_HOLYSTAFF",
+    "_2H_BOW", "_2H_CROSSBOW", "_2H_CARVINGSWORD", "_2H_GREATAXE", "_2H_MAUL", "_2H_HALBERD", "_2H_PIKE", "_2H_DUALAXE_KEEPER", "_2H_DUALAXE", "_2H_MACE",
+    "_RANGED_BOW", "_RANGED_CROSSBOW",
   ],
-  Armaduras: ["_BODY_CLERICROBE", "_BODY_ASSASSINJACKET", "_BODY_SOLDIERARMOR", "_BODY_MAGE"],
-  Elmos: ["_HEAD_HUNTER", "_HEAD_CLERICHOOD", "_HEAD_SOLDIERHELMET", "_HEAD_MAGE"],
-  Botas: ["_SHOES_SOLDIERBOOTS", "_SHOES_ASSASSINSHOES", "_SHOES_CLERICSHOES"],
+  Armaduras: [
+    "_BODY_CLERICROBE", "_BODY_ASSASSINJACKET", "_BODY_SOLDIERARMOR", "_BODY_MAGE", "_BODY_CLOTHROBES", "_BODY_LEATHERARMOR", "_BODY_PLATEARMOR",
+    "_BODY_CLOTH", "_BODY_LEATHER", "_BODY_PLATE",
+  ],
+  Elmos: [
+    "_HEAD_HUNTER", "_HEAD_CLERICHOOD", "_HEAD_SOLDIERHELMET", "_HEAD_MAGE",
+    "_HEAD_CLOTH", "_HEAD_LEATHER", "_HEAD_PLATE",
+  ],
+  Botas: [
+    "_SHOES_SOLDIERBOOTS", "_SHOES_ASSASSINSHOES", "_SHOES_CLERICSHOES",
+    "_SHOES_CLOTH", "_SHOES_LEATHER", "_SHOES_PLATE",
+  ],
   Capas: [
-    "_CAPE",
-    "_CAPEITEM_FW_LYMHURST",
-    "_CAPEITEM_FW_FORTSTERLING",
-    "_CAPEITEM_FW_MARTLOCK",
-    "_CAPEITEM_FW_THETFORD",
-    "_CAPEITEM_FW_BRIDGEWATCH",
+    "_CAPE", "_CAPEITEM_FW_LYMHURST", "_CAPEITEM_FW_FORTSTERLING", "_CAPEITEM_FW_MARTLOCK", 
+    "_CAPEITEM_FW_THETFORD", "_CAPEITEM_FW_BRIDGEWATCH",
   ],
-  Montarias: ["_MOUNT_HORSE", "_MOUNT_OX", "_MOUNT_SWIFTCLAW", "_MOUNT_STAG"],
+  Escudos: [
+    "_SHIELD_TOWER", "_SHIELD_KITE", "_SHIELD_ROUND", "_OFF_DAGGER", "_OFF_SHIELD",
+  ],
+  Luvas: [
+    "_GLOVES_CLOTH", "_GLOVES_LEATHER", "_GLOVES_PLATE",
+  ],
+  Montarias: [
+    "_MOUNT_HORSE", "_MOUNT_OX", "_MOUNT_SWIFTCLAW", "_MOUNT_STAG", "_MOUNT_RAM", "_MOUNT_MOOSE",
+  ],
   Consumíveis: [
-    "_POTION_HEAL",
-    "_POTION_ENERGY",
-    "_MEAL_STEAK",
-    "_MEAL_OMELETTE",
-    "_MEAL_STEW",
-    "_MEAL_PIE",
+    "_POTION_HEAL", "_POTION_ENERGY", "_POTION_POWER", "_POTION_FORCE",
+    "_MEAL_STEAK", "_MEAL_OMELETTE", "_MEAL_STEW", "_MEAL_PIE", "_MEAL_BREAD", "_MEAL_CHEESE",
+    "_DRINK_WATER", "_DRINK_BEER",
+    "_SPICE_SUGAR", "_SPICE_SALT", "_SPICE_HERB",
   ],
-  Artefatos: ["_RUNE", "_SOUL", "_RELIC"],
-  "Etc (Bolsas)": ["_BAG"],
+  Artefatos: [
+    "_RUNE_AIR", "_RUNE_FIRE", "_RUNE_FROST", "_RUNE_HOLY", "_RUNE_NATURE", "_RUNE_ARCANE",
+    "_SOUL_", "_RELIC_",
+    "_AMULET_", "_RING_",
+  ],
+  Bolsas: [
+    "_BAG_SMALL", "_BAG_MEDIUM", "_BAG_LARGE", "_BAG",
+  ],
+  Materiais: [
+    "_ORE_COPPER", "_ORE_TIN", "_ORE_IRON", "_ORE_STEEL", "_ORE_TITANIUM",
+    "_WOOD_BIRCH", "_WOOD_OAK", "_WOOD_ASHWOOD", "_WOOD_IRONWOOD", "_WOOD_EBONWOOD",
+    "_LEATHER_THIN", "_LEATHER_THICK",
+    "_CLOTH_LINEN", "_CLOTH_CLOTH", "_CLOTH_SILK",
+    "_PLANKS", "_METAL", "_HIDE", "_FABRIC",
+  ],
+  Ferragens: [
+    "_NAILS", "_SCREWS", "_BOLTS", "_HINGES",
+  ],
+  Outros: [
+    "_BOOK_", "_SCROLL_", "_CRYSTAL_",
+  ]
 };
 
 const CIDADES_SEGURAS = [
@@ -45,12 +88,46 @@ const CIDADES_SEGURAS = [
 
 const TIERS = ["T4", "T5", "T6", "T7", "T8"];
 
+function extrairInfoItem(itemId) {
+  const tier = itemId.startsWith('T') ? itemId.slice(0, 2) : "?";
+  let encanto = "0";
+  if (itemId.includes('@')) {
+    const parts = itemId.split('@');
+    encanto = parts[parts.length - 1] || "0";
+  }
+  return { tier, encanto };
+}
+
+function obterPesoItem(itemId) {
+  for (const [prefixo, peso] of Object.entries(ITEM_WEIGHTS)) {
+    if (itemId.toUpperCase().includes(prefixo)) {
+      return peso;
+    }
+  }
+  return 1.0;
+}
+
 function gerarListaItens(categoria) {
-  const bases = CATEGORIAS[categoria] || [];
+  let bases = CATEGORIAS[categoria] || [];
+  
+  if (categoria === "Todos") {
+    bases = [];
+    for (const [cat, itens] of Object.entries(CATEGORIAS)) {
+      if (cat !== "Todos") {
+        bases.push(...itens);
+      }
+    }
+    bases = [...new Set(bases)];
+  }
+  
   const lista = [];
   for (const t of TIERS) {
     for (const b of bases) {
       lista.push(`${t}${b}`);
+      // Também adicionar versões com encantamentos (@1, @2, @3, @4)
+      for (const enc of ["@1", "@2", "@3", "@4"]) {
+        lista.push(`${t}${b}${enc}`);
+      }
     }
   }
   return lista;
@@ -88,16 +165,16 @@ async function obterMediaVendas7d(itemId, cidade) {
 }
 
 /**
- * Preços em várias cidades com qualities=1 (query extra na URL Albion).
+ * Preços em várias cidades com qualities configurável (query extra na URL Albion).
  */
-async function fetchPricesMarket(itemIds, locations) {
+async function fetchPricesMarket(itemIds, locations, quality = 1) {
   const unique = [...new Set(itemIds.filter(Boolean))];
   const loc = Array.isArray(locations) ? locations.join(",") : locations;
   const merged = [];
   for (const part of chunk(unique, 100)) {
     const url = `https://www.albion-online-data.com/api/v2/stats/prices/${part.join(
       ","
-    )}?locations=${encodeURIComponent(loc)}&qualities=1`;
+    )}?locations=${encodeURIComponent(loc)}&qualities=${quality}`;
     const res = await fetch(url, { headers: { Accept: "application/json" } });
     if (!res.ok) throw new Error(`Albion prices HTTP ${res.status}`);
     merged.push(...(await res.json()));
@@ -105,17 +182,27 @@ async function fetchPricesMarket(itemIds, locations) {
   return merged;
 }
 
-export async function buscarOportunidades({ categoria, maxIdadeHoras = 6 }) {
+export async function buscarOportunidades({ 
+  categoria, 
+  maxIdadeHoras = 6,
+  quality = 1,
+  usarBuyOrder = false,
+  taxaVenda = 6.5,
+  teleportRate = TELEPORT_RATE_PER_KG
+}) {
   const itens = gerarListaItens(categoria);
   const cidadesStr = CIDADES_SEGURAS.join(",");
   const maxIdade = Number(maxIdadeHoras) || 6;
   const agora = Date.now();
+  const qualityNum = Number(quality) || 1;
+  const taxaVendaDecimal = (taxaVenda / 100);
+  const taxaVendaNota = 1 - taxaVendaDecimal;
 
   const chunks = chunk(itens, 100);
   const oportunidadesBrutas = [];
 
   for (const chunkItems of chunks) {
-    const respostaPrecos = await fetchPricesMarket(chunkItems, cidadesStr);
+    const respostaPrecos = await fetchPricesMarket(chunkItems, cidadesStr, qualityNum);
 
     const mapaPrecos = new Map();
     for (const p of respostaPrecos) {
@@ -127,32 +214,57 @@ export async function buscarOportunidades({ categoria, maxIdadeHoras = 6 }) {
 
       if (idadeHoras <= maxIdade && p.sell_price_min > 0) {
         const it = p.item_id;
-        if (!mapaPrecos.has(it)) mapaPrecos.set(it, []);
-        mapaPrecos.get(it).push({
-          cidade: p.city,
-          preco: p.sell_price_min,
-          idade: idadeHoras,
+        if (!mapaPrecos.has(it)) mapaPrecos.set(it, {});
+        
+        const precoCompra = usarBuyOrder && p.buy_price_max > 0 ? p.buy_price_max : p.sell_price_min;
+        const precoVenda = p.sell_price_min; // Sempre o menor da sell order
+        
+        mapaPrecos.get(it)[p.city] = {
+          precoCompra,
+          precoVenda,
           dataStr: String(dataStr).replace("T", " ").slice(0, 16),
-        });
+        };
       }
     }
 
-    for (const [itemId, ofertas] of mapaPrecos) {
-      for (const ori of ofertas) {
-        for (const dest of ofertas) {
-          if (ori.cidade === dest.cidade) continue;
-
-          const lucroLiquido = dest.preco * 0.935 - ori.preco;
+    for (const [itemId, cidades] of mapaPrecos) {
+      const peso = obterPesoItem(itemId);
+      const custoTeleporte = peso * teleportRate;
+      const { tier, encanto } = extrairInfoItem(itemId);
+      const nomeBase = itemId.slice(2).replace(/@\d+/, "").replace(/_/g, " ").trim();
+      const estado = QUALITY_NAMES[qualityNum] || "?";
+      
+      const cidadesArray = Object.entries(cidades);
+      
+      for (let i = 0; i < cidadesArray.length; i++) {
+        for (let j = 0; j < cidadesArray.length; j++) {
+          if (i === j) continue;
+          
+          const [cidadeOri, infoOri] = cidadesArray[i];
+          const [cidadeDest, infoDest] = cidadesArray[j];
+          
+          const precoCompra = infoOri.precoCompra;
+          const precoVenda = infoDest.precoVenda;
+          
+          // Lucro = (Preço_Venda × Taxa_Venda%) - Preço_Compra - Custo_Teleporte
+          const receita = precoVenda * taxaVendaNota;
+          const custos = precoCompra + custoTeleporte;
+          const lucroLiquido = receita - custos;
 
           if (lucroLiquido > 0) {
             oportunidadesBrutas.push({
               id: itemId,
-              origem: ori.cidade,
-              destino: dest.cidade,
-              compra: ori.preco,
-              venda: dest.preco,
+              nomeBase,
+              tier,
+              encanto,
+              estado,
+              origem: cidadeOri,
+              destino: cidadeDest,
+              compra: precoCompra,
+              venda: precoVenda,
+              custoTeleporte,
               lucro: lucroLiquido,
-              atualizacaoDest: dest.dataStr,
+              atualizacaoDest: infoDest.dataStr,
             });
           }
         }
@@ -161,7 +273,7 @@ export async function buscarOportunidades({ categoria, maxIdadeHoras = 6 }) {
   }
 
   oportunidadesBrutas.sort((a, b) => b.lucro - a.lucro);
-  const top = oportunidadesBrutas.slice(0, 30);
+  const top = oportunidadesBrutas.slice(0, 50);
 
   const resultadosFinais = [];
   for (const op of top) {
@@ -171,9 +283,9 @@ export async function buscarOportunidades({ categoria, maxIdadeHoras = 6 }) {
         ...op,
         media7d: mediaVendas,
       });
-      if (resultadosFinais.length >= 15) break;
+      if (resultadosFinais.length >= 20) break;
     }
   }
 
-  return resultadosFinais.slice(0, 15);
+  return resultadosFinais.slice(0, 20);
 }

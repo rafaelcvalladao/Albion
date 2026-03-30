@@ -543,18 +543,41 @@ table.result-table {
   letter-spacing: 0.04em;
 }
 
-.market-toolbar select {
-  min-width: 11rem;
+.market-toolbar select,
+.market-toolbar input {
   padding: 0.55rem 0.65rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
 }
 
-.market-toolbar select:focus {
+.market-toolbar select {
+  min-width: 11rem;
+}
+
+.market-toolbar select:focus,
+.market-toolbar input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--ring);
+}
+
+.market-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.market-checkbox input {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  padding: 0;
+  min-width: auto;
 }
 
 .market-empty {
