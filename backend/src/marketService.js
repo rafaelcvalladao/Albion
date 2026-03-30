@@ -274,23 +274,45 @@ export async function buscarOportunidades({
 
       if (idadeHoras <= maxIdade && p.sell_price_min > 0) {
         const it = p.item_id;
-        if (!mapaPrecos.has(it)) mapaPrecos.set(it, {});
+        const cidade = p.city;
+        const chave = `${it}|${cidade}`;
         
-        // ✅ CORREÇÃO: Armazenar separadamente para compra e venda
-        // Para COMPRA: usar buy_price_max se ativado, senão sell_price_min
-        // Para VENDA: SEMPRE usar sell_price_min (menor preço disponível)
-        const precoPorCompra = usarBuyOrder && p.buy_price_max > 0 ? p.buy_price_max : p.sell_price_min;
-        const precoPorVenda = p.sell_price_min;
-        
-        mapaPrecos.get(it)[p.city] = {
-          compra: precoPorCompra,
-          venda: precoPorVenda,
-          dataStr: String(dataStr).replace("T", " ").slice(0, 16),
-        };
+        if (!mapaPrecos.has(chave)) {
+          mapaPrecos.set(chave, {
+            item: it,
+            city: cidade,
+            sellMin: p.sell_price_min,
+            buyMax: p.buy_price_max || 0,
+            dataStr: String(dataStr).replace("T", " ").slice(0, 16),
+          });
+        } else {
+          // Se já existe um registro, manter o com MENOR sell_price_min
+          const existente = mapaPrecos.get(chave);
+          if (p.sell_price_min < existente.sellMin) {
+            existente.sellMin = p.sell_price_min;
+          }
+          // Para buy_price_max, manter o com MAIOR valor
+          if (p.buy_price_max > existente.buyMax) {
+            existente.buyMax = p.buy_price_max;
+          }
+        }
       }
     }
+    
+    // Converter de volta para formato por item/cidade
+    const mapaOrganiado = new Map();
+    for (const [chave, dados] of mapaPrecos) {
+      const it = dados.item;
+      if (!mapaOrganiado.has(it)) mapaOrganiado.set(it, {});
+      
+      mapaOrganiado.get(it)[dados.city] = {
+        compra: usarBuyOrder && dados.buyMax > 0 ? dados.buyMax : dados.sellMin,
+        venda: dados.sellMin,
+        dataStr: dados.dataStr,
+      };
+    }
 
-    for (const [itemId, cidades] of mapaPrecos) {
+    for (const [itemId, cidades] of mapaOrganiado) {
       const peso = obterPesoItem(itemId);
       const tcm = obterTCMItem(itemId);
       const { tier, encanto } = extrairInfoItem(itemId);
