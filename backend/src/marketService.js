@@ -276,12 +276,15 @@ export async function buscarOportunidades({
         const it = p.item_id;
         if (!mapaPrecos.has(it)) mapaPrecos.set(it, {});
         
-        const precoCompra = usarBuyOrder && p.buy_price_max > 0 ? p.buy_price_max : p.sell_price_min;
-        const precoVenda = p.sell_price_min; // Sempre o menor da sell order
+        // ✅ CORREÇÃO: Armazenar separadamente para compra e venda
+        // Para COMPRA: usar buy_price_max se ativado, senão sell_price_min
+        // Para VENDA: SEMPRE usar sell_price_min (menor preço disponível)
+        const precoPorCompra = usarBuyOrder && p.buy_price_max > 0 ? p.buy_price_max : p.sell_price_min;
+        const precoPorVenda = p.sell_price_min;
         
         mapaPrecos.get(it)[p.city] = {
-          precoCompra,
-          precoVenda,
+          compra: precoPorCompra,
+          venda: precoPorVenda,
           dataStr: String(dataStr).replace("T", " ").slice(0, 16),
         };
       }
@@ -303,8 +306,9 @@ export async function buscarOportunidades({
           const [cidadeOri, infoOri] = cidadesArray[i];
           const [cidadeDest, infoDest] = cidadesArray[j];
           
-          const precoCompra = infoOri.precoCompra;
-          const precoVenda = infoDest.precoVenda;
+          // ✅ CORREÇÃO: Usar preço de COMPRA da origem e preço de VENDA do destino
+          const precoCompra = infoOri.compra;
+          const precoVenda = infoDest.venda;
           
           // Custo com fórmula precisa: Custo = (Peso × PrataBase × TCM) × (1 - DescontoGlobal)
           const custoTeleporte = calcularCustoTeleporteComTCM(peso, tcm, cidadeOri, cidadeDest);
