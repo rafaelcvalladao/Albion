@@ -54,25 +54,28 @@ app.get("/api/market/categories", (_req, res) => {
 /** Arbitragem entre cidades seguras */
 app.post("/api/market/opportunities", async (req, res) => {
   try {
-    const { 
-      categoria, 
-      maxIdadeHoras,
+    const {
+      categoria = 'Consumível',
+      maxIdadeHoras = 6,
+      quality = 1,
       usarBuyOrder = false,
       taxaVenda = 6.5
-    } = req.body || {};
-    if (!categoria || !CATEGORIAS[categoria]) {
-      return res.status(400).json({ error: "Categoria inválida ou em falta." });
-    }
-    const oportunidades = await buscarOportunidades({
+    } = req.body;
+
+    const resultados = await buscarOportunidades({
       categoria,
-      maxIdadeHoras: maxIdadeHoras ?? 6,
-      usarBuyOrder: usarBuyOrder ?? false,
-      taxaVenda: taxaVenda ?? 6.5
+      maxIdadeHoras,
+      quality,
+      usarBuyOrder,
+      taxaVenda
     });
-    res.json({ oportunidades });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
+
+    res.json(resultados);
+  } catch (erro) {
+    console.error('Erro ao buscar oportunidades:', erro);
+    res.status(500).json({ 
+      erro: erro.message || 'Erro ao buscar oportunidades' 
+    });
   }
 });
 
