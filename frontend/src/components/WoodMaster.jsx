@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { calculateWood, scheduleWood, strategyWood } from "../api.js";
-import { profitClass } from "../utils/profit.js";
+import { profitClass, famaClass } from "../utils/profit.js";
 
 const SPEC_KEYS = [
   { key: "t4", label: "Bétula (T4)" },
@@ -335,12 +335,12 @@ export default function WoodMaster() {
           )}
         </section>
 
-        <aside className="panel wood-strategy-panel" aria-label="Estratégia completa">
+        <aside className="panel wood-strategy-panel" aria-label="Indicações">
           <div className="strategy-panel__head">
-            <h2>Estratégia completa</h2>
+            <h2>Indicações</h2>
           </div>
           <p className="strategy-hint">
-            Top 7 com volume (todas as tiers). Atualiza ao mudar buy order / bónus ou com Refresh.
+            Top 15 com volume (todas as tiers). Atualiza ao mudar buy order / bónus ou com Refresh.
           </p>
           {strategyLoading && <p className="mono strategy-hint">A carregar…</p>}
           {strategy?.error && <p className="error">{strategy.error}</p>}
@@ -348,8 +348,8 @@ export default function WoodMaster() {
             <>
               <StrategyTable title="Local com Foco" kind="foco" rows={strategy.fsLocalFoco} compact />
               <StrategyTable title="Local: Fama" kind="fama" rows={strategy.fsLocalFama} compact />
-              <StrategyTable title="Global com Foco" kind="foco" rows={strategy.globalFoco} compact />
-              <StrategyTable title="Global: Fama" kind="fama" rows={strategy.globalFama} compact />
+              {showLy && <StrategyTable title="Global com Foco" kind="foco" rows={strategy.globalFoco} compact />}
+              {showLy && <StrategyTable title="Global: Fama" kind="fama" rows={strategy.globalFama} compact />}
             </>
           )}
         </aside>
@@ -402,13 +402,54 @@ export default function WoodMaster() {
 }
 
 function StrategyTable({ title, kind, rows, compact }) {
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortAsc, setSortAsc] = useState(true);
+
   if (!rows?.length) return null;
+
   const headClass =
     kind === "foco"
       ? "strategy-section-title strategy-section-title--foco"
       : kind === "fama"
         ? "strategy-section-title strategy-section-title--fama"
         : "strategy-section-title";
+
+  const colHeaderLabel = kind === "foco" ? "Lucro/1 foco" : "Fama por Prata";
+
+  const handleHeaderClick = (column) => {
+    if (sortColumn === column) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortColumn(column);
+      setSortAsc(false);
+    }
+  };
+
+  const sortedRows = [...rows].sort((a, b) => {
+    let valA, valB;
+
+    if (sortColumn === "lucro" || sortColumn === "fama") {
+      valA = kind === "foco" ? a.lucro : a.famaPerPrata;
+      valB = kind === "foco" ? b.lucro : b.famaPerPrata;
+    } else if (sortColumn === "volume") {
+      valA = a.volume ?? 0;
+      valB = b.volume ?? 0;
+    } else {
+      valA = a.item;
+      valB = b.item;
+    }
+
+    if (typeof valA === "string") {
+      return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    }
+    return sortAsc ? valA - valB : valB - valA;
+  });
+
+  const getSortIndicator = (column) => {
+    if (sortColumn !== column) return "";
+    return sortAsc ? " ↑" : " ↓";
+  };
+
   return (
     <div className={`strategy-block${compact ? " strategy-block--compact" : ""}`}>
       <div className={headClass} role="heading" aria-level={3}>
@@ -418,17 +459,35 @@ function StrategyTable({ title, kind, rows, compact }) {
         <table className="result-table">
           <thead>
             <tr>
-              <th>Item</th>
-              <th>Lucro</th>
-              <th>Vol. 24h</th>
+              <th
+                style={{ cursor: "pointer" }}
+                onClick={() => handleHeaderClick("item")}
+              >
+                Item{getSortIndicator("item")}
+              </th>
+              <th
+                style={{ cursor: "pointer" }}
+                onClick={() => handleHeaderClick("lucro")}
+              >
+                {colHeaderLabel}
+                {getSortIndicator("lucro")}
+              </th>
+              <th
+                style={{ cursor: "pointer" }}
+                onClick={() => handleHeaderClick("volume")}
+              >
+                Vol. 24h{getSortIndicator("volume")}
+              </th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {sortedRows.map((r) => (
               <tr key={r.item}>
                 <td>{r.item}</td>
-                <td className={profitClass(r.lucro)}>
-                  {Math.round(r.lucro).toLocaleString("pt-PT")}
+                <td className={kind === "fama" ? famaClass(r.lucro) : profitClass(r.lucro)}>
+                  {kind === "foco"
+                    ? Math.round(r.lucro).toLocaleString("pt-PT")
+                    : r.famaPerPrata?.toFixed(4).toLocaleString("pt-PT") ?? "—"}
                 </td>
                 <td className="tabular-nums strategy-table-vol">{r.volume?.toLocaleString("pt-PT") ?? "—"}</td>
               </tr>

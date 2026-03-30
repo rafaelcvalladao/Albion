@@ -247,6 +247,7 @@ export async function estrategiaCompleta(body) {
       const rrrFama = calcularRrrManual(false, bonusFortSterling);
       const fBase = FOCO_BASE[t] ?? 250;
       const fReal = fBase * [1, 1.5, 2.5, 5, 10][idxN] * 0.5 ** (specTotal / 10000);
+      const fama = famaRefinoPorCraft(t, idxN);
 
       const bestP = Math.max(fsP, lyP);
       const vGb = fsP >= lyP ? vFs : vLy;
@@ -259,9 +260,12 @@ export async function estrategiaCompleta(body) {
           lucro: (bestP - ((bT * qt + bA) * (1 - rrrFoco) + txF)) / fReal,
           volume: vGb,
         });
+        const lucroBrutoFama = bestP - ((bT * qt + bA) * (1 - rrrFama) + txF);
         gbFama.push({
           item: `${t}${enc}`,
-          lucro: bestP - ((bT * qt + bA) * (1 - rrrFama) + txF),
+          fama,
+          famaPerPrata: Math.abs(lucroBrutoFama) > 0 ? fama / Math.abs(lucroBrutoFama) : 0,
+          lucro: lucroBrutoFama,
           volume: vGb,
         });
       }
@@ -272,9 +276,12 @@ export async function estrategiaCompleta(body) {
           lucro: (fsP - ((fsT * qt + fsA) * (1 - rrrFoco) + txF)) / fReal,
           volume: vFs,
         });
+        const lucroBrutoFamaLocal = fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF);
         fsFama.push({
           item: `${t}${enc}`,
-          lucro: fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF),
+          fama,
+          famaPerPrata: Math.abs(lucroBrutoFamaLocal) > 0 ? fama / Math.abs(lucroBrutoFamaLocal) : 0,
+          lucro: lucroBrutoFamaLocal,
           volume: vFs,
         });
       }
@@ -282,13 +289,15 @@ export async function estrategiaCompleta(body) {
   }
 
   const sortDesc = (a, b) => b.lucro - a.lucro;
-  const top = (arr, n = 7) => [...arr].sort(sortDesc).slice(0, n);
+  const sortDescFama = (a, b) => b.fama - a.fama;
+  const top = (arr, n = 15) => [...arr].sort(sortDesc).slice(0, n);
+  const topFama = (arr, n = 15) => [...arr].sort(sortDescFama).slice(0, n);
 
   return {
     globalFoco: top(gbFoco),
-    globalFama: top(gbFama),
+    globalFama: topFama(gbFama),
     fsLocalFoco: top(fsFoco),
-    fsLocalFama: top(fsFama),
+    fsLocalFama: topFama(fsFama),
   };
 }
 
