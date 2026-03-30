@@ -1,4 +1,15 @@
-const base = import.meta.env.VITE_API_BASE || "";
+/**
+ * URL base do backend (ex.: https://api.exemplo.com).
+ * Definir em build/runtime via `VITE_API_BASE` (Vite injeta em `import.meta.env`).
+ * Sem barra final. Vazio em dev: pedidos a `/api/...` usam o proxy do Vite.
+ */
+function getApiBase() {
+  const raw = import.meta.env.VITE_API_BASE;
+  if (raw == null || raw === "") return "";
+  return String(raw).trim().replace(/\/+$/, "");
+}
+
+const base = getApiBase();
 
 async function request(path, options = {}) {
   const res = await fetch(`${base}${path}`, {
