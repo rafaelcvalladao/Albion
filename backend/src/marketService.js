@@ -321,6 +321,9 @@ export async function buscarOportunidades({
       
       const cidadesArray = Object.entries(cidades);
       
+      // Validar que temos pelo menos 2 cidades com preços
+      if (cidadesArray.length < 2) continue;
+      
       for (let i = 0; i < cidadesArray.length; i++) {
         for (let j = 0; j < cidadesArray.length; j++) {
           if (i === j) continue;
@@ -328,9 +331,15 @@ export async function buscarOportunidades({
           const [cidadeOri, infoOri] = cidadesArray[i];
           const [cidadeDest, infoDest] = cidadesArray[j];
           
-          // ✅ CORREÇÃO: Usar preço de COMPRA da origem e preço de VENDA do destino
+          // ✅ Validação: ambas as cidades precisam ter preços válidos
+          if (!infoOri || !infoDest) continue;
+          if (!infoOri.compra || !infoOri.venda || !infoDest.compra || !infoDest.venda) continue;
+          
           const precoCompra = infoOri.compra;
           const precoVenda = infoDest.venda;
+          
+          // Validação adicional
+          if (!precoCompra || !precoVenda || precoCompra <= 0 || precoVenda <= 0) continue;
           
           // Custo com fórmula precisa: Custo = (Peso × PrataBase × TCM) × (1 - DescontoGlobal)
           const custoTeleporte = calcularCustoTeleporteComTCM(peso, tcm, cidadeOri, cidadeDest);
@@ -367,14 +376,12 @@ export async function buscarOportunidades({
   const resultadosFinais = [];
   for (const op of top) {
     const mediaVendas = await obterMediaVendas7d(op.id, op.destino);
-    if (mediaVendas > 0) {
-      resultadosFinais.push({
-        ...op,
-        media7d: mediaVendas,
-      });
-      if (resultadosFinais.length >= 20) break;
-    }
+    resultadosFinais.push({
+      ...op,
+      media7d: mediaVendas || 0,
+    });
+    if (resultadosFinais.length >= 20) break;
   }
 
-  return resultadosFinais.slice(0, 20);
+  return resultadosFinais;
 }
