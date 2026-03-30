@@ -6,10 +6,8 @@ export default function MarketAnalyzer() {
   const [categories, setCategories] = useState([]);
   const [categoria, setCategoria] = useState("Armas");
   const [maxHoras, setMaxHoras] = useState("6");
-  const [quality, setQuality] = useState("1");
   const [usarBuyOrder, setUsarBuyOrder] = useState(false);
   const [taxaVenda, setTaxaVenda] = useState("6.5");
-  const [teleportRate, setTeleportRate] = useState("0.0075");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
   const [rows, setRows] = useState([]);
@@ -51,10 +49,8 @@ export default function MarketAnalyzer() {
       const data = await marketOpportunities({
         categoria,
         maxIdadeHoras: parseInt(maxHoras, 10) || 6,
-        quality: parseInt(quality, 10) || 1,
         usarBuyOrder,
         taxaVenda: parseFloat(taxaVenda) || 6.5,
-        teleportRate: parseFloat(teleportRate) || 0.0075,
       });
       setRows(data.oportunidades || []);
     } catch (e) {
@@ -72,7 +68,7 @@ export default function MarketAnalyzer() {
         Compara preços entre cidades seguras; lucro líquido estimado com todas as taxas incluídas.
       </p>
       
-      {/* Linha 1: Categoria e Estado */}
+      {/* Linha 1: Categoria e Dados */}
       <div className="market-toolbar">
         <label>
           <span>Categoria</span>
@@ -82,15 +78,6 @@ export default function MarketAnalyzer() {
                 {c}
               </option>
             ))}
-          </select>
-        </label>
-        <label>
-          <span>Estado (Quality)</span>
-          <select value={quality} onChange={(e) => setQuality(e.target.value)}>
-            <option value="1">Normal</option>
-            <option value="2">Bom</option>
-            <option value="3">Excepcional</option>
-            <option value="4">Excelente</option>
           </select>
         </label>
         <label>
@@ -122,15 +109,6 @@ export default function MarketAnalyzer() {
             value={taxaVenda}
             onChange={(e) => setTaxaVenda(e.target.value)}
             style={{ width: "60px" }}
-          />
-        </label>
-        <label>
-          <span>Teleporte (prata/kg)</span>
-          <input
-            type="text"
-            value={teleportRate}
-            onChange={(e) => setTeleportRate(e.target.value)}
-            style={{ width: "80px" }}
           />
         </label>
         <button type="button" className="btn btn-primary" onClick={buscar} disabled={loading}>

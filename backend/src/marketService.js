@@ -1,6 +1,17 @@
 import { fetchHistory, fetchPrices } from "./albionClient.js";
 
-// Mapa de pesos dos itens (em kg) para calcular custo de teleporte
+// Mapa de distâncias entre cidades (em relação à "vizinhança")
+// Vizinhos: ~100 prata/kg, Distantes: ~200 prata/kg
+const CITY_DISTANCES = {
+  "Bridgewatch": { "FortSterling": 200, "Lymhurst": 200, "Martlock": 200, "Thetford": 200, "Brecilien": 100 },
+  "FortSterling": { "Bridgewatch": 200, "Lymhurst": 100, "Martlock": 200, "Thetford": 200, "Brecilien": 200 },
+  "Lymhurst": { "Bridgewatch": 200, "FortSterling": 100, "Martlock": 200, "Thetford": 100, "Brecilien": 200 },
+  "Martlock": { "Bridgewatch": 200, "FortSterling": 200, "Lymhurst": 200, "Thetford": 200, "Brecilien": 200 },
+  "Thetford": { "Bridgewatch": 200, "FortSterling": 200, "Lymhurst": 100, "Martlock": 200, "Brecilien": 200 },
+  "Brecilien": { "Bridgewatch": 100, "FortSterling": 200, "Lymhurst": 200, "Martlock": 200, "Thetford": 200 }
+};
+
+// Mapa de pesos dos itens (em kg)
 const ITEM_WEIGHTS = {
   "_MAIN_": 1.5, "_2H_": 2.0, "_RANGED_": 1.5,
   "_BODY_": 2.5, "_HEAD_": 1.0, "_SHOES_": 0.5, "_CAPE": 0.3, "_GLOVES_": 0.5,
@@ -11,7 +22,33 @@ const ITEM_WEIGHTS = {
   "_ORE_": 0.05, "_WOOD_": 0.05, "_LEATHER_": 0.05, "_CLOTH_": 0.02, "_PLANKS": 0.1,
 };
 
-const TELEPORT_RATE_PER_KG = 0.0075;
+// Multiplicador crítico (TCM) por tipo de item
+// Equipamentos: 1x, Recursos: 50x-100x (média 75x)
+const ITEM_TCM = {
+  // Equipamentos (TCM = 1)
+  "_MAIN_": 1, "_2H_": 1, "_RANGED_": 1,
+  "_BODY_": 1, "_HEAD_": 1, "_SHOES_": 1, "_CAPE": 1, "_GLOVES_": 1,
+  "_OFF_": 1, "_SHIELD_": 1,
+  
+  // Montarias (TCM = 1)
+  "_MOUNT_": 1,
+  
+  // Consumíveis (TCM = 1, geralmente são leves)
+  "_POTION_": 1, "_MEAL_": 1, "_DRINK_": 1, "_SPICE_": 1, "_HERB_": 1,
+  
+  // Artefatos (TCM = 1)
+  "_RUNE": 1, "_SOUL": 1, "_RELIC": 1, "_AMULET_": 1, "_RING_": 1,
+  
+  // Bolsas (TCM = 1)
+  "_BAG": 1,
+  
+  // Recursos Brutos e Refinados (TCM = 75, média de 50x-100x)
+  "_ORE_": 75, "_WOOD_": 75, "_LEATHER_": 75, "_CLOTH_": 75, "_PLANKS": 75,
+  "_METAL": 75, "_HIDE": 75, "_FABRIC": 75, "_NAILS": 75, "_SCREWS": 75, "_BOLTS": 75, "_HINGES": 75,
+};
+
+// Desconto global (flutuante, aqui usamos 0.15 = 15%) - em produção seria do jogo
+const GLOBAL_DISCOUNT = 0.15;
 
 const QUALITY_NAMES = { 1: "Normal", 2: "Bom", 3: "Excepcional", 4: "Excelente" };
 
@@ -23,27 +60,27 @@ export const CATEGORIAS = {
     "_2H_BOW", "_2H_CROSSBOW", "_2H_CARVINGSWORD", "_2H_GREATAXE", "_2H_MAUL", "_2H_HALBERD", "_2H_PIKE", "_2H_DUALAXE_KEEPER", "_2H_DUALAXE", "_2H_MACE",
     "_RANGED_BOW", "_RANGED_CROSSBOW",
   ],
-  Armaduras: [
+  "Armadura de Corpo": [
     "_BODY_CLERICROBE", "_BODY_ASSASSINJACKET", "_BODY_SOLDIERARMOR", "_BODY_MAGE", "_BODY_CLOTHROBES", "_BODY_LEATHERARMOR", "_BODY_PLATEARMOR",
     "_BODY_CLOTH", "_BODY_LEATHER", "_BODY_PLATE",
   ],
-  Elmos: [
+  "Armadura de Cabeça": [
     "_HEAD_HUNTER", "_HEAD_CLERICHOOD", "_HEAD_SOLDIERHELMET", "_HEAD_MAGE",
     "_HEAD_CLOTH", "_HEAD_LEATHER", "_HEAD_PLATE",
   ],
-  Botas: [
+  "Armadura de Pés": [
     "_SHOES_SOLDIERBOOTS", "_SHOES_ASSASSINSHOES", "_SHOES_CLERICSHOES",
     "_SHOES_CLOTH", "_SHOES_LEATHER", "_SHOES_PLATE",
   ],
-  Capas: [
+  "Armadura de Mãos": [
+    "_GLOVES_CLOTH", "_GLOVES_LEATHER", "_GLOVES_PLATE",
+  ],
+  "Capas": [
     "_CAPE", "_CAPEITEM_FW_LYMHURST", "_CAPEITEM_FW_FORTSTERLING", "_CAPEITEM_FW_MARTLOCK", 
     "_CAPEITEM_FW_THETFORD", "_CAPEITEM_FW_BRIDGEWATCH",
   ],
-  Escudos: [
+  "Mão Secundária": [
     "_SHIELD_TOWER", "_SHIELD_KITE", "_SHIELD_ROUND", "_OFF_DAGGER", "_OFF_SHIELD",
-  ],
-  Luvas: [
-    "_GLOVES_CLOTH", "_GLOVES_LEATHER", "_GLOVES_PLATE",
   ],
   Montarias: [
     "_MOUNT_HORSE", "_MOUNT_OX", "_MOUNT_SWIFTCLAW", "_MOUNT_STAG", "_MOUNT_RAM", "_MOUNT_MOOSE",
@@ -54,23 +91,22 @@ export const CATEGORIAS = {
     "_DRINK_WATER", "_DRINK_BEER",
     "_SPICE_SUGAR", "_SPICE_SALT", "_SPICE_HERB",
   ],
-  Artefatos: [
-    "_RUNE_AIR", "_RUNE_FIRE", "_RUNE_FROST", "_RUNE_HOLY", "_RUNE_NATURE", "_RUNE_ARCANE",
-    "_SOUL_", "_RELIC_",
+  "Equipamento de Coleira": [
     "_AMULET_", "_RING_",
   ],
-  Bolsas: [
-    "_BAG_SMALL", "_BAG_MEDIUM", "_BAG_LARGE", "_BAG",
-  ],
-  Materiais: [
+  Fabricação: [
     "_ORE_COPPER", "_ORE_TIN", "_ORE_IRON", "_ORE_STEEL", "_ORE_TITANIUM",
     "_WOOD_BIRCH", "_WOOD_OAK", "_WOOD_ASHWOOD", "_WOOD_IRONWOOD", "_WOOD_EBONWOOD",
     "_LEATHER_THIN", "_LEATHER_THICK",
     "_CLOTH_LINEN", "_CLOTH_CLOTH", "_CLOTH_SILK",
-    "_PLANKS", "_METAL", "_HIDE", "_FABRIC",
+    "_PLANKS", "_METAL", "_HIDE", "_FABRIC", "_NAILS", "_SCREWS", "_BOLTS", "_HINGES",
   ],
-  Ferragens: [
-    "_NAILS", "_SCREWS", "_BOLTS", "_HINGES",
+  Artefatos: [
+    "_RUNE_AIR", "_RUNE_FIRE", "_RUNE_FROST", "_RUNE_HOLY", "_RUNE_NATURE", "_RUNE_ARCANE",
+    "_SOUL_", "_RELIC_",
+  ],
+  Bolsas: [
+    "_BAG_SMALL", "_BAG_MEDIUM", "_BAG_LARGE", "_BAG",
   ],
   Outros: [
     "_BOOK_", "_SCROLL_", "_CRYSTAL_",
@@ -105,6 +141,31 @@ function obterPesoItem(itemId) {
     }
   }
   return 1.0;
+}
+
+function obterTCMItem(itemId) {
+  // Obtém o multiplicador crítico (TCM) do item
+  for (const [prefixo, tcm] of Object.entries(ITEM_TCM)) {
+    if (itemId.toUpperCase().includes(prefixo)) {
+      return tcm;
+    }
+  }
+  return 1; // Padrão para equipamento
+}
+
+function calcularCustoTeleporte(peso, cidadeOrigem, cidadeDestino) {
+  // Fórmula: Custo = (Peso × PrataBase × TCM) × (1 - DescontoGlobal)
+  const prataBase = CITY_DISTANCES[cidadeOrigem]?.[cidadeDestino] || 200;
+  const custo = peso * prataBase;
+  return Math.round(custo * (1 - GLOBAL_DISCOUNT));
+}
+
+function calcularCustoTeleporteComTCM(peso, tcm, cidadeOrigem, cidadeDestino) {
+  // Fórmula: Custo = (Peso × PrataBase × TCM) × (1 - DescontoGlobal)
+  const prataBase = CITY_DISTANCES[cidadeOrigem]?.[cidadeDestino] || 200;
+  const custoBruto = peso * prataBase * tcm;
+  const custoCalculado = custoBruto * (1 - GLOBAL_DISCOUNT);
+  return Math.round(custoCalculado);
 }
 
 function gerarListaItens(categoria) {
@@ -187,8 +248,7 @@ export async function buscarOportunidades({
   maxIdadeHoras = 6,
   quality = 1,
   usarBuyOrder = false,
-  taxaVenda = 6.5,
-  teleportRate = TELEPORT_RATE_PER_KG
+  taxaVenda = 6.5
 }) {
   const itens = gerarListaItens(categoria);
   const cidadesStr = CIDADES_SEGURAS.join(",");
@@ -229,7 +289,7 @@ export async function buscarOportunidades({
 
     for (const [itemId, cidades] of mapaPrecos) {
       const peso = obterPesoItem(itemId);
-      const custoTeleporte = peso * teleportRate;
+      const tcm = obterTCMItem(itemId);
       const { tier, encanto } = extrairInfoItem(itemId);
       const nomeBase = itemId.slice(2).replace(/@\d+/, "").replace(/_/g, " ").trim();
       const estado = QUALITY_NAMES[qualityNum] || "?";
@@ -245,6 +305,9 @@ export async function buscarOportunidades({
           
           const precoCompra = infoOri.precoCompra;
           const precoVenda = infoDest.precoVenda;
+          
+          // Custo com fórmula precisa: Custo = (Peso × PrataBase × TCM) × (1 - DescontoGlobal)
+          const custoTeleporte = calcularCustoTeleporteComTCM(peso, tcm, cidadeOri, cidadeDest);
           
           // Lucro = (Preço_Venda × Taxa_Venda%) - Preço_Compra - Custo_Teleporte
           const receita = precoVenda * taxaVendaNota;
