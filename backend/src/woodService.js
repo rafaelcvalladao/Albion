@@ -61,6 +61,21 @@ function volumeMapFromHistory(hist) {
   return volMap;
 }
 
+function convertToUTC3(isoDate) {
+  if (!isoDate) return null;
+  const dateStr = String(isoDate);
+  if (dateStr.includes("0001")) return null;
+  try {
+    const d = new Date(isoDate);
+    if (Number.isNaN(d.getTime())) return null;
+    // Converter de UTC para UTC-3: subtrair 3 horas
+    d.setUTCHours(d.getUTCHours() - 3);
+    return d.toISOString();
+  } catch {
+    return null;
+  }
+}
+
 function getVol(volMap, city, itemId) {
   return volMap.get(`${city}|${itemId}`) ?? 0;
 }
@@ -95,8 +110,8 @@ export async function processarWood(body) {
 
   const dc = new Map();
   const dv = new Map();
-  const dt = new Map(); // Timestamps para compra (buy_price_max_date ou sell_price_min_date)
-  const dvt = new Map(); // Timestamps para venda (sell_price_min_date)
+  const dt = new Map(); // Timestamps para compra (buy_price_max_date ou sell_price_min_date) - convertidos para UTC-3
+  const dvt = new Map(); // Timestamps para venda (sell_price_min_date) - convertidos para UTC-3
   
   for (const p of res) {
     const key = `${p.city}|${p.item_id}`;
@@ -105,29 +120,19 @@ export async function processarWood(body) {
     // Para compra: usa buy_price_max se disponível E buyOrder=true, senão usa sell_price_min
     if (valSell > 0) {
       dc.set(key, buyOrder && valBuy > 0 ? valBuy : valSell);
-      // Armazena timestamp - usa buy_price_max_date se em buyOrder, senão sell_price_min_date
-      // Valida timestamp: rejeita null, undefined, ou datas com "0001" (inválidas)
+      // Armazena timestamp convertido para UTC-3
       let dateToStore = null;
       if (buyOrder && valBuy > 0) {
-        if (p.buy_price_max_date && !String(p.buy_price_max_date).includes("0001")) {
-          dateToStore = p.buy_price_max_date;
-        }
+        dateToStore = convertToUTC3(p.buy_price_max_date);
       } else {
-        if (p.sell_price_min_date && !String(p.sell_price_min_date).includes("0001")) {
-          dateToStore = p.sell_price_min_date;
-        }
+        dateToStore = convertToUTC3(p.sell_price_min_date);
       }
       dt.set(key, dateToStore);
     }
     // Para venda: sempre usa sell_price_min
     if (valSell > 0) {
       dv.set(key, valSell);
-      // Valida timestamp para venda também
-      let sellDateToStore = null;
-      if (p.sell_price_min_date && !String(p.sell_price_min_date).includes("0001")) {
-        sellDateToStore = p.sell_price_min_date;
-      }
-      dvt.set(key, sellDateToStore);
+      dvt.set(key, convertToUTC3(p.sell_price_min_date));
     }
   }
 
@@ -357,15 +362,16 @@ export async function horariosUtc(tier) {
   const res = await fetchPrices(ids, LOCATIONS_WOOD);
   const checkDict = new Map();
   for (const p of res) {
-    const d = p.sell_price_min_date;
-    if (d && !String(d).includes("0001")) {
-      checkDict.set(`${p.city}|${p.item_id}`, d);
+    const dateUTC3 = convertToUTC3(p.sell_price_min_date);
+    if (dateUTC3) {
+      checkDict.set(`${p.city}|${p.item_id}`, dateUTC3);
     }
   }
 
   function fmt(city, itemId) {
     const f = checkDict.get(`${city}|${itemId}`);
     if (!f) return "---";
+    // f está em ISO format UTC-3: "2024-03-31T11:30:00.000Z"
     return `${f.slice(8, 10)}/${f.slice(5, 7)} ${f.slice(11, 16)}`;
   }
 

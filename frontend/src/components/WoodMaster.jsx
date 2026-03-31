@@ -233,19 +233,25 @@ export default function WoodMaster() {
 
   const formatTimeAgo = (isoDate) => {
     if (!isoDate) return "—";
-    const now = new Date();
-    const then = new Date(isoDate);
-    if (Number.isNaN(then.getTime())) return "—";
-    // Se a diferença for negativa (data futura), retorna "—"
-    const diffSec = Math.floor((now - then) / 1000);
-    if (diffSec < 0) return "—";
-    if (diffSec < 60) return `${diffSec}s`;
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin}m`;
-    const diffHour = Math.floor(diffMin / 60);
-    if (diffHour < 24) return `${diffHour}h`;
-    const diffDay = Math.floor(diffHour / 24);
-    return `${diffDay}d`;
+    try {
+      const now = new Date();
+      const then = new Date(isoDate);
+      if (Number.isNaN(then.getTime())) return "—";
+      // Calcular diferença em segundos
+      const diffSec = Math.floor((now - then) / 1000);
+      // Se diferença for negativa (data futura), retornar "—"
+      if (diffSec < 0) return "—";
+      // Retornar em formato amigável
+      if (diffSec < 60) return `${diffSec}s`;
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}m`;
+      const diffHour = Math.floor(diffMin / 60);
+      if (diffHour < 24) return `${diffHour}h`;
+      const diffDay = Math.floor(diffHour / 24);
+      return `${diffDay}d`;
+    } catch {
+      return "—";
+    }
   };
 
   const openSchedule = async () => {
