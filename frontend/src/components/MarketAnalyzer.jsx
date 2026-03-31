@@ -2,6 +2,35 @@ import { useEffect, useState } from "react";
 import { marketCategories, marketOpportunities } from "../api.js";
 import { profitClass } from "../utils/profit.js";
 
+function tierStyle(tier) {
+  const colors = {
+    T4: "#9f6d34",
+    T5: "#3a84c8",
+    T6: "#9f3fba",
+    T7: "#d46f2e",
+    T8: "#c41d7f",
+  };
+  return colors[tier] || "#999";
+}
+
+function timeAgo(label) {
+  if (!label) return "-";
+  const parts = String(label).split(" ");
+  if (parts.length < 2) return label;
+  const [datePart, timePart] = parts;
+  const [y,m,d] = datePart.split("-").map(Number);
+  const [hh,mm] = timePart.split(":").map(Number);
+  const date = new Date(Date.UTC(y,m-1,d,hh,mm));
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs < 60 * 1000) return "agora";
+  const mins = Math.floor(diffMs / (60 * 1000));
+  if (mins < 60) return `${mins}m atrás`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h atrás`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d atrás`;
+}
+
 export default function MarketAnalyzer() {
   const [categories, setCategories] = useState([]);
   const [categoria, setCategoria] = useState("Todos");
@@ -102,7 +131,7 @@ export default function MarketAnalyzer() {
         Compara preços entre cidades seguras; lucro líquido estimado com todas as taxas incluídas.
       </p>
       
-      {/* Linha 1: Categoria e Dados */}
+      {/* Linha 1: Categoria e Filtro */}
       <div className="market-toolbar">
         <label>
           <span>Categoria</span>
@@ -122,16 +151,6 @@ export default function MarketAnalyzer() {
             onChange={(e) => setItemFiltro(e.target.value)}
             placeholder="ex: sword, wood"
           />
-        </label>
-        <label>
-          <span>Dados no máx. (h)</span>
-          <select value={maxHoras} onChange={(e) => setMaxHoras(e.target.value)}>
-            {["2", "6", "12", "24", "48"].map((h) => (
-              <option key={h} value={h}>
-                {h}
-              </option>
-            ))}
-          </select>
         </label>
       </div>
 
@@ -155,15 +174,6 @@ export default function MarketAnalyzer() {
             style={{ width: "80px" }}
           />
         </label>
-        <label>
-          <span>Taxa Venda (%)</span>
-          <input
-            type="text"
-            value={taxaVenda}
-            onChange={(e) => setTaxaVenda(e.target.value)}
-            style={{ width: "60px" }}
-          />
-        </label>
         <button type="button" className="btn btn-primary" onClick={buscar} disabled={loading || scanning}>
           {scanning ? "Escaneando…" : "Buscar oportunidades"}
         </button>
@@ -182,33 +192,57 @@ export default function MarketAnalyzer() {
         <table className="result-table">
           <thead>
             <tr>
+              <th>#</th>
               <th>Item</th>
-              <th>T</th>
-              <th>Compre</th>
+              <th>Compra</th>
               <th>Venda</th>
-              <th>P. Compra</th>
-              <th>P. Venda</th>
-              <th>%</th>
               <th>Lucro</th>
+              <th>%</th>
               <th>Última</th>
               <th>Stale</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((op) => {
+            {rows.map((op, idx) => {
               const margem = op.compra > 0 ? ((op.venda / op.compra - 1) * 100).toFixed(1) : "0.0";
-              const ultima = op.atualizacaoDest || op.atualizacaoOrig || "-";
+              const ultima = timeAgo(op.atualizacaoDest || op.atualizacaoOrig);
               return (
-                <tr key={`${op.id}-${op.origem}-${op.destino}`}>
-                  <td>{op.nomeBase}</td>
-                  <td style={{ textAlign: "center" }}>{op.tier}</td>
-                  <td>{op.origem}</td>
-                  <td>{op.destino}</td>
-                  <td className="tabular-nums">{op.compra?.toLocaleString("pt-PT")}</td>
-                  <td className="tabular-nums">{op.venda?.toLocaleString("pt-PT")}</td>
+                <tr key={`${op.id}-${op.origem}-${op.destino}`}> 
+                  <td style={{ textAlign: "right" }}>{idx + 1}</td>
+                  <td>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <img
+                        src={`https://render.albiononline.com/v1/item/${op.id}.png?quality=1`}
+                        alt={op.nomeBase}
+                        style={{ width: "32px", height: "32px", borderRadius: "4px", border: "1px solid #666" }}
+                        onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/32?text=?"; }}
+                      />
+                      <div>
+                        <strong>{op.nomeBase}</strong>
+                        <div style={{ marginTop: "0.1rem", fontSize: "0.80rem", color: "#aaa" }}>
+                          <span style={{ color: tierStyle(op.tier), fontWeight: 700 }}>[{op.tier}]</span>
+                          <span style={{ marginLeft: "0.4rem" }}>{op.estado}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{op.compra?.toLocaleString("pt-PT")}</div>
+                    <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
+                      {op.origem} · {timeAgo(op.atualizacaoOrig)}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{op.venda?.toLocaleString("pt-PT")}</div>
+                    <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
+                      {op.destino} · {timeAgo(op.atualizacaoDest)}
+                    </div>
+                  </td>
+                  <td className={profitClass(op.lucro)} style={{ fontWeight: 700 }}>
+                    {op.lucro?.toLocaleString("pt-PT", { maximumFractionDigits: 0 })}
+                  </td>
                   <td style={{ textAlign: "right" }}>{margem}%</td>
-                  <td className={profitClass(op.lucro)}>{op.lucro?.toLocaleString("pt-PT", { maximumFractionDigits: 0 })}</td>
-                  <td style={{ whiteSpace: "nowrap" }}>{ultima}</td>
+                  <td>{ultima}</td>
                   <td style={{ textAlign: "center" }}>{op.desatualizado ? "⚠️" : "✅"}</td>
                 </tr>
               );

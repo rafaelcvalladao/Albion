@@ -95,6 +95,7 @@ export const CATEGORIAS = {
 
 const ITEM_ID_SOURCE_URL = "https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json";
 let ALL_ITEM_IDS_CACHE = null;
+let ITEM_NAME_PT_BR_CACHE = null;
 
 const CIDADES_SEGURAS = [
   "Bridgewatch",
@@ -113,16 +114,36 @@ async function carregarItensDoJogo() {
     const res = await fetch(ITEM_ID_SOURCE_URL, { headers: { Accept: "application/json" } });
     if (!res.ok) throw new Error(`Falha ao buscar itens do jogo (${res.status})`);
     const data = await res.json();
+
     const ids = Array.isArray(data)
       ? [...new Set(data.map((item) => String(item.UniqueName || "")).filter((id) => /^(T[4-8]_)/.test(id)))]
       : [];
+
     ALL_ITEM_IDS_CACHE = ids;
+
+    if (Array.isArray(data)) {
+      ITEM_NAME_PT_BR_CACHE = data.reduce((acc, item) => {
+        const key = String(item.UniqueName || "");
+        const ptName = item.LocalizedNames?.["PT-BR"] || item.LocalizedNames?.["pt-BR"] || item.LocalizedNames?.["pt-br"];
+        if (key) acc[key] = ptName || key.replace(/_/g, " ");
+        return acc;
+      }, {});
+    }
+
     return ids;
   } catch (err) {
     console.warn("Não foi possível carregar itens completos do jogo:", err.message || err);
     ALL_ITEM_IDS_CACHE = [];
+    ITEM_NAME_PT_BR_CACHE = {};
     return [];
   }
+}
+
+function nomeItemEmPortugues(itemId) {
+  if (ITEM_NAME_PT_BR_CACHE && ITEM_NAME_PT_BR_CACHE[itemId]) {
+    return ITEM_NAME_PT_BR_CACHE[itemId];
+  }
+  return itemId.replace(/^T[4-8]_/, "").replace(/_/g, " ");
 }
 
 function extrairInfoItem(itemId) {
@@ -365,7 +386,7 @@ export async function buscarOportunidades({
       const peso = obterPesoItem(itemId);
       const tcm = obterTCMItem(itemId);
       const { tier, encanto } = extrairInfoItem(itemId);
-      const nomeBase = itemId.slice(2).replace(/@\d+/, "").replace(/_/g, " ").trim();
+      const nomeBase = nomeItemEmPortugues(itemId);
       const estado = QUALITY_NAMES[qualityNum] || "?";
       
       const cidadesArray = Object.entries(cidades);
