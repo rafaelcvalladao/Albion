@@ -78,6 +78,17 @@ function ItemIcons({ item }) {
   );
 }
 
+function FinalProductIcon({ item }) {
+  const { tier, level } = parseTierItem(item);
+  const plankId = buildPlankId(tier, level);
+
+  return (
+    <div className="strategy-final-product-icon">
+      <img src={itemIconUrl(plankId)} alt={`${tier} tábua final`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/56?text=product"; }} />
+    </div>
+  );
+}
+
 export default function WoodMaster() {
   const [cfg, setCfg] = useState(loadConfig);
   const [result, setResult] = useState(null);
@@ -323,8 +334,6 @@ export default function WoodMaster() {
               </div>
               {result.rows?.map((row) => {
                 const q = row.qtTronco ?? 0;
-                const thTronco = `Tronco (${q}×)`;
-                const thAnt = `${colAntLabel} (1×)`;
                 return (
                 <article key={row.nivel} className="result-card">
                   <h3 className="result-card__title">
@@ -343,20 +352,19 @@ export default function WoodMaster() {
                           <th>Cidade</th>
                           <th>
                             <div className="th-with-icon">
-                              <span>{thTronco}</span>
-                              <img src={itemIconUrl(buildWoodId(parseTierItem(row.nivel).tier, parseTierItem(row.nivel).level))} alt={`${row.nivel} tronco`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/56?text=wood"; }} />
+                              <img src={itemIconUrl(buildWoodId(parseTierItem(row.nivel).tier, parseTierItem(row.nivel).level))} alt={`${row.nivel} tronco`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/84?text=wood"; }} />
+                              <span className="th-with-icon__qty">x{q}</span>
                             </div>
                           </th>
                           <th>
                             <div className="th-with-icon">
-                              <span>{thAnt}</span>
-                              <img src={itemIconUrl(buildPlankId(tAntOf(parseTierItem(row.nivel).tier), parseTierItem(row.nivel).level))} alt={`${tAntOf(parseTierItem(row.nivel).tier)} tábua ant.`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/56?text=plank"; }} />
+                              <img src={itemIconUrl(buildPlankId(tAntOf(parseTierItem(row.nivel).tier), parseTierItem(row.nivel).level))} alt={`${tAntOf(parseTierItem(row.nivel).tier)} tábua ant.`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/84?text=plank"; }} />
+                              <span className="th-with-icon__qty">x1</span>
                             </div>
                           </th>
                           <th>
                             <div className="th-with-icon">
-                              <span>Tábua</span>
-                              <img src={itemIconUrl(buildPlankId(parseTierItem(row.nivel).tier, parseTierItem(row.nivel).level))} alt={`${row.nivel} tábua`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/56?text=plank"; }} />
+                              <img src={itemIconUrl(buildPlankId(parseTierItem(row.nivel).tier, parseTierItem(row.nivel).level))} alt={`${row.nivel} tábua`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/84?text=plank"; }} />
                             </div>
                           </th>
                           <th>Lucro</th>
@@ -631,7 +639,7 @@ function StrategyTable({ title, kind, rows, compact }) {
               <tr key={r.item}>
                 <td>
                   <div className="strategy-item-cell">
-                    <ItemIcons item={r.item} />
+                    <FinalProductIcon item={r.item} />
                     <span className="strategy-item-label">{r.item}</span>
                   </div>
                 </td>
