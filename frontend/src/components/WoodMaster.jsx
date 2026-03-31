@@ -159,6 +159,7 @@ export default function WoodMaster() {
     let cancelled = false;
     setLoading(true);
     setErr(null);
+    console.log(`[calculateWood] Fetching - tier: ${cfg.tier}, buyOrder: ${cfg.buyOrder}, foco: ${cfg.foco}, bonusFortSterling: ${cfg.bonusFortSterling}`);
     calculateWood({
       tier: cfg.tier,
       taxaNpc: cfg.taxaNpc,
@@ -168,7 +169,10 @@ export default function WoodMaster() {
       bonusFortSterling: cfg.bonusFortSterling,
     })
       .then((data) => {
-        if (!cancelled) setResult(data);
+        if (!cancelled) {
+          console.log(`[calculateWood] Data received at:`, new Date().toLocaleTimeString("pt-PT"));
+          setResult(data);
+        }
       })
       .catch((e) => {
         if (!cancelled) {
