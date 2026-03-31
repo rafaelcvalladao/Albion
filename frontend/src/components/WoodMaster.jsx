@@ -698,7 +698,7 @@ function StrategyTable({ title, kind, rows, compact }) {
 }
 
 function TieredFamaTables({ rows }) {
-  const [sortBy, setSortBy] = useState("volume");
+  const [sortBy, setSortBy] = useState("famaPerPrata");
   const [sortAsc, setSortAsc] = useState(false);
   if (!rows?.length) return null;
 
