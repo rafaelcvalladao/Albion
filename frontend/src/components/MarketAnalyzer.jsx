@@ -205,6 +205,8 @@ export default function MarketAnalyzer() {
           <tbody>
             {rows.map((op, idx) => {
               const margem = op.compra > 0 ? ((op.venda / op.compra - 1) * 100).toFixed(1) : "0.0";
+              // Filtrar itens com lucro % maior que 200%
+              if (parseFloat(margem) > 200) return null;
               const ultima = timeAgo(op.atualizacaoDest || op.atualizacaoOrig);
               return (
                 <tr key={`${op.id}-${op.origem}-${op.destino}`}> 
