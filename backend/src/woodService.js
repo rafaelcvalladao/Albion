@@ -95,8 +95,9 @@ export async function processarWood(body) {
 
   const dc = new Map();
   const dv = new Map();
-  const dt = new Map(); // Timestamps para compra
-  const dvt = new Map(); // Timestamps para venda
+  const dt = new Map(); // Timestamps para compra (buy_price_max_date ou sell_price_min_date)
+  const dvt = new Map(); // Timestamps para venda (sell_price_min_date)
+  
   for (const p of res) {
     const key = `${p.city}|${p.item_id}`;
     const valBuy = p.buy_price_max;
@@ -105,12 +106,28 @@ export async function processarWood(body) {
     if (valSell > 0) {
       dc.set(key, buyOrder && valBuy > 0 ? valBuy : valSell);
       // Armazena timestamp - usa buy_price_max_date se em buyOrder, senão sell_price_min_date
-      dt.set(key, buyOrder && valBuy > 0 ? p.buy_price_max_date : p.sell_price_min_date);
+      // Valida timestamp: rejeita null, undefined, ou datas com "0001" (inválidas)
+      let dateToStore = null;
+      if (buyOrder && valBuy > 0) {
+        if (p.buy_price_max_date && !String(p.buy_price_max_date).includes("0001")) {
+          dateToStore = p.buy_price_max_date;
+        }
+      } else {
+        if (p.sell_price_min_date && !String(p.sell_price_min_date).includes("0001")) {
+          dateToStore = p.sell_price_min_date;
+        }
+      }
+      dt.set(key, dateToStore);
     }
     // Para venda: sempre usa sell_price_min
     if (valSell > 0) {
       dv.set(key, valSell);
-      dvt.set(key, p.sell_price_min_date);
+      // Valida timestamp para venda também
+      let sellDateToStore = null;
+      if (p.sell_price_min_date && !String(p.sell_price_min_date).includes("0001")) {
+        sellDateToStore = p.sell_price_min_date;
+      }
+      dvt.set(key, sellDateToStore);
     }
   }
 
