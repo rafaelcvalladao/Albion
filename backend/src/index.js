@@ -74,7 +74,7 @@ app.post("/api/market/opportunities", async (req, res) => {
       maxItensProcessar,
     });
 
-    res.json(resultados);
+    res.json({ oportunidades: resultados });
   } catch (erro) {
     console.error('Erro ao buscar oportunidades:', erro);
     res.status(500).json({ 

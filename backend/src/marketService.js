@@ -278,6 +278,8 @@ export async function buscarOportunidades({
   taxaVenda = 6.5,
   itemFiltro = "",
   maxItensProcessar = 2500,
+  offset = 0,
+  step = 500,
 }) {
   let itens = await gerarListaItens(categoria, itemFiltro);
 
@@ -294,6 +296,11 @@ export async function buscarOportunidades({
     itens = itens.slice(0, maxItensProcessar);
   }
 
+  const itensProcessar = itens.slice(offset, Math.min(offset + step, itens.length));
+  if (!itensProcessar.length) {
+    return [];
+  }
+
   const cidadesStr = CIDADES_SEGURAS.join(",");
   const maxIdade = Number(maxIdadeHoras) || 6;
   const agora = Date.now();
@@ -301,9 +308,8 @@ export async function buscarOportunidades({
   const taxaVendaDecimal = (taxaVenda / 100);
   const taxaVendaNota = 1 - taxaVendaDecimal;
 
-  const chunks = chunk(itens, 100);
+  const chunks = chunk(itensProcessar, 100);
   const oportunidadesBrutas = [];
-
   for (const chunkItems of chunks) {
     const respostaPrecos = await fetchPricesMarket(chunkItems, cidadesStr, qualityNum);
 
