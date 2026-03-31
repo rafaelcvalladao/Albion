@@ -596,8 +596,8 @@ export default function WoodMaster() {
 }
 
 function StrategyTable({ title, kind, rows, compact }) {
-  const [sortColumn, setSortColumn] = useState(null);
-  const [sortAsc, setSortAsc] = useState(true);
+  const [sortColumn, setSortColumn] = useState(kind === "foco" ? "volume" : null);
+  const [sortAsc, setSortAsc] = useState(kind === "foco" ? false : true);
 
   if (!rows?.length) return null;
 
