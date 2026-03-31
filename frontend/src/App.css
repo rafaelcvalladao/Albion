@@ -740,6 +740,18 @@ table.result-table {
   box-shadow: var(--shadow);
 }
 
+.modal--full-width {
+  max-width: 90vw;
+  max-height: 95vh;
+  width: 90vw;
+}
+
+.modal--full-width .tiered-fama-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+}
+
 .modal header {
   display: flex;
   justify-content: space-between;

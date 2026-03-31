@@ -96,6 +96,7 @@ export default function WoodMaster() {
   const [err, setErr] = useState(null);
   const [showSchedule, setShowSchedule] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
+  const [showFarmFama, setShowFarmFama] = useState(false);
   const [schedule, setSchedule] = useState(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [strategy, setStrategy] = useState(null);
@@ -235,7 +236,9 @@ export default function WoodMaster() {
     const now = new Date();
     const then = new Date(isoDate);
     if (Number.isNaN(then.getTime())) return "—";
-    const diffSec = Math.max(0, Math.floor((now - then) / 1000));
+    // Se a diferença for negativa (data futura), retorna "—"
+    const diffSec = Math.floor((now - then) / 1000);
+    if (diffSec < 0) return "—";
     if (diffSec < 60) return `${diffSec}s`;
     const diffMin = Math.floor(diffSec / 60);
     if (diffMin < 60) return `${diffMin}m`;
@@ -316,6 +319,9 @@ export default function WoodMaster() {
           </div>
           <button type="button" className="btn btn-primary" onClick={refreshAll} disabled={loading || strategyLoading}>
             {loading || strategyLoading ? "A carregar…" : "Refresh preços"}
+          </button>
+          <button type="button" className="btn btn-primary" onClick={() => setShowFarmFama(true)}>
+            Farm Fama
           </button>
         </div>
       </aside>
@@ -458,7 +464,6 @@ export default function WoodMaster() {
           {strategy && !strategy.error && (
             <>
               <StrategyTable title="Local com Foco" kind="foco" rows={strategy.fsLocalFoco} compact />
-              <TieredFamaTables rows={strategy.fsLocalFamaAll || strategy.fsLocalFama} />
               {showLy && <StrategyTable title="Global com Foco" kind="foco" rows={strategy.globalFoco} compact />}
               {showLy && <StrategyTable title="Global: Fama" kind="fama" rows={strategy.globalFama} compact />}
             </>
@@ -562,6 +567,26 @@ export default function WoodMaster() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {showFarmFama && (
+        <div className="modal-backdrop" role="presentation" onClick={() => setShowFarmFama(false)}>
+          <div className="modal modal--full-width" role="dialog" aria-labelledby="farm-fama-title" onClick={(e) => e.stopPropagation()}>
+            <header>
+              <h3 id="farm-fama-title">Farm Fama (Top 3 por Tier)</h3>
+              <button type="button" className="modal-close" onClick={() => setShowFarmFama(false)} aria-label="Fechar">
+                ×
+              </button>
+            </header>
+            {strategyLoading ? (
+              <p>A carregar…</p>
+            ) : strategy?.error ? (
+              <p className="error">{strategy.error}</p>
+            ) : (
+              <TieredFamaTables rows={strategy?.fsLocalFamaAll || strategy?.fsLocalFama} />
+            )}
           </div>
         </div>
       )}
