@@ -146,6 +146,30 @@ export default function WoodMaster() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- taxa/spec atualizados no refresh ou blur
   }, [cfg.buyOrder, cfg.bonusFortSterling]);
 
+  const convertUtcToUtc3 = (utcTime) => {
+    if (utcTime === "---") return "---";
+    // Formato: "DD/MM HH:MM"
+    const [datePart, timePart] = utcTime.split(" ");
+    const [day, month] = datePart.split("/");
+    const [hour, minute] = timePart.split(":").map(Number);
+    
+    // Criar data UTC
+    const utcDate = new Date();
+    utcDate.setUTCFullYear(2024, parseInt(month) - 1, parseInt(day));
+    utcDate.setUTCHours(hour, minute, 0, 0);
+    
+    // Subtrair 3 horas para UTC-3
+    utcDate.setUTCHours(utcDate.getUTCHours() - 3);
+    
+    // Formatar de volta
+    const newDay = String(utcDate.getUTCDate()).padStart(2, "0");
+    const newMonth = String(utcDate.getUTCMonth() + 1).padStart(2, "0");
+    const newHour = String(utcDate.getUTCHours()).padStart(2, "0");
+    const newMinute = String(utcDate.getUTCMinutes()).padStart(2, "0");
+    
+    return `${newDay}/${newMonth} ${newHour}:${newMinute}`;
+  };
+
   const openSchedule = async () => {
     setShowSchedule(true);
     setScheduleLoading(true);
@@ -234,7 +258,7 @@ export default function WoodMaster() {
             {loading || strategyLoading ? "A carregar…" : "Refresh preços"}
           </button>
           <button type="button" className="btn btn-secondary" onClick={openSchedule}>
-            Horários (UTC)
+            Horários (UTC-3)
           </button>
         </div>
       </aside>
@@ -359,7 +383,7 @@ export default function WoodMaster() {
         <div className="modal-backdrop" role="presentation" onClick={() => setShowSchedule(false)}>
           <div className="modal" role="dialog" aria-labelledby="sched-title" onClick={(e) => e.stopPropagation()}>
             <header>
-              <h3 id="sched-title">Últimas atualizações (UTC) — {cfg.tier}</h3>
+              <h3 id="sched-title">Últimas atualizações (UTC-3) — {cfg.tier}</h3>
               <button type="button" className="modal-close" onClick={() => setShowSchedule(false)} aria-label="Fechar">
                 ×
               </button>
@@ -383,9 +407,9 @@ export default function WoodMaster() {
                       {b.cities.map((c) => (
                         <tr key={c.city}>
                           <td>{c.city}</td>
-                          <td>{c.tronco}</td>
-                          <td>{c.tabuaAnt}</td>
-                          <td>{c.tabuaSell}</td>
+                          <td>{convertUtcToUtc3(c.tronco)}</td>
+                          <td>{convertUtcToUtc3(c.tabuaAnt)}</td>
+                          <td>{convertUtcToUtc3(c.tabuaSell)}</td>
                         </tr>
                       ))}
                     </tbody>
