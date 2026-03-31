@@ -4,10 +4,10 @@ import { profitClass } from "../utils/profit.js";
 
 export default function MarketAnalyzer() {
   const [categories, setCategories] = useState([]);
-  const [categoria, setCategoria] = useState("Armas");
+  const [categoria, setCategoria] = useState("Todos");
   const [maxHoras, setMaxHoras] = useState("6");
   const [itemFiltro, setItemFiltro] = useState("");
-  const [usarBuyOrder, setUsarBuyOrder] = useState(false);
+  const [maxItens, setMaxItens] = useState("2500");
   const [taxaVenda, setTaxaVenda] = useState("6.5");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
@@ -51,8 +51,8 @@ export default function MarketAnalyzer() {
         categoria,
         maxIdadeHoras: parseInt(maxHoras, 10) || 6,
         itemFiltro,
-        usarBuyOrder,
         taxaVenda: parseFloat(taxaVenda) || 6.5,
+        maxItensProcessar: parseInt(maxItens, 10) || 2500,
       });
       setRows(data.oportunidades || []);
     } catch (e) {
@@ -103,16 +103,16 @@ export default function MarketAnalyzer() {
         </label>
       </div>
 
-      {/* Linha 2: Checkboxes e Configurações */}
+      {/* Linha 2: Configurações */}
       <div className="market-toolbar">
-        <label className="market-checkbox">
+        <label>
+          <span>Máx. itens processados</span>
           <input
-            type="checkbox"
-            checked={usarBuyOrder}
-            onChange={(e) => setUsarBuyOrder(e.target.checked)}
-            disabled
+            type="text"
+            value={maxItens}
+            onChange={(e) => setMaxItens(e.target.value)}
+            style={{ width: "80px" }}
           />
-          Considerar Buy Order (compra) - atualmente ignorado, comparando sell_order em origem/destino
         </label>
         <label>
           <span>Taxa Venda (%)</span>

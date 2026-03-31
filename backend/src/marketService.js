@@ -60,58 +60,41 @@ export const CATEGORIAS = {
     "_2H_BOW", "_2H_CROSSBOW", "_2H_CARVINGSWORD", "_2H_GREATAXE", "_2H_MAUL", "_2H_HALBERD", "_2H_PIKE", "_2H_DUALAXE_KEEPER", "_2H_DUALAXE", "_2H_MACE",
     "_RANGED_BOW", "_RANGED_CROSSBOW",
   ],
-  "Armadura de Corpo": [
+  "Armaduras de Peitoral": [
     "_BODY_CLERICROBE", "_BODY_ASSASSINJACKET", "_BODY_SOLDIERARMOR", "_BODY_MAGE", "_BODY_CLOTHROBES", "_BODY_LEATHERARMOR", "_BODY_PLATEARMOR",
     "_BODY_CLOTH", "_BODY_LEATHER", "_BODY_PLATE",
   ],
-  "Armadura de Cabeça": [
+  "Armaduras de Cabeça": [
     "_HEAD_HUNTER", "_HEAD_CLERICHOOD", "_HEAD_SOLDIERHELMET", "_HEAD_MAGE",
     "_HEAD_CLOTH", "_HEAD_LEATHER", "_HEAD_PLATE",
   ],
-  "Armadura de Pés": [
+  "Armaduras de Calçado": [
     "_SHOES_SOLDIERBOOTS", "_SHOES_ASSASSINSHOES", "_SHOES_CLERICSHOES",
     "_SHOES_CLOTH", "_SHOES_LEATHER", "_SHOES_PLATE",
-  ],
-  "Armadura de Mãos": [
-    "_GLOVES_CLOTH", "_GLOVES_LEATHER", "_GLOVES_PLATE",
-  ],
-  "Capas": [
-    "_CAPE", "_CAPEITEM_FW_LYMHURST", "_CAPEITEM_FW_FORTSTERLING", "_CAPEITEM_FW_MARTLOCK", 
-    "_CAPEITEM_FW_THETFORD", "_CAPEITEM_FW_BRIDGEWATCH",
   ],
   "Mão Secundária": [
     "_SHIELD_TOWER", "_SHIELD_KITE", "_SHIELD_ROUND", "_OFF_DAGGER", "_OFF_SHIELD",
   ],
-  Montarias: [
-    "_MOUNT_HORSE", "_MOUNT_OX", "_MOUNT_SWIFTCLAW", "_MOUNT_STAG", "_MOUNT_RAM", "_MOUNT_MOOSE",
-  ],
-  Consumíveis: [
+  Capas: ["_CAPE", "_CAPEITEM_FW_LYMHURST", "_CAPEITEM_FW_FORTSTERLING", "_CAPEITEM_FW_MARTLOCK", "_CAPEITEM_FW_THETFORD", "_CAPEITEM_FW_BRIDGEWATCH"],
+  Bolsas: ["_BAG_SMALL", "_BAG_MEDIUM", "_BAG_LARGE", "_BAG"],
+  Montarias: ["_MOUNT_HORSE", "_MOUNT_OX", "_MOUNT_SWIFTCLAW", "_MOUNT_STAG", "_MOUNT_RAM", "_MOUNT_MOOSE"],
+  Consumível: [
     "_POTION_HEAL", "_POTION_ENERGY", "_POTION_POWER", "_POTION_FORCE",
     "_MEAL_STEAK", "_MEAL_OMELETTE", "_MEAL_STEW", "_MEAL_PIE", "_MEAL_BREAD", "_MEAL_CHEESE",
     "_DRINK_WATER", "_DRINK_BEER",
     "_SPICE_SUGAR", "_SPICE_SALT", "_SPICE_HERB",
   ],
-  "Equipamento de Coleira": [
-    "_AMULET_", "_RING_",
-  ],
-  Fabricação: [
-    "_ORE_COPPER", "_ORE_TIN", "_ORE_IRON", "_ORE_STEEL", "_ORE_TITANIUM",
-    "_WOOD_BIRCH", "_WOOD_OAK", "_WOOD_ASHWOOD", "_WOOD_IRONWOOD", "_WOOD_EBONWOOD",
-    "_LEATHER_THIN", "_LEATHER_THICK",
-    "_CLOTH_LINEN", "_CLOTH_CLOTH", "_CLOTH_SILK",
-    "_PLANKS", "_METAL", "_HIDE", "_FABRIC", "_NAILS", "_SCREWS", "_BOLTS", "_HINGES",
-  ],
-  Artefatos: [
-    "_RUNE_AIR", "_RUNE_FIRE", "_RUNE_FROST", "_RUNE_HOLY", "_RUNE_NATURE", "_RUNE_ARCANE",
-    "_SOUL_", "_RELIC_",
-  ],
-  Bolsas: [
-    "_BAG_SMALL", "_BAG_MEDIUM", "_BAG_LARGE", "_BAG",
-  ],
-  Outros: [
-    "_BOOK_", "_SCROLL_", "_CRYSTAL_",
-  ]
+  "Equipamento de Coleta": ["_ORE_COPPER", "_ORE_TIN", "_ORE_IRON", "_ORE_STEEL", "_ORE_TITANIUM", "_WOOD_BIRCH", "_WOOD_OAK", "_WOOD_ASHWOOD", "_WOOD_IRONWOOD", "_WOOD_EBONWOOD", "_LEATHER_THIN", "_LEATHER_THICK", "_CLOTH_LINEN", "_CLOTH_CLOTH", "_CLOTH_SILK"],
+  Fabricação: ["_PLANKS", "_METAL", "_HIDE", "_FABRIC", "_NAILS", "_SCREWS", "_BOLTS", "_HINGES"],
+  Artefatos: ["_RUNE_AIR", "_RUNE_FIRE", "_RUNE_FROST", "_RUNE_HOLY", "_RUNE_NATURE", "_RUNE_ARCANE", "_SOUL_", "_RELIC_"],
+  Cultivo: ["_FISH_", "_HERB_"],
+  Mobília: ["_MOBILITY_"],
+  Vaidade: ["_CLOTHING_"],
+  Outros: ["_BOOK_", "_SCROLL_", "_CRYSTAL_"],
 };
+
+const ITEM_ID_SOURCE_URL = "https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json";
+let ALL_ITEM_IDS_CACHE = null;
 
 const CIDADES_SEGURAS = [
   "Bridgewatch",
@@ -123,6 +106,24 @@ const CIDADES_SEGURAS = [
 ];
 
 const TIERS = ["T4", "T5", "T6", "T7", "T8"];
+
+async function carregarItensDoJogo() {
+  if (ALL_ITEM_IDS_CACHE && ALL_ITEM_IDS_CACHE.length > 0) return ALL_ITEM_IDS_CACHE;
+  try {
+    const res = await fetch(ITEM_ID_SOURCE_URL, { headers: { Accept: "application/json" } });
+    if (!res.ok) throw new Error(`Falha ao buscar itens do jogo (${res.status})`);
+    const data = await res.json();
+    const ids = Array.isArray(data)
+      ? [...new Set(data.map((item) => String(item.UniqueName || "")).filter((id) => /^(T[4-8]_)/.test(id)))]
+      : [];
+    ALL_ITEM_IDS_CACHE = ids;
+    return ids;
+  } catch (err) {
+    console.warn("Não foi possível carregar itens completos do jogo:", err.message || err);
+    ALL_ITEM_IDS_CACHE = [];
+    return [];
+  }
+}
 
 function extrairInfoItem(itemId) {
   const tier = itemId.startsWith('T') ? itemId.slice(0, 2) : "?";
@@ -168,30 +169,37 @@ function calcularCustoTeleporteComTCM(peso, tcm, cidadeOrigem, cidadeDestino) {
   return Math.round(custoCalculado);
 }
 
-function gerarListaItens(categoria) {
-  let bases = CATEGORIAS[categoria] || [];
-  
+async function gerarListaItens(categoria, itemFiltro = "") {
+  let lista = [];
+
   if (categoria === "Todos") {
-    bases = [];
-    for (const [cat, itens] of Object.entries(CATEGORIAS)) {
-      if (cat !== "Todos") {
-        bases.push(...itens);
-      }
+    const todos = await carregarItensDoJogo();
+    if (todos && todos.length) {
+      lista = todos;
+    } else {
+      // fallback para categorias estáticas (se não conseguiu carregar o dump externo)
+      const bases = Object.entries(CATEGORIAS)
+        .filter(([cat]) => cat !== "Todos")
+        .flatMap(([, itens]) => itens);
+      lista = [...new Set(bases)].flatMap((b) => {
+        return TIERS.map((t) => `${t}${b}`);
+      });
     }
-    bases = [...new Set(bases)];
+  } else {
+    const bases = CATEGORIAS[categoria] || [];
+    lista = bases.flatMap((b) => {
+      const baseIds = TIERS.map((t) => `${t}${b}`);
+      return baseIds;
+    });
   }
-  
-  const lista = [];
-  for (const t of TIERS) {
-    for (const b of bases) {
-      lista.push(`${t}${b}`);
-      // Também adicionar versões com encantamentos (@1, @2, @3, @4)
-      for (const enc of ["@1", "@2", "@3", "@4"]) {
-        lista.push(`${t}${b}${enc}`);
-      }
-    }
+
+  // Se for filtro por texto, aplicar correspondência em todos os IDs disponíveis.
+  if (itemFiltro && itemFiltro.trim()) {
+    const filtro = itemFiltro.trim().toLowerCase();
+    lista = lista.filter((id) => id.toLowerCase().includes(filtro));
   }
-  return lista;
+
+  return [...new Set(lista)];
 }
 
 function chunk(arr, size) {
@@ -231,15 +239,34 @@ async function obterMediaVendas7d(itemId, cidade) {
 async function fetchPricesMarket(itemIds, locations, quality = 1) {
   const unique = [...new Set(itemIds.filter(Boolean))];
   const loc = Array.isArray(locations) ? locations.join(",") : locations;
+  const allChunks = chunk(unique, 100);
   const merged = [];
-  for (const part of chunk(unique, 100)) {
-    const url = `https://www.albion-online-data.com/api/v2/stats/prices/${part.join(
-      ","
-    )}?locations=${encodeURIComponent(loc)}&qualities=${quality}`;
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!res.ok) throw new Error(`Albion prices HTTP ${res.status}`);
-    merged.push(...(await res.json()));
+  const concurrency = 3;
+
+  for (let i = 0; i < allChunks.length; i += concurrency) {
+    const batch = allChunks.slice(i, i + concurrency);
+    const calls = batch.map(async (part) => {
+      const url = `https://www.albion-online-data.com/api/v2/stats/prices/${part.join(",")}?locations=${encodeURIComponent(loc)}&qualities=${quality}`;
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!res.ok) {
+        throw new Error(`Albion prices HTTP ${res.status}`);
+      }
+      return res.json();
+    });
+
+    const results = await Promise.allSettled(calls);
+    for (const r of results) {
+      if (r.status === "fulfilled" && Array.isArray(r.value)) {
+        merged.push(...r.value);
+      }
+    }
+
+    // Respeita limites de rate, evita burst de requisições
+    if (i + concurrency < allChunks.length) {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
   }
+
   return merged;
 }
 
@@ -249,13 +276,24 @@ export async function buscarOportunidades({
   quality = 1,
   usarBuyOrder = false,
   taxaVenda = 6.5,
-  itemFiltro = ""
+  itemFiltro = "",
+  maxItensProcessar = 2500,
 }) {
-  let itens = gerarListaItens(categoria);
+  let itens = await gerarListaItens(categoria, itemFiltro);
+
+  if (!Array.isArray(itens) || itens.length === 0) {
+    return [];
+  }
+
   if (itemFiltro && String(itemFiltro).trim()) {
     const filtro = String(itemFiltro).trim().toLowerCase();
     itens = itens.filter((itemId) => itemId.toLowerCase().includes(filtro));
   }
+
+  if (itens.length > maxItensProcessar) {
+    itens = itens.slice(0, maxItensProcessar);
+  }
+
   const cidadesStr = CIDADES_SEGURAS.join(",");
   const maxIdade = Number(maxIdadeHoras) || 6;
   const agora = Date.now();

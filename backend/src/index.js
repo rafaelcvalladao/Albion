@@ -60,7 +60,8 @@ app.post("/api/market/opportunities", async (req, res) => {
       quality = 1,
       usarBuyOrder = false,
       taxaVenda = 6.5,
-      itemFiltro = ''
+      itemFiltro = '',
+      maxItensProcessar = 2500,
     } = req.body;
 
     const resultados = await buscarOportunidades({
@@ -70,6 +71,7 @@ app.post("/api/market/opportunities", async (req, res) => {
       usarBuyOrder,
       taxaVenda,
       itemFiltro,
+      maxItensProcessar,
     });
 
     res.json(resultados);
