@@ -91,9 +91,11 @@ export async function processarWood(body) {
     const key = `${p.city}|${p.item_id}`;
     const valBuy = p.buy_price_max;
     const valSell = p.sell_price_min;
-    if (buyOrder ? valBuy > 0 : valSell > 0) {
-      dc.set(key, buyOrder ? valBuy : valSell);
+    // Para compra: usa buy_price_max se disponível E buyOrder=true, senão usa sell_price_min
+    if (valSell > 0) {
+      dc.set(key, buyOrder && valBuy > 0 ? valBuy : valSell);
     }
+    // Para venda: sempre usa sell_price_min
     if (valSell > 0) dv.set(key, valSell);
   }
 
@@ -208,7 +210,7 @@ export async function estrategiaCompleta(body) {
   const dv = new Map();
   for (const p of res) {
     const key = `${p.city}|${p.item_id}`;
-    const val = buyOrder ? p.buy_price_max : p.sell_price_min;
+    const val = buyOrder && p.buy_price_max > 0 ? p.buy_price_max : p.sell_price_min;
     if (val > 0) dc.set(key, val);
     if (p.sell_price_min > 0) dv.set(key, p.sell_price_min);
   }
