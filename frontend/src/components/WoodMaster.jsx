@@ -36,6 +36,7 @@ export default function WoodMaster() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
   const [schedule, setSchedule] = useState(null);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [strategy, setStrategy] = useState(null);
@@ -192,36 +193,21 @@ export default function WoodMaster() {
       <aside className="panel panel--sidebar wood-sidebar">
         <h2>Configurações</h2>
         <div className="form-grid">
-          <label>
-            Taxa do NPC (Prata)
-            <input
-              type="text"
-              value={cfg.taxaNpc}
-              onChange={(e) => setCfg({ ...cfg, taxaNpc: e.target.value })}
-              onBlur={refreshAll}
-            />
-          </label>
-          {SPEC_KEYS.map(({ key, label }) => (
-            <label key={key}>
-              {label}
-              <input
-                type="text"
-                value={cfg.spec[key] ?? ""}
-                onChange={(e) => setSpec(key, e.target.value)}
-                onBlur={refreshAll}
-              />
-            </label>
-          ))}
-          <label>
-            Tier
-            <select value={cfg.tier} onChange={(e) => setCfg({ ...cfg, tier: e.target.value })}>
-              {["T4", "T5", "T6", "T7", "T8"].map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="wood-config-summary">
+            <p>
+              <strong>Tier:</strong> {cfg.tier}
+            </p>
+            <p>
+              <strong>Taxa NPC:</strong> {cfg.taxaNpc} prata
+            </p>
+            <p>
+              <strong>Specs:</strong>{" "}
+              {SPEC_KEYS.map((s) => `${s.label}: ${cfg.spec[s.key] ?? 0}`).join(" · ")}
+            </p>
+            <button type="button" className="btn btn-secondary" onClick={() => setShowConfig(true)}>
+              Editar taxa e specs
+            </button>
+          </div>
           <label className="checkbox-row">
             <input
               type="checkbox"
@@ -371,13 +357,71 @@ export default function WoodMaster() {
           {strategy && !strategy.error && (
             <>
               <StrategyTable title="Local com Foco" kind="foco" rows={strategy.fsLocalFoco} compact />
-              <StrategyTable title="Local: Fama" kind="fama" rows={strategy.fsLocalFama} compact />
+              <TieredFamaTables rows={strategy.fsLocalFama} />
               {showLy && <StrategyTable title="Global com Foco" kind="foco" rows={strategy.globalFoco} compact />}
               {showLy && <StrategyTable title="Global: Fama" kind="fama" rows={strategy.globalFama} compact />}
             </>
           )}
         </aside>
       </div>
+
+      {showConfig && (
+        <div className="modal-backdrop" role="presentation" onClick={() => setShowConfig(false)}>
+          <div className="modal" role="dialog" aria-labelledby="config-title" onClick={(e) => e.stopPropagation()}>
+            <header>
+              <h3 id="config-title">Taxa NPC, Tier e Spec</h3>
+              <button type="button" className="modal-close" onClick={() => setShowConfig(false)} aria-label="Fechar">
+                ×
+              </button>
+            </header>
+            <div className="form-grid">
+              <label>
+                Taxa do NPC (Prata)
+                <input
+                  type="text"
+                  value={cfg.taxaNpc}
+                  onChange={(e) => setCfg({ ...cfg, taxaNpc: e.target.value })}
+                />
+              </label>
+              <label>
+                Tier
+                <select value={cfg.tier} onChange={(e) => setCfg({ ...cfg, tier: e.target.value })}>
+                  {["T4", "T5", "T6", "T7", "T8"].map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {SPEC_KEYS.map(({ key, label }) => (
+                <label key={key}>
+                  {label}
+                  <input
+                    type="text"
+                    value={cfg.spec[key] ?? ""}
+                    onChange={(e) => setSpec(key, e.target.value)}
+                  />
+                </label>
+              ))}
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setShowConfig(false);
+                    refreshAll();
+                  }}
+                >
+                  Salvar
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowConfig(false)}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showSchedule && (
         <div className="modal-backdrop" role="presentation" onClick={() => setShowSchedule(false)}>
@@ -518,6 +562,51 @@ function StrategyTable({ title, kind, rows, compact }) {
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+function TieredFamaTables({ rows }) {
+  if (!rows?.length) return null;
+
+  const tiers = ["T4", "T5", "T6", "T7", "T8"];
+  const grouped = tiers.map((tier) => ({
+    tier,
+    items: rows.filter((r) => r.item.startsWith(tier)).slice(0, 3),
+  })).filter((g) => g.items.length > 0);
+
+  if (!grouped.length) return null;
+
+  return (
+    <div>
+      <div className="strategy-section-title strategy-section-title--fama">Local: Fama (Top 3 por Tier)</div>
+      <div className="tiered-fama-grid">
+        {grouped.map(({ tier, items }) => (
+          <div key={tier} className="strategy-block strategy-block--compact">
+            <div className="strategy-section-title strategy-section-title--fama">{tier}</div>
+            <div className="table-wrap">
+              <table className="result-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Fama/Prata</th>
+                    <th>Vol. 24h</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((r) => (
+                    <tr key={r.item}>
+                      <td>{r.item}</td>
+                      <td className={famaClass(r.lucro)}>{r.famaPerPrata?.toFixed(4).toLocaleString("pt-PT") ?? "—"}</td>
+                      <td className="tabular-nums strategy-table-vol">{r.volume?.toLocaleString("pt-PT") ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

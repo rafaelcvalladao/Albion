@@ -538,6 +538,31 @@ table.result-table {
   border-radius: 4px;
 }
 
+.wood-config-summary {
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  background: var(--surface-2);
+}
+
+.wood-config-summary p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.tiered-fama-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
 /* Market */
 .market-toolbar {
   display: flex;
