@@ -575,7 +575,7 @@ export default function WoodMaster() {
         <div className="modal-backdrop" role="presentation" onClick={() => setShowFarmFama(false)}>
           <div className="modal modal--full-width" role="dialog" aria-labelledby="farm-fama-title" onClick={(e) => e.stopPropagation()}>
             <header>
-              <h3 id="farm-fama-title">Farm Fama (Top 3 por Tier)</h3>
+              <h3 id="farm-fama-title">Farm Fama (Todos os enchantments)</h3>
               <button type="button" className="modal-close" onClick={() => setShowFarmFama(false)} aria-label="Fechar">
                 ×
               </button>
@@ -713,7 +713,7 @@ function TieredFamaTables({ rows }) {
         if (aVal > bVal) return sortAsc ? 1 : -1;
         return 0;
       });
-      return { tier, items: sorted.slice(0, 3) };
+      return { tier, items: sorted };
     })
     .filter((g) => g.items.length > 0);
 
@@ -735,7 +735,7 @@ function TieredFamaTables({ rows }) {
 
   return (
     <div>
-      <div className="strategy-section-title strategy-section-title--fama">Local: Fama (Top 3 por Tier)</div>
+      <div className="strategy-section-title strategy-section-title--fama">Local: Fama (Todos os enchantments)</div>
       <div className="tiered-fama-grid">
         {grouped.map(({ tier, items }) => (
           <div key={tier} className="strategy-block strategy-block--compact">
