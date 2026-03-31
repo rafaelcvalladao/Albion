@@ -59,7 +59,8 @@ app.post("/api/market/opportunities", async (req, res) => {
       maxIdadeHoras = 6,
       quality = 1,
       usarBuyOrder = false,
-      taxaVenda = 6.5
+      taxaVenda = 6.5,
+      itemFiltro = ''
     } = req.body;
 
     const resultados = await buscarOportunidades({
@@ -67,7 +68,8 @@ app.post("/api/market/opportunities", async (req, res) => {
       maxIdadeHoras,
       quality,
       usarBuyOrder,
-      taxaVenda
+      taxaVenda,
+      itemFiltro,
     });
 
     res.json(resultados);

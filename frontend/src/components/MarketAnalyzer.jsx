@@ -6,6 +6,7 @@ export default function MarketAnalyzer() {
   const [categories, setCategories] = useState([]);
   const [categoria, setCategoria] = useState("Armas");
   const [maxHoras, setMaxHoras] = useState("6");
+  const [itemFiltro, setItemFiltro] = useState("");
   const [usarBuyOrder, setUsarBuyOrder] = useState(false);
   const [taxaVenda, setTaxaVenda] = useState("6.5");
   const [loading, setLoading] = useState(false);
@@ -49,6 +50,7 @@ export default function MarketAnalyzer() {
       const data = await marketOpportunities({
         categoria,
         maxIdadeHoras: parseInt(maxHoras, 10) || 6,
+        itemFiltro,
         usarBuyOrder,
         taxaVenda: parseFloat(taxaVenda) || 6.5,
       });
@@ -81,6 +83,15 @@ export default function MarketAnalyzer() {
           </select>
         </label>
         <label>
+          <span>Item (filtro)</span>
+          <input
+            type="text"
+            value={itemFiltro}
+            onChange={(e) => setItemFiltro(e.target.value)}
+            placeholder="ex: sword, wood"
+          />
+        </label>
+        <label>
           <span>Dados no máx. (h)</span>
           <select value={maxHoras} onChange={(e) => setMaxHoras(e.target.value)}>
             {["2", "6", "12", "24", "48"].map((h) => (
@@ -99,8 +110,9 @@ export default function MarketAnalyzer() {
             type="checkbox"
             checked={usarBuyOrder}
             onChange={(e) => setUsarBuyOrder(e.target.checked)}
+            disabled
           />
-          Considerar Buy Order (compra)
+          Considerar Buy Order (compra) - atualmente ignorado, comparando sell_order em origem/destino
         </label>
         <label>
           <span>Taxa Venda (%)</span>
@@ -132,7 +144,9 @@ export default function MarketAnalyzer() {
               <th>Teleporte</th>
               <th>Lucro Líquido</th>
               <th>Média 7d</th>
-              <th>Atualização</th>
+              <th>Atualização Orig.</th>
+              <th>Atualização Dest.</th>
+              <th>Stale</th>
             </tr>
           </thead>
           <tbody>
@@ -149,7 +163,9 @@ export default function MarketAnalyzer() {
                 <td className="tabular-nums">{op.custoTeleporte?.toFixed(0)}</td>
                 <td className={profitClass(op.lucro)}>{op.lucro?.toLocaleString("pt-PT", { maximumFractionDigits: 0 })}</td>
                 <td style={{ textAlign: "center" }}>{op.media7d} / dia</td>
+                <td style={{ fontSize: "0.72rem" }}>{op.atualizacaoOrig}</td>
                 <td style={{ fontSize: "0.72rem" }}>{op.atualizacaoDest}</td>
+                <td>{op.desatualizado ? "⚠️" : "✅"}</td>
               </tr>
             ))}
           </tbody>

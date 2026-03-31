@@ -248,9 +248,14 @@ export async function buscarOportunidades({
   maxIdadeHoras = 6,
   quality = 1,
   usarBuyOrder = false,
-  taxaVenda = 6.5
+  taxaVenda = 6.5,
+  itemFiltro = ""
 }) {
-  const itens = gerarListaItens(categoria);
+  let itens = gerarListaItens(categoria);
+  if (itemFiltro && String(itemFiltro).trim()) {
+    const filtro = String(itemFiltro).trim().toLowerCase();
+    itens = itens.filter((itemId) => itemId.toLowerCase().includes(filtro));
+  }
   const cidadesStr = CIDADES_SEGURAS.join(",");
   const maxIdade = Number(maxIdadeHoras) || 6;
   const agora = Date.now();
@@ -306,7 +311,7 @@ export async function buscarOportunidades({
       if (!mapaOrganiado.has(it)) mapaOrganiado.set(it, {});
       
       mapaOrganiado.get(it)[dados.city] = {
-        compra: usarBuyOrder && dados.buyMax > 0 ? dados.buyMax : dados.sellMin,
+        compra: dados.sellMin,
         venda: dados.sellMin,
         dataStr: dados.dataStr,
       };
@@ -350,6 +355,13 @@ export async function buscarOportunidades({
           const lucroLiquido = receita - custos;
 
           if (lucroLiquido > 0) {
+            const agoraMs = Date.now();
+            const destinoDate = new Date(String(infoDest.dataStr).replace(" ", "T")).getTime();
+            const origemDate = new Date(String(infoOri.dataStr).replace(" ", "T")).getTime();
+            const desatualizado = 
+              (!isNaN(destinoDate) && agoraMs - destinoDate > 12 * 3600000) ||
+              (!isNaN(origemDate) && agoraMs - origemDate > 12 * 3600000);
+
             oportunidadesBrutas.push({
               id: itemId,
               nomeBase,
@@ -362,7 +374,9 @@ export async function buscarOportunidades({
               venda: precoVenda,
               custoTeleporte,
               lucro: lucroLiquido,
+              atualizacaoOrig: infoOri.dataStr,
               atualizacaoDest: infoDest.dataStr,
+              desatualizado,
             });
           }
         }
