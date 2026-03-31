@@ -237,11 +237,16 @@ export default function WoodMaster() {
   const formatTimeAgo = (isoDate) => {
     if (!isoDate) return "—";
     try {
-      const now = new Date();
+      // isoDate está em UTC-3, e new Date() também é UTC
+      // Converter new Date() para UTC-3: subtrair 3 horas
+      const nowUTC = new Date();
+      const nowUTC3 = new Date(nowUTC.getTime() - (3 * 60 * 60 * 1000));
+      
       const then = new Date(isoDate);
       if (Number.isNaN(then.getTime())) return "—";
+      
       // Calcular diferença em segundos
-      const diffSec = Math.floor((now - then) / 1000);
+      const diffSec = Math.floor((nowUTC3 - then) / 1000);
       // Se diferença for negativa (data futura), retornar "—"
       if (diffSec < 0) return "—";
       // Retornar em formato amigável

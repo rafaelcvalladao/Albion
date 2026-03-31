@@ -68,21 +68,22 @@ function convertToUTC3(isoDate) {
   try {
     const d = new Date(isoDate);
     if (Number.isNaN(d.getTime())) return null;
-    // Retorna em ISO UTC padrão (não converte, mantém UTC)
+    // Converter de UTC para UTC-3: subtrair 3 horas
+    d.setUTCHours(d.getUTCHours() - 3);
+    // Retorna em ISO UTC-3 (que ainda tem o Z, mas representa UTC-3)
     return d.toISOString();
   } catch {
     return null;
   }
 }
 
-function convertUTCToUTC3Display(isoDate) {
-  // Converte ISO UTC para UTC-3 apenas para EXIBIÇÃO (sem convertendo para string ISO)
-  if (!isoDate) return null;
+function convertUTCToUTC3Display(isoDateUTC3) {
+  // Recebe data já em UTC-3 (ISO format), converte apenas para objeto Date para exibição
+  if (!isoDateUTC3) return null;
   try {
-    const d = new Date(isoDate);
+    const d = new Date(isoDateUTC3);
     if (Number.isNaN(d.getTime())) return null;
-    // Subtrair 3 horas da hora UTC para obter UTC-3
-    d.setUTCHours(d.getUTCHours() - 3);
+    // Como a data já está em UTC-3 (representada com Z mas -3h), apenas retorna como está
     return d;
   } catch {
     return null;
@@ -384,14 +385,8 @@ export async function horariosUtc(tier) {
   function fmt(city, itemId) {
     const f = checkDict.get(`${city}|${itemId}`);
     if (!f) return "---";
-    // Converter de UTC para UTC-3 para exibição
-    const dateUTC3 = convertUTCToUTC3Display(f);
-    if (!dateUTC3) return "---";
-    const day = String(dateUTC3.getUTCDate()).padStart(2, "0");
-    const month = String(dateUTC3.getUTCMonth() + 1).padStart(2, "0");
-    const hour = String(dateUTC3.getUTCHours()).padStart(2, "0");
-    const minute = String(dateUTC3.getUTCMinutes()).padStart(2, "0");
-    return `${day}/${month} ${hour}:${minute}`;
+    // f já está em UTC-3: "2024-03-31T11:30:00.000Z" (mas representa UTC-3)
+    return `${f.slice(8, 10)}/${f.slice(5, 7)} ${f.slice(11, 16)}`;
   }
 
   const blocos = [];
