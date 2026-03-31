@@ -218,7 +218,7 @@ export default function WoodMaster() {
               ))}
             </select>
           </label>
-          <button type="button" className="btn btn-secondary" onClick={() => setShowConfig(true)}>
+          <button type="button" className="btn btn-primary" onClick={() => setShowConfig(true)}>
             Editar taxa e specs
           </button>
           <div className="checkbox-grid">
@@ -581,15 +581,40 @@ function StrategyTable({ title, kind, rows, compact }) {
 }
 
 function TieredFamaTables({ rows }) {
+  const [sortBy, setSortBy] = useState("volume");
+  const [sortAsc, setSortAsc] = useState(false);
   if (!rows?.length) return null;
 
   const tiers = ["T4", "T5", "T6", "T7", "T8"];
-  const grouped = tiers.map((tier) => ({
-    tier,
-    items: rows.filter((r) => r.item.startsWith(tier)).slice(0, 3),
-  })).filter((g) => g.items.length > 0);
+  const grouped = tiers
+    .map((tier) => {
+      const tierRows = rows.filter((r) => r.item.startsWith(tier));
+      const sorted = [...tierRows].sort((a, b) => {
+        let aVal = sortBy === "famaPerPrata" ? a.famaPerPrata ?? 0 : a.volume ?? 0;
+        let bVal = sortBy === "famaPerPrata" ? b.famaPerPrata ?? 0 : b.volume ?? 0;
+        if (aVal < bVal) return sortAsc ? -1 : 1;
+        if (aVal > bVal) return sortAsc ? 1 : -1;
+        return 0;
+      });
+      return { tier, items: sorted.slice(0, 3) };
+    })
+    .filter((g) => g.items.length > 0);
 
   if (!grouped.length) return null;
+
+  const getIndicator = (column) => {
+    if (sortBy !== column) return "";
+    return sortAsc ? " ↑" : " ↓";
+  };
+
+  const handleSort = (column) => {
+    if (sortBy === column) {
+      setSortAsc((cur) => !cur);
+    } else {
+      setSortBy(column);
+      setSortAsc(false);
+    }
+  };
 
   return (
     <div>
@@ -603,15 +628,27 @@ function TieredFamaTables({ rows }) {
                 <thead>
                   <tr>
                     <th>Item</th>
-                    <th>Fama/Prata</th>
-                    <th>Vol. 24h</th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("famaPerPrata")}
+                    >
+                      Fama/Prata{getIndicator("famaPerPrata")}
+                    </th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("volume")}
+                    >
+                      Vol. 24h{getIndicator("volume")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((r) => (
                     <tr key={r.item}>
                       <td>{r.item}</td>
-                      <td className={famaClass(r.lucro)}>{r.famaPerPrata?.toFixed(4).toLocaleString("pt-PT") ?? "—"}</td>
+                      <td className={famaClass(r.lucro)}>
+                        {r.famaPerPrata?.toFixed(4).toLocaleString("pt-PT") ?? "—"}
+                      </td>
                       <td className="tabular-nums strategy-table-vol">{r.volume?.toLocaleString("pt-PT") ?? "—"}</td>
                     </tr>
                   ))}
