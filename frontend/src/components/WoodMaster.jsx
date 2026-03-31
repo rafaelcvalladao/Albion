@@ -335,14 +335,30 @@ export default function WoodMaster() {
                         {row.volumeFs24h?.toLocaleString("pt-PT")} un
                       </strong>
                     </span>
-                  </h3>                  <ItemIcons item={row.nivel} />                  <div className="table-wrap">
+                  </h3>
+                  <div className="table-wrap">
                     <table className="result-table">
                       <thead>
                         <tr>
                           <th>Cidade</th>
-                          <th>{thTronco}</th>
-                          <th>{thAnt}</th>
-                          <th>Tábua</th>
+                          <th>
+                            <div className="th-with-icon">
+                              <span>{thTronco}</span>
+                              <img src={itemIconUrl(buildWoodId(parseTierItem(row.nivel).tier, parseTierItem(row.nivel).level))} alt={`${row.nivel} tronco`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/56?text=wood"; }} />
+                            </div>
+                          </th>
+                          <th>
+                            <div className="th-with-icon">
+                              <span>{thAnt}</span>
+                              <img src={itemIconUrl(buildPlankId(tAntOf(parseTierItem(row.nivel).tier), parseTierItem(row.nivel).level))} alt={`${tAntOf(parseTierItem(row.nivel).tier)} tábua ant.`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/56?text=plank"; }} />
+                            </div>
+                          </th>
+                          <th>
+                            <div className="th-with-icon">
+                              <span>Tábua</span>
+                              <img src={itemIconUrl(buildPlankId(parseTierItem(row.nivel).tier, parseTierItem(row.nivel).level))} alt={`${row.nivel} tábua`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/56?text=plank"; }} />
+                            </div>
+                          </th>
                           <th>Lucro</th>
                           <th>Fama</th>
                         </tr>
