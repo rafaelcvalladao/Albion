@@ -309,6 +309,7 @@ export async function estrategiaCompleta(body) {
     globalFama: topFama(gbFama),
     fsLocalFoco: top(fsFoco),
     fsLocalFama: topFama(fsFama),
+    fsLocalFamaAll: fsFama,
   };
 }
 

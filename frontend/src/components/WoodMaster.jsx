@@ -370,7 +370,7 @@ export default function WoodMaster() {
           {strategy && !strategy.error && (
             <>
               <StrategyTable title="Local com Foco" kind="foco" rows={strategy.fsLocalFoco} compact />
-              <TieredFamaTables rows={strategy.fsLocalFama} />
+              <TieredFamaTables rows={strategy.fsLocalFamaAll || strategy.fsLocalFama} />
               {showLy && <StrategyTable title="Global com Foco" kind="foco" rows={strategy.globalFoco} compact />}
               {showLy && <StrategyTable title="Global: Fama" kind="fama" rows={strategy.globalFama} compact />}
             </>
