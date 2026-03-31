@@ -68,9 +68,22 @@ function convertToUTC3(isoDate) {
   try {
     const d = new Date(isoDate);
     if (Number.isNaN(d.getTime())) return null;
-    // Converter de UTC para UTC-3: subtrair 3 horas
-    d.setUTCHours(d.getUTCHours() - 3);
+    // Retorna em ISO UTC padrão (não converte, mantém UTC)
     return d.toISOString();
+  } catch {
+    return null;
+  }
+}
+
+function convertUTCToUTC3Display(isoDate) {
+  // Converte ISO UTC para UTC-3 apenas para EXIBIÇÃO (sem convertendo para string ISO)
+  if (!isoDate) return null;
+  try {
+    const d = new Date(isoDate);
+    if (Number.isNaN(d.getTime())) return null;
+    // Subtrair 3 horas da hora UTC para obter UTC-3
+    d.setUTCHours(d.getUTCHours() - 3);
+    return d;
   } catch {
     return null;
   }
@@ -362,17 +375,23 @@ export async function horariosUtc(tier) {
   const res = await fetchPrices(ids, LOCATIONS_WOOD);
   const checkDict = new Map();
   for (const p of res) {
-    const dateUTC3 = convertToUTC3(p.sell_price_min_date);
-    if (dateUTC3) {
-      checkDict.set(`${p.city}|${p.item_id}`, dateUTC3);
+    const dateUTC = convertToUTC3(p.sell_price_min_date);
+    if (dateUTC) {
+      checkDict.set(`${p.city}|${p.item_id}`, dateUTC);
     }
   }
 
   function fmt(city, itemId) {
     const f = checkDict.get(`${city}|${itemId}`);
     if (!f) return "---";
-    // f está em ISO format UTC-3: "2024-03-31T11:30:00.000Z"
-    return `${f.slice(8, 10)}/${f.slice(5, 7)} ${f.slice(11, 16)}`;
+    // Converter de UTC para UTC-3 para exibição
+    const dateUTC3 = convertUTCToUTC3Display(f);
+    if (!dateUTC3) return "---";
+    const day = String(dateUTC3.getUTCDate()).padStart(2, "0");
+    const month = String(dateUTC3.getUTCMonth() + 1).padStart(2, "0");
+    const hour = String(dateUTC3.getUTCHours()).padStart(2, "0");
+    const minute = String(dateUTC3.getUTCMinutes()).padStart(2, "0");
+    return `${day}/${month} ${hour}:${minute}`;
   }
 
   const blocos = [];
