@@ -368,6 +368,7 @@ export default function WoodMaster() {
                             </div>
                           </th>
                           <th>Lucro</th>
+                          <th className="result-table__time-col">Atualizado há</th>
                           <th>Fama</th>
                         </tr>
                       </thead>
@@ -383,6 +384,7 @@ export default function WoodMaster() {
                               ? row.lymhurst.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
                               : "—"}
                           </td>
+                          <td className="result-table__time-cell">{result.lastUpdated ? `há ${formatTimeAgo(result.lastUpdated)}` : "—"}</td>
                           <td className="tabular-nums result-table__fama">
                             {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
                           </td>
@@ -398,6 +400,7 @@ export default function WoodMaster() {
                               ? row.fortSterling.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
                               : "—"}
                           </td>
+                          <td className="result-table__time-cell">{result.lastUpdated ? `há ${formatTimeAgo(result.lastUpdated)}` : "—"}</td>
                           <td className="tabular-nums result-table__fama">
                             {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
                           </td>
@@ -405,9 +408,6 @@ export default function WoodMaster() {
                       </tbody>
                     </table>
                   </div>
-                  <p className="result-card__updated">
-                    {result.lastUpdated ? `há ${formatTimeAgo(result.lastUpdated)}` : "—"}
-                  </p>
                   <p className="otimizado-line">
                     <span className="otimizado-line__label">Otimizado (compra/venda)</span>
                     <span className={profitClass(row.otimizado)}>
