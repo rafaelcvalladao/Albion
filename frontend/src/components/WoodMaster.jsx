@@ -287,9 +287,8 @@ export default function WoodMaster() {
                         {row.volumeFs24h?.toLocaleString("pt-PT")} un
                       </strong>
                     </span>
-                  </h3>                  <p className="result-card__updated">
-                    Última atualização: {result.lastUpdated ? `há ${formatTimeAgo(result.lastUpdated)}` : "—"}
-                  </p>                  <div className="table-wrap">
+                  </h3>
+                  <div className="table-wrap">
                     <table className="result-table">
                       <thead>
                         <tr>
@@ -335,6 +334,9 @@ export default function WoodMaster() {
                       </tbody>
                     </table>
                   </div>
+                  <p className="result-card__updated">
+                    {result.lastUpdated ? `há ${formatTimeAgo(result.lastUpdated)}` : "—"}
+                  </p>
                   <p className="otimizado-line">
                     <span className="otimizado-line__label">Otimizado (compra/venda)</span>
                     <span className={profitClass(row.otimizado)}>
