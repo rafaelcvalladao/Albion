@@ -368,7 +368,6 @@ export default function WoodMaster() {
                             </div>
                           </th>
                           <th>Lucro</th>
-                          <th className="result-table__time-col">Atualizado há</th>
                           <th>Fama</th>
                         </tr>
                       </thead>
@@ -376,15 +375,23 @@ export default function WoodMaster() {
                         {showLy && (
                         <tr>
                           <td>Lymhurst</td>
-                          <td className="tabular-nums">{row.lymhurst.tronco?.toLocaleString("pt-PT") ?? "—"}</td>
-                          <td className="tabular-nums">{row.lymhurst.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</td>
-                          <td className="tabular-nums">{row.lymhurst.tabua?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                            <div>{row.lymhurst.tronco?.toLocaleString("pt-PT") ?? "—"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.lymhurst.troncoDate)}</div>
+                          </td>
+                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                            <div>{row.lymhurst.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.lymhurst.tabuaAntDate)}</div>
+                          </td>
+                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                            <div>{row.lymhurst.tabua?.toLocaleString("pt-PT") ?? "—"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.lymhurst.tauaDate)}</div>
+                          </td>
                           <td className={profitClass(row.lymhurst.lucro)}>
                             {Number.isFinite(row.lymhurst.lucro)
                               ? row.lymhurst.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
                               : "—"}
                           </td>
-                          <td className="result-table__time-cell">{result.lastUpdated ? `há ${formatTimeAgo(result.lastUpdated)}` : "—"}</td>
                           <td className="tabular-nums result-table__fama">
                             {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
                           </td>
@@ -392,15 +399,23 @@ export default function WoodMaster() {
                         )}
                         <tr>
                           <td>Fort Sterling</td>
-                          <td className="tabular-nums">{row.fortSterling.tronco?.toLocaleString("pt-PT") ?? "—"}</td>
-                          <td className="tabular-nums">{row.fortSterling.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</td>
-                          <td className="tabular-nums">{row.fortSterling.tabua?.toLocaleString("pt-PT") ?? "—"}</td>
+                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                            <div>{row.fortSterling.tronco?.toLocaleString("pt-PT") ?? "—"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.fortSterling.troncoDate)}</div>
+                          </td>
+                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                            <div>{row.fortSterling.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.fortSterling.tabuaAntDate)}</div>
+                          </td>
+                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                            <div>{row.fortSterling.tabua?.toLocaleString("pt-PT") ?? "—"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.fortSterling.tauaDate)}</div>
+                          </td>
                           <td className={profitClass(row.fortSterling.lucro)}>
                             {Number.isFinite(row.fortSterling.lucro)
                               ? row.fortSterling.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
                               : "—"}
                           </td>
-                          <td className="result-table__time-cell">{result.lastUpdated ? `há ${formatTimeAgo(result.lastUpdated)}` : "—"}</td>
                           <td className="tabular-nums result-table__fama">
                             {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
                           </td>

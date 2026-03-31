@@ -95,6 +95,8 @@ export async function processarWood(body) {
 
   const dc = new Map();
   const dv = new Map();
+  const dt = new Map(); // Timestamps para compra
+  const dvt = new Map(); // Timestamps para venda
   for (const p of res) {
     const key = `${p.city}|${p.item_id}`;
     const valBuy = p.buy_price_max;
@@ -102,13 +104,20 @@ export async function processarWood(body) {
     // Para compra: usa buy_price_max se disponível E buyOrder=true, senão usa sell_price_min
     if (valSell > 0) {
       dc.set(key, buyOrder && valBuy > 0 ? valBuy : valSell);
+      // Armazena timestamp - usa buy_price_max_date se em buyOrder, senão sell_price_min_date
+      dt.set(key, buyOrder && valBuy > 0 ? p.buy_price_max_date : p.sell_price_min_date);
     }
     // Para venda: sempre usa sell_price_min
-    if (valSell > 0) dv.set(key, valSell);
+    if (valSell > 0) {
+      dv.set(key, valSell);
+      dvt.set(key, p.sell_price_min_date);
+    }
   }
 
   const getDc = (city, item) => dc.get(`${city}|${item}`) ?? 0;
   const getDv = (city, item) => dv.get(`${city}|${item}`) ?? 0;
+  const getDt = (city, item) => dt.get(`${city}|${item}`) ?? null;
+  const getDvt = (city, item) => dvt.get(`${city}|${item}`) ?? null;
 
   const rows = [];
   const spTotal = specTotalPrata(spec);
@@ -153,14 +162,20 @@ export async function processarWood(body) {
       volumeFs24h: getVol(volMap, "Fort Sterling", iP),
       lymhurst: {
         tronco: lh[0],
+        troncoDate: getDt("Lymhurst", iT),
         tabuaAnt: lh[1],
+        tabuaAntDate: getDt("Lymhurst", iA),
         tabua: lh[2],
+        tauaDate: getDvt("Lymhurst", iP),
         lucro: lLh,
       },
       fortSterling: {
         tronco: ft[0],
+        troncoDate: getDt("Fort Sterling", iT),
         tabuaAnt: ft[1],
+        tabuaAntDate: getDt("Fort Sterling", iA),
         tabua: ft[2],
+        tauaDate: getDvt("Fort Sterling", iP),
         lucro: lFt,
       },
       otimizado: lOt,
