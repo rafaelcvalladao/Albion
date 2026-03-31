@@ -642,7 +642,7 @@ function StrategyTable({ title, kind, rows, compact }) {
                     <FinalProductIcon item={r.item} />
                   </div>
                 </td>
-                <td className={kind === "fama" ? famaClass(r.lucro) : profitClass(r.lucro)}>
+                <td className={kind === "fama" ? famaClass(r.lucro) : profitClass(r.lucro)} style={{ fontSize: "1.1rem", fontWeight: 700, textAlign: "center" }}>
                   {kind === "foco"
                     ? Math.round(r.lucro).toLocaleString("pt-PT")
                     : r.famaPerPrata?.toFixed(4).toLocaleString("pt-PT") ?? "—"}
@@ -722,11 +722,13 @@ function TieredFamaTables({ rows }) {
                 <tbody>
                   {items.map((r) => (
                     <tr key={r.item}>
-                      <td>{r.item}</td>
-                      <td className={famaClass(r.lucro)}>
+                      <td>
+                        <FinalProductIcon item={r.item} />
+                      </td>
+                      <td className={famaClass(r.lucro)} style={{ fontSize: "1.1rem", fontWeight: 700, textAlign: "center" }}>
                         {r.famaPerPrata?.toFixed(4).toLocaleString("pt-PT") ?? "—"}
                       </td>
-                      <td className="tabular-nums strategy-table-vol">{r.volume?.toLocaleString("pt-PT") ?? "—"}</td>
+                      <td className="tabular-nums strategy-table-vol" style={{ textAlign: "center" }}>{r.volume?.toLocaleString("pt-PT") ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>
