@@ -551,6 +551,29 @@ table.result-table {
   font-size: 0.9rem;
 }
 
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.55rem;
+  background: var(--surface-2);
+}
+
+.result-card__updated {
+  margin: 0.15rem 0 0.65rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
 .modal-actions {
   display: flex;
   gap: 0.5rem;

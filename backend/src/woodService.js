@@ -85,6 +85,14 @@ export async function processarWood(body) {
   const hist = await fetchHistory(plankIds, LOCATIONS_WOOD, 24);
   const volMap = volumeMapFromHistory(hist);
 
+  let lastUpdated = null;
+  for (const p of res) {
+    const d = p.sell_price_min_date ? new Date(p.sell_price_min_date) : null;
+    if (d && !Number.isNaN(d.getTime())) {
+      if (!lastUpdated || d > lastUpdated) lastUpdated = d;
+    }
+  }
+
   const dc = new Map();
   const dv = new Map();
   for (const p of res) {
@@ -174,6 +182,7 @@ export async function processarWood(body) {
     rrr,
     rrrPercent: rrr * 100,
     taxaNpc: txU,
+    lastUpdated: lastUpdated ? lastUpdated.toISOString() : null,
     rows,
   };
 }

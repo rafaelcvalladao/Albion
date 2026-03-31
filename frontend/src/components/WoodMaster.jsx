@@ -171,6 +171,21 @@ export default function WoodMaster() {
     return `${newDay}/${newMonth} ${newHour}:${newMinute}`;
   };
 
+  const formatTimeAgo = (isoDate) => {
+    if (!isoDate) return "—";
+    const now = new Date();
+    const then = new Date(isoDate);
+    if (Number.isNaN(then.getTime())) return "—";
+    const diffSec = Math.max(0, Math.floor((now - then) / 1000));
+    if (diffSec < 60) return `${diffSec}s`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m`;
+    const diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return `${diffHour}h`;
+    const diffDay = Math.floor(diffHour / 24);
+    return `${diffDay}d`;
+  };
+
   const openSchedule = async () => {
     setShowSchedule(true);
     setScheduleLoading(true);
@@ -193,58 +208,55 @@ export default function WoodMaster() {
       <aside className="panel panel--sidebar wood-sidebar">
         <h2>Configurações</h2>
         <div className="form-grid">
-          <div className="wood-config-summary">
-            <p>
-              <strong>Tier:</strong> {cfg.tier}
-            </p>
-            <p>
-              <strong>Taxa NPC:</strong> {cfg.taxaNpc} prata
-            </p>
-            <p>
-              <strong>Specs:</strong>{" "}
-              {SPEC_KEYS.map((s) => `${s.label}: ${cfg.spec[s.key] ?? 0}`).join(" · ")}
-            </p>
-            <button type="button" className="btn btn-secondary" onClick={() => setShowConfig(true)}>
-              Editar taxa e specs
-            </button>
+          <label>
+            Tier
+            <select value={cfg.tier} onChange={(e) => setCfg({ ...cfg, tier: e.target.value })}>
+              {["T4", "T5", "T6", "T7", "T8"].map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="btn btn-secondary" onClick={() => setShowConfig(true)}>
+            Editar taxa e specs
+          </button>
+          <div className="checkbox-grid">
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={cfg.buyOrder}
+                onChange={(e) => setCfg({ ...cfg, buyOrder: e.target.checked })}
+              />
+              Comprar via buy order
+            </label>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={cfg.foco}
+                onChange={(e) => setCfg({ ...cfg, foco: e.target.checked })}
+              />
+              Usar foco
+            </label>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={cfg.bonusFortSterling}
+                onChange={(e) => setCfg({ ...cfg, bonusFortSterling: e.target.checked })}
+              />
+              Bónus Fort Sterling
+            </label>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={showLy}
+                onChange={(e) => setCfg({ ...cfg, showLymhurst: e.target.checked })}
+              />
+              Lymhurst
+            </label>
           </div>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={cfg.buyOrder}
-              onChange={(e) => setCfg({ ...cfg, buyOrder: e.target.checked })}
-            />
-            Comprar via buy order
-          </label>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={cfg.foco}
-              onChange={(e) => setCfg({ ...cfg, foco: e.target.checked })}
-            />
-            Usar foco
-          </label>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={cfg.bonusFortSterling}
-              onChange={(e) => setCfg({ ...cfg, bonusFortSterling: e.target.checked })}
-            />
-            Bónus Fort Sterling
-          </label>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={cfg.showLymhurst ?? false}
-              onChange={(e) => setCfg({ ...cfg, showLymhurst: e.target.checked })}
-            />
-            Lymhurst
-          </label>
           <button type="button" className="btn btn-primary" onClick={refreshAll} disabled={loading || strategyLoading}>
             {loading || strategyLoading ? "A carregar…" : "Refresh preços"}
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={openSchedule}>
-            Horários (UTC-3)
           </button>
         </div>
       </aside>
@@ -275,8 +287,9 @@ export default function WoodMaster() {
                         {row.volumeFs24h?.toLocaleString("pt-PT")} un
                       </strong>
                     </span>
-                  </h3>
-                  <div className="table-wrap">
+                  </h3>                  <p className="result-card__updated">
+                    Última atualização: {result.lastUpdated ? `há ${formatTimeAgo(result.lastUpdated)}` : "—"}
+                  </p>                  <div className="table-wrap">
                     <table className="result-table">
                       <thead>
                         <tr>
