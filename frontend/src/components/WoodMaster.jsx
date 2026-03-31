@@ -30,6 +30,54 @@ function loadConfig() {
   };
 }
 
+function parseTierItem(item) {
+  const [tier, level] = String(item).split(".");
+  return {
+    tier: tier || "T4",
+    level: level || "0",
+  };
+}
+
+function tAntOf(tier) {
+  const tNum = parseInt(String(tier).slice(1), 10);
+  return Number.isNaN(tNum) ? "T4" : tNum > 4 ? `T${tNum - 1}` : "T3";
+}
+
+function buildWoodId(tier, level) {
+  if (level === "0") return `${tier}_WOOD`;
+  return `${tier}_WOOD_LEVEL${level}`;
+}
+
+function buildPlankId(tier, level) {
+  if (level === "0") return `${tier}_PLANKS`;
+  return `${tier}_PLANKS_LEVEL${level}`;
+}
+
+function itemIconUrl(itemId) {
+  return `https://render.albiononline.com/v1/item/${itemId}.png?quality=1`;
+}
+
+function ItemIcons({ item }) {
+  const { tier, level } = parseTierItem(item);
+  const woodId = buildWoodId(tier, level);
+  const plankId = buildPlankId(tier, level);
+  const antPlankId = buildPlankId(tAntOf(tier), level);
+
+  return (
+    <div className="item-icons-row">
+      <div className="item-icon-entry">
+        <img src={itemIconUrl(woodId)} alt={`${tier} tronco`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/32?text=wood"; }} />
+      </div>
+      <div className="item-icon-entry">
+        <img src={itemIconUrl(antPlankId)} alt={`${tAntOf(tier)} tábua ant.`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/32?text=plank"; }} />
+      </div>
+      <div className="item-icon-entry">
+        <img src={itemIconUrl(plankId)} alt={`${tier} tábua`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/32?text=plank"; }} />
+      </div>
+    </div>
+  );
+}
+
 export default function WoodMaster() {
   const [cfg, setCfg] = useState(loadConfig);
   const [result, setResult] = useState(null);
@@ -287,8 +335,7 @@ export default function WoodMaster() {
                         {row.volumeFs24h?.toLocaleString("pt-PT")} un
                       </strong>
                     </span>
-                  </h3>
-                  <div className="table-wrap">
+                  </h3>                  <ItemIcons item={row.nivel} />                  <div className="table-wrap">
                     <table className="result-table">
                       <thead>
                         <tr>
@@ -566,7 +613,12 @@ function StrategyTable({ title, kind, rows, compact }) {
           <tbody>
             {sortedRows.map((r) => (
               <tr key={r.item}>
-                <td>{r.item}</td>
+                <td>
+                  <div className="strategy-item-cell">
+                    <ItemIcons item={r.item} />
+                    <span className="strategy-item-label">{r.item}</span>
+                  </div>
+                </td>
                 <td className={kind === "fama" ? famaClass(r.lucro) : profitClass(r.lucro)}>
                   {kind === "foco"
                     ? Math.round(r.lucro).toLocaleString("pt-PT")
