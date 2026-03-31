@@ -61,7 +61,10 @@ function ItemIcons({ item }) {
   const { tier, level } = parseTierItem(item);
   const woodId = buildWoodId(tier, level);
   const plankId = buildPlankId(tier, level);
-  const antPlankId = buildPlankId(tAntOf(tier), "0");
+  // Tábua antecessora: T4 sempre usa T3.0, outros tiers seguem o enchantment
+  const tierNum = parseInt(tier.slice(1), 10);
+  const antLevel = tierNum === 4 ? "0" : level;
+  const antPlankId = buildPlankId(tAntOf(tier), antLevel);
 
   return (
     <div className="item-icons-row">
@@ -370,7 +373,15 @@ export default function WoodMaster() {
                           </th>
                           <th>
                             <div className="th-with-icon">
-                              <img src={itemIconUrl(buildPlankId(tAntOf(parseTierItem(row.nivel).tier), "0"))} alt={`${tAntOf(parseTierItem(row.nivel).tier)} tábua ant.`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/84?text=plank"; }} />
+                              {(() => {
+                                const tier = parseTierItem(row.nivel).tier;
+                                const level = parseTierItem(row.nivel).level;
+                                const tierNum = parseInt(tier.slice(1), 10);
+                                const antLevel = tierNum === 4 ? "0" : level;
+                                return (
+                                  <img src={itemIconUrl(buildPlankId(tAntOf(tier), antLevel))} alt={`${tAntOf(tier)} tábua ant.`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/84?text=plank"; }} />
+                                );
+                              })()}
                               <span className="th-with-icon__qty">x1</span>
                             </div>
                           </th>
