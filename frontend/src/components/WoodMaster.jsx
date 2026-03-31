@@ -61,7 +61,7 @@ function ItemIcons({ item }) {
   const { tier, level } = parseTierItem(item);
   const woodId = buildWoodId(tier, level);
   const plankId = buildPlankId(tier, level);
-  const antPlankId = buildPlankId(tAntOf(tier), level);
+  const antPlankId = buildPlankId(tAntOf(tier), "0");
 
   return (
     <div className="item-icons-row">
@@ -358,7 +358,7 @@ export default function WoodMaster() {
                           </th>
                           <th>
                             <div className="th-with-icon">
-                              <img src={itemIconUrl(buildPlankId(tAntOf(parseTierItem(row.nivel).tier), parseTierItem(row.nivel).level))} alt={`${tAntOf(parseTierItem(row.nivel).tier)} tábua ant.`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/84?text=plank"; }} />
+                              <img src={itemIconUrl(buildPlankId(tAntOf(parseTierItem(row.nivel).tier), "0"))} alt={`${tAntOf(parseTierItem(row.nivel).tier)} tábua ant.`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/84?text=plank"; }} />
                               <span className="th-with-icon__qty">x1</span>
                             </div>
                           </th>
@@ -640,7 +640,6 @@ function StrategyTable({ title, kind, rows, compact }) {
                 <td>
                   <div className="strategy-item-cell">
                     <FinalProductIcon item={r.item} />
-                    <span className="strategy-item-label">{r.item}</span>
                   </div>
                 </td>
                 <td className={kind === "fama" ? famaClass(r.lucro) : profitClass(r.lucro)}>
