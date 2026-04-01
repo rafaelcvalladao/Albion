@@ -64,6 +64,18 @@ export function scheduleFiber(tier) {
   return request(`/api/fiber/schedule/${encodeURIComponent(tier)}`);
 }
 
+export function calculateLeather(body) {
+  return request("/api/leather/calculate", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function strategyLeather(body) {
+  return request("/api/leather/strategy", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function scheduleLeather(tier) {
+  return request(`/api/leather/schedule/${encodeURIComponent(tier)}`);
+}
+
 export function marketCategories() {
   return request("/api/market/categories");
 }
