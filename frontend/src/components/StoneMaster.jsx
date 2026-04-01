@@ -44,13 +44,13 @@ function tAntOf(tier) {
 }
 
 function buildStoneId(tier, level) {
-  if (level === "0") return `${tier}_STONE`;
-  return `${tier}_STONE_LEVEL${level}`;
+  if (level === "0") return `${tier}_ORE`;
+  return `${tier}_ORE_LEVEL${level}@${level}`;
 }
 
 function buildStoneBlockId(tier, level) {
   if (level === "0") return `${tier}_STONEBLOCK`;
-  return `${tier}_STONEBLOCK_LEVEL${level}`;
+  return `${tier}_STONEBLOCK@${level}`;
 }
 
 function itemIconUrl(itemId) {
