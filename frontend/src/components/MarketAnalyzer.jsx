@@ -121,7 +121,7 @@ export default function MarketAnalyzer() {
         const dedupSet = new Set();
         const todasUnicas = [];
         for (const op of todas) {
-          const chave = `${op.tier}|${op.encanto}|${op.estado}|${op.origem}|${op.destino}`;
+          const chave = `${op.id}|${op.origem}|${op.destino}`;
           if (!dedupSet.has(chave)) {
             dedupSet.add(chave);
             todasUnicas.push(op);
@@ -236,7 +236,6 @@ export default function MarketAnalyzer() {
                     <th>Venda Buy Order</th>
                     <th>Lucro</th>
                     <th>%</th>
-                    <th>Vol. Semanal</th>
                     <th>Stale</th>
                   </tr>
                 </thead>
@@ -285,12 +284,6 @@ export default function MarketAnalyzer() {
                           {op.lucro?.toLocaleString("pt-PT", { maximumFractionDigits: 0 })}
                         </td>
                         <td style={{ textAlign: "right" }}>{margem}%</td>
-                        <td style={{ textAlign: "center", fontSize: "0.95rem" }}>
-                          <div style={{ fontWeight: 600, color: op.volumeSemanal > 10 ? "#4ade80" : op.volumeSemanal > 3 ? "#fbbf24" : "#ef4444" }}>
-                            {op.volumeSemanal}
-                          </div>
-                          <div style={{ fontSize: "0.75rem", color: "#888" }}>por dia</div>
-                        </td>
                         <td style={{ textAlign: "center" }}>{op.desatualizado ? "⚠️" : "✅"}</td>
                       </tr>
                     );

@@ -1,5 +1,3 @@
-import { fetchHistory, fetchPrices } from "./albionClient.js";
-
 // Mapa de distâncias entre cidades (em relação à "vizinhança")
 // Vizinhos: ~100 prata/kg, Distantes: ~200 prata/kg
 const CITY_DISTANCES = {
@@ -342,35 +340,6 @@ function chunk(arr, size) {
   return out;
 }
 
-async function obterMediaVendas7d(itemId, cidade) {
-  try {
-    // timescale=7 pega dados dos últimos 7 dias
-    const resposta = await fetchHistory([itemId], cidade, 7);
-    if (!resposta?.length || !resposta[0]?.data?.length) return 0;
-
-    const dadosHistorico = resposta[0].data;
-    let totalVendido = 0;
-
-    // Somar TODAS as vendas nos 7 dias (sell_price_max_mov é o volume de vendas)
-    for (const registro of dadosHistorico) {
-      // item_count é a quantidade vendida naquele período
-      totalVendido += registro.item_count || 0;
-    }
-
-    // Retorna a média por dia (total / 7 dias)
-    const mediaPerDia = Math.floor(totalVendido / 7);
-    
-    console.log(`[Volume] ${itemId} em ${cidade}: total 7 dias = ${totalVendido}, média/dia = ${mediaPerDia}`);
-    return mediaPerDia;
-  } catch (err) {
-    console.error(`[Volume] Erro ao buscar volume para ${itemId} em ${cidade}:`, err.message);
-    return 0;
-  }
-}
-
-/**
- * Preços em várias cidades com qualities configurável (query extra na URL Albion).
- */
 async function fetchPricesMarket(itemIds, locations, quality = 1) {
   const unique = [...new Set(itemIds.filter(Boolean))];
   const loc = Array.isArray(locations) ? locations.join(",") : locations;
@@ -446,9 +415,6 @@ export async function buscarOportunidades({
   const qualityNum = Number(quality) || 1;
   const taxaVendaDecimal = (taxaVenda / 100);
   const taxaVendaNota = 1 - taxaVendaDecimal;
-
-  // Cache para volume de vendas por item+cidade para evitar múltiplas requisições
-  const volumeCache = {};
 
   // Aumentar concorrência para batches grandes
   const chunks = chunk(itensProcessar, 100);
@@ -562,16 +528,6 @@ export async function buscarOportunidades({
               (!isNaN(destinoDate) && agoraMs - destinoDate > 12 * 3600000) ||
               (!isNaN(origemDate) && agoraMs - origemDate > 12 * 3600000);
 
-            // 🔄 Buscar volume de vendas para o destino (com cache)
-            let volumeSemanal = 0;
-            const cacheKey = `${itemId}|${cidadeDest}`;
-            if (volumeCache[cacheKey] !== undefined) {
-              volumeSemanal = volumeCache[cacheKey];
-            } else {
-              volumeSemanal = await obterMediaVendas7d(itemId, cidadeDest);
-              volumeCache[cacheKey] = volumeSemanal;
-            }
-
             oportunidadesBrutas.push({
               id: itemId,
               nomeBase,
@@ -585,7 +541,7 @@ export async function buscarOportunidades({
               buyOrderDestino,
               custoTeleporte,
               lucro: lucroLiquido,
-              volumeSemanal, // 📊 Novo: volume médio de vendas por dia
+              margem: precoCompra > 0 ? ((precoVenda / precoCompra - 1) * 100) : 0,
               atualizacaoOrig: infoOri.dataStrSell,
               atualizacaoDest: infoDest.dataStrSell,
               atualizacaoBuyOrderDest: infoDest.dataStrBuy,
@@ -601,16 +557,11 @@ export async function buscarOportunidades({
   console.log(`[Market] Total oportunidades encontradas: ${oportunidadesBrutas.length}`);
   console.log(`[Market] Items processados do batch ${itensProcessar.length}, itens com preço: ${[...new Set(oportunidadesBrutas.map(o => o.id))].length}`);
   
-  // Deduplicar por combinação (tier + encanto + qualidade + origem + destino)
-  // IMPORTANTE: Comparamos preços de itens com as MESMAS características!
-  // - Tier: T4, T5, ... T8
-  // - Encanto: .0 (ou sem), .1, .2, .3, .4
-  // - Qualidade: Normal, Bom, Excepcional, Excelente, Obra-prima
-  // Itens sem encanto têm encanto="0", itens sem esses atributos usam valor padrão
+  // Deduplicar por item + par de cidades
   const dedupSet = new Set();
   const oportunidadesUnicas = [];
   for (const op of oportunidadesBrutas) {
-    const chave = `${op.tier}|${op.encanto}|${op.estado}|${op.origem}|${op.destino}`;
+    const chave = `${op.id}|${op.origem}|${op.destino}`;
     if (!dedupSet.has(chave)) {
       dedupSet.add(chave);
       oportunidadesUnicas.push(op);
