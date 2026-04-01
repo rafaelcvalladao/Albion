@@ -2,10 +2,10 @@ import express from "express";
 import cors from "cors";
 import { buscarOportunidades, CATEGORIAS, obterCategoriasDinamicas } from "./marketService.js";
 import { estrategiaCompleta, horariosUtc, processarWood } from "./woodService.js";
-import { processarFiber, estrategiaCompletaFiber, horariosUtcFiber } from "./fiberService.js";
-import { processarLeather, estrategiaCompletaLeather, horariosUtcLeather } from "./leatherService.js";
-import { processarMetal, estrategiaCompletaMetal, horariosUtcMetal } from "./metalService.js";
-import { processarStone, estrategiaCompleteStone, horariosUtcStone } from "./stoneService.js";
+import { processarFiber, estrategiaCompletaFiber } from "./fiberService.js";
+import { processarLeather, estrategiaCompletaLeather } from "./leatherService.js";
+import { processarMetal, estrategiaCompletaMetal } from "./metalService.js";
+import { processarStone, estrategiaCompleteStone } from "./stoneService.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -71,16 +71,6 @@ app.post("/api/fiber/strategy", async (req, res) => {
   }
 });
 
-app.get("/api/fiber/schedule/:tier", async (req, res) => {
-  try {
-    const data = await horariosUtcFiber(req.params.tier);
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
 /** Refino de couro → leather */
 app.post("/api/leather/calculate", async (req, res) => {
   try {
@@ -95,16 +85,6 @@ app.post("/api/leather/calculate", async (req, res) => {
 app.post("/api/leather/strategy", async (req, res) => {
   try {
     const data = await estrategiaCompletaLeather(req.body || {});
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
-app.get("/api/leather/schedule/:tier", async (req, res) => {
-  try {
-    const data = await horariosUtcLeather(req.params.tier);
     res.json(data);
   } catch (e) {
     console.error(e);
@@ -133,16 +113,6 @@ app.post("/api/metal/strategy", async (req, res) => {
   }
 });
 
-app.get("/api/metal/schedule/:tier", async (req, res) => {
-  try {
-    const data = await horariosUtcMetal(req.params.tier);
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
 app.post("/api/stone/calculate", async (req, res) => {
   try {
     const data = await processarStone(req.body || {});
@@ -156,16 +126,6 @@ app.post("/api/stone/calculate", async (req, res) => {
 app.post("/api/stone/strategy", async (req, res) => {
   try {
     const data = await estrategiaCompleteStone(req.body || {});
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
-app.get("/api/stone/schedule/:tier", async (req, res) => {
-  try {
-    const data = await horariosUtcStone(req.params.tier);
     res.json(data);
   } catch (e) {
     console.error(e);

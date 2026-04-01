@@ -77,19 +77,6 @@ function convertToUTC3(isoDate) {
   }
 }
 
-function convertUTCToUTC3Display(isoDateUTC3) {
-  // Recebe data já em UTC-3 (ISO format), converte apenas para objeto Date para exibição
-  if (!isoDateUTC3) return null;
-  try {
-    const d = new Date(isoDateUTC3);
-    if (Number.isNaN(d.getTime())) return null;
-    // Como a data já está em UTC-3 (representada com Z mas -3h), apenas retorna como está
-    return d;
-  } catch {
-    return null;
-  }
-}
-
 function getVol(volMap, city, itemId) {
   return volMap.get(`${city}|${itemId}`) ?? 0;
 }

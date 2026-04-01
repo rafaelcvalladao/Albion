@@ -48,20 +48,12 @@ export function strategyWood(body) {
   return request("/api/wood/strategy", { method: "POST", body: JSON.stringify(body) });
 }
 
-export function scheduleWood(tier) {
-  return request(`/api/wood/schedule/${encodeURIComponent(tier)}`);
-}
-
 export function calculateFiber(body) {
   return request("/api/fiber/calculate", { method: "POST", body: JSON.stringify(body) });
 }
 
 export function strategyFiber(body) {
   return request("/api/fiber/strategy", { method: "POST", body: JSON.stringify(body) });
-}
-
-export function scheduleFiber(tier) {
-  return request(`/api/fiber/schedule/${encodeURIComponent(tier)}`);
 }
 
 export function calculateLeather(body) {
@@ -72,10 +64,6 @@ export function strategyLeather(body) {
   return request("/api/leather/strategy", { method: "POST", body: JSON.stringify(body) });
 }
 
-export function scheduleLeather(tier) {
-  return request(`/api/leather/schedule/${encodeURIComponent(tier)}`);
-}
-
 export function calculateMetal(body) {
   return request("/api/metal/calculate", { method: "POST", body: JSON.stringify(body) });
 }
@@ -84,20 +72,12 @@ export function strategyMetal(body) {
   return request("/api/metal/strategy", { method: "POST", body: JSON.stringify(body) });
 }
 
-export function scheduleMetal(tier) {
-  return request(`/api/metal/schedule/${encodeURIComponent(tier)}`);
-}
-
 export function calculateStone(body) {
   return request("/api/stone/calculate", { method: "POST", body: JSON.stringify(body) });
 }
 
 export function strategyStone(body) {
   return request("/api/stone/strategy", { method: "POST", body: JSON.stringify(body) });
-}
-
-export function scheduleStone(tier) {
-  return request(`/api/stone/schedule/${encodeURIComponent(tier)}`);
 }
 
 export function marketCategories() {

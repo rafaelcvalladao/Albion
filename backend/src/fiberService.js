@@ -75,17 +75,6 @@ function convertToUTC3(isoDate) {
   }
 }
 
-function convertUTCToUTC3Display(isoDateUTC3) {
-  if (!isoDateUTC3) return null;
-  try {
-    const d = new Date(isoDateUTC3);
-    if (Number.isNaN(d.getTime())) return null;
-    return d;
-  } catch {
-    return null;
-  }
-}
-
 function getVol(volMap, city, itemId) {
   return volMap.get(`${city}|${itemId}`) ?? 0;
 }
@@ -308,8 +297,4 @@ export async function estrategiaCompletaFiber(body) {
     fsLocalFoco: top(fsFoco),
     fsLocalFama: topFama(fsFama),
   };
-}
-
-export async function horariosUtcFiber(tier) {
-  return { schedule: [] };
 }

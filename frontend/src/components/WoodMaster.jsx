@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { calculateWood, scheduleWood, strategyWood } from "../api.js";
+import { calculateWood, strategyWood } from "../api.js";
 import { profitClass, famaClass } from "../utils/profit.js";
 
 const SPEC_KEYS = [
@@ -56,30 +56,6 @@ function itemIconUrl(itemId) {
   return `https://render.albiononline.com/v1/item/${itemId}.png?quality=1`;
 }
 
-function ItemIcons({ item }) {
-  const { tier, level } = parseTierItem(item);
-  const woodId = buildWoodId(tier, level);
-  const plankId = buildPlankId(tier, level);
-  // Tábua antecessora: T4 sempre usa T3.0, outros tiers seguem o enchantment
-  const tierNum = parseInt(tier.slice(1), 10);
-  const antLevel = tierNum === 4 ? "0" : level;
-  const antPlankId = buildPlankId(tAntOf(tier), antLevel);
-
-  return (
-    <div className="item-icons-row">
-      <div className="item-icon-entry">
-        <img src={itemIconUrl(woodId)} alt={`${tier} tronco`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/32?text=wood"; }} />
-      </div>
-      <div className="item-icon-entry">
-        <img src={itemIconUrl(antPlankId)} alt={`${tAntOf(tier)} tábua ant.`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/32?text=plank"; }} />
-      </div>
-      <div className="item-icon-entry">
-        <img src={itemIconUrl(plankId)} alt={`${tier} tábua`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/32?text=plank"; }} />
-      </div>
-    </div>
-  );
-}
-
 function FinalProductIcon({ item }) {
   const { tier, level } = parseTierItem(item);
   const plankId = buildPlankId(tier, level);
@@ -96,11 +72,8 @@ export default function WoodMaster() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
-  const [showSchedule, setShowSchedule] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [showFarmFama, setShowFarmFama] = useState(false);
-  const [schedule, setSchedule] = useState(null);
-  const [scheduleLoading, setScheduleLoading] = useState(false);
   const [strategy, setStrategy] = useState(null);
   const [strategyLoading, setStrategyLoading] = useState(false);
 
@@ -207,30 +180,6 @@ export default function WoodMaster() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- taxa/spec atualizados no refresh ou blur
   }, [cfg.buyOrder, cfg.foco]);
 
-  const convertUtcToUtc3 = (utcTime) => {
-    if (utcTime === "---") return "---";
-    // Formato: "DD/MM HH:MM"
-    const [datePart, timePart] = utcTime.split(" ");
-    const [day, month] = datePart.split("/");
-    const [hour, minute] = timePart.split(":").map(Number);
-    
-    // Criar data UTC
-    const utcDate = new Date();
-    utcDate.setUTCFullYear(2024, parseInt(month) - 1, parseInt(day));
-    utcDate.setUTCHours(hour, minute, 0, 0);
-    
-    // Subtrair 3 horas para UTC-3
-    utcDate.setUTCHours(utcDate.getUTCHours() - 3);
-    
-    // Formatar de volta
-    const newDay = String(utcDate.getUTCDate()).padStart(2, "0");
-    const newMonth = String(utcDate.getUTCMonth() + 1).padStart(2, "0");
-    const newHour = String(utcDate.getUTCHours()).padStart(2, "0");
-    const newMinute = String(utcDate.getUTCMinutes()).padStart(2, "0");
-    
-    return `${newDay}/${newMonth} ${newHour}:${newMinute}`;
-  };
-
   const formatTimeAgo = (isoDate) => {
     if (!isoDate) return "—";
     try {
@@ -258,22 +207,6 @@ export default function WoodMaster() {
       return "—";
     }
   };
-
-  const openSchedule = async () => {
-    setShowSchedule(true);
-    setScheduleLoading(true);
-    setSchedule(null);
-    try {
-      const data = await scheduleWood(cfg.tier);
-      setSchedule(data);
-    } catch (e) {
-      setSchedule({ error: e.message || String(e) });
-    } finally {
-      setScheduleLoading(false);
-    }
-  };
-
-  const colAntLabel = cfg.tier === "T4" ? "Tábua T3" : "Tábua Ant.";
 
   return (
     <div className="wood-layout">
@@ -503,48 +436,6 @@ export default function WoodMaster() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {showSchedule && (
-        <div className="modal-backdrop" role="presentation" onClick={() => setShowSchedule(false)}>
-          <div className="modal" role="dialog" aria-labelledby="sched-title" onClick={(e) => e.stopPropagation()}>
-            <header>
-              <h3 id="sched-title">Últimas atualizações (UTC-3) — {cfg.tier}</h3>
-              <button type="button" className="modal-close" onClick={() => setShowSchedule(false)} aria-label="Fechar">
-                ×
-              </button>
-            </header>
-            {scheduleLoading && <p>A carregar…</p>}
-            {schedule?.error && <p className="error">{schedule.error}</p>}
-            {schedule?.blocos?.map((b) => (
-              <div key={b.titulo} className="schedule-block">
-                <h4>{b.titulo}</h4>
-                <div className="table-wrap">
-                  <table className="result-table">
-                    <thead>
-                      <tr>
-                        <th>Cidade</th>
-                        <th>Tronco</th>
-                        <th>Tábua Ant.</th>
-                        <th>Tábua (Sell)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {b.cities.map((c) => (
-                        <tr key={c.city}>
-                          <td>{c.city}</td>
-                          <td>{convertUtcToUtc3(c.tronco)}</td>
-                          <td>{convertUtcToUtc3(c.tabuaAnt)}</td>
-                          <td>{convertUtcToUtc3(c.tabuaSell)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       )}
