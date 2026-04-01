@@ -277,6 +277,9 @@ export default function WoodMaster() {
     <div className="wood-layout">
       <aside className="panel panel--sidebar wood-sidebar">
         <h2>Configurações</h2>
+        <div style={{ marginBottom: "1rem", padding: "0.75rem", backgroundColor: "rgba(76, 175, 80, 0.1)", borderRadius: "4px", border: "1px solid #4CAF50" }}>
+          <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: "bold", color: "#2E7D32" }}>🏴 Refino em: <strong>{REFINING_CITY}</strong></p>
+        </div>
         <div className="form-grid">
           <label>
             Tier

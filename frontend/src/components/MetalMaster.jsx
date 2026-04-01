@@ -500,18 +500,6 @@ export default function MetalMaster() {
                             {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "\u2014"}
                           </td>
                         </tr>
-                        <tr style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)', fontWeight: 'bold' }}>
-                          <td colSpan={3}>Otimizado (Melhor compra/venda)</td>
-                          <td className="tabular-nums"></td>
-                          <td className={profitClass(row.otimizado)}>
-                            {Number.isFinite(row.otimizado)
-                              ? row.otimizado.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
-                              : "—"}
-                          </td>
-                          <td className="tabular-nums result-table__fama">
-                            {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
-                          </td>
-                        </tr>
                       </tbody>
                     </table>
                   </div>
