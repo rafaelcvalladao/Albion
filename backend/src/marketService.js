@@ -469,18 +469,10 @@ export async function buscarOportunidades({
   }
   console.log(`[Market] Após deduplicar: ${oportunidadesUnicas.length} oportunidades únicas`);
   
-  const top = oportunidadesUnicas.slice(0, 50);
-
-  const resultadosFinais = [];
-  for (const op of top) {
-    const mediaVendas = await obterMediaVendas7d(op.id, op.destino);
-    resultadosFinais.push({
-      ...op,
-      media7d: mediaVendas || 0,
-    });
-    if (resultadosFinais.length >= 20) break;
-  }
-
-  console.log(`[Market] Retornando ${resultadosFinais.length} oportunidades finais`);
+  // Retornar TODOS os itens encontrados (não limitar a 20)
+  // O frontend deduplica e escolhe o top 20
+  const resultadosFinais = oportunidadesUnicas.slice(0, 100);
+  
+  console.log(`[Market] Retornando ${resultadosFinais.length} oportunidades (até 100 por batch)`);
   return resultadosFinais;
 }

@@ -125,8 +125,12 @@ export default function MarketAnalyzer() {
         }
       }
       
-      console.log(`[Market] Total final: ${todasUnicas.length} itens únicos (antes de dedup: ${todas.length})`);
-      setRows(todasUnicas);
+      // Ordenar por lucro descente e pegar só top 20
+      todasUnicas.sort((a, b) => b.lucro - a.lucro);
+      const top20 = todasUnicas.slice(0, 20);
+      
+      console.log(`[Market] Total final: ${top20.length} itens únicos (antes de dedup: ${todas.length}, após dedup: ${todasUnicas.length})`);
+      setRows(top20);
     } catch (e) {
       console.error(`[Market] Erro na busca:`, e);
       setErr(e.message || String(e));
