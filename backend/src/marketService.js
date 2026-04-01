@@ -96,6 +96,7 @@ export const CATEGORIAS = {
 const ITEM_ID_SOURCE_URL = "https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json";
 let ALL_ITEM_IDS_CACHE = null;
 let ITEM_NAME_PT_BR_CACHE = null;
+let CATEGORIES_CACHE = null;
 
 const CIDADES_SEGURAS = [
   "Bridgewatch",
@@ -116,13 +117,13 @@ async function carregarItensDoJogo() {
     const data = await res.json();
 
     // Carregar TODOS os items que têm UniqueName
-    // Não filtrar por padrão - deixar que a API do Albion Data filtre por disponibilidade
     const ids = Array.isArray(data)
       ? [...new Set(data.map((item) => String(item.UniqueName || "")).filter((id) => id.length > 0))]
       : [];
 
     ALL_ITEM_IDS_CACHE = ids;
 
+    // Construir cache de nomes localizados
     if (Array.isArray(data)) {
       ITEM_NAME_PT_BR_CACHE = data.reduce((acc, item) => {
         const key = String(item.UniqueName || "");
@@ -130,9 +131,13 @@ async function carregarItensDoJogo() {
         if (key) acc[key] = ptName || item.LocalizedNames?.["EN-US"] || key.replace(/_/g, " ");
         return acc;
       }, {});
+
+      // Construir mapa de categorias dinamicamente
+      CATEGORIES_CACHE = construirMapaCategorias(data);
     }
 
-    console.log(`Carregados ${ids.length} itens do jogo com sucesso (de um total de ${data.length})`);
+    console.log(`Carregados ${ids.length} itens do jogo com sucesso`);
+    console.log(`Categorias dinâmicas identificadas: ${Object.keys(CATEGORIES_CACHE || {}).length}`);
     return ids;
   } catch (err) {
     console.warn("Não foi possível carregar itens completos do jogo:", err.message || err);
@@ -147,6 +152,71 @@ async function carregarItensDoJogo() {
     console.log(`Usando fallback: ${fallbackIds.length} itens gerados a partir de categorias estáticas`);
     return fallbackIds;
   }
+}
+
+function construirMapaCategorias(allItems) {
+  const cats = { Todos: [] };
+
+  if (!Array.isArray(allItems)) return cats;
+
+  for (const item of allItems) {
+    const uniqueName = String(item.UniqueName || "");
+    if (!uniqueName) continue;
+
+    cats.Todos.push(uniqueName);
+
+    // Parse: T#_CATEGORIA_SUBCATEGORIA_...
+    // Remover encantamento (@#)
+    const baseId = uniqueName.split("@")[0];
+    const parts = baseId.split("_");
+
+    if (parts.length < 2) continue;
+
+    // Extrair tier e categoria base
+    const tier = parts[0]; // T1, T2, ..., T8
+    const categoria = parts[1]; // 2H, MAIN, HEAD, ARMOR, SHOES, etc
+
+    // Determinar categoria logicamente
+    let mainCat = "Outros";
+
+    if (categoria === "2H") {
+      mainCat = "Armas 2H";
+    } else if (categoria === "MAIN") {
+      mainCat = "Armas 1H";
+    } else if (categoria === "RANGED") {
+      mainCat = "Armas Ranged";
+    } else if (["HEAD", "ARMOR", "SHOES", "GLOVES", "CAPE"].includes(categoria)) {
+      mainCat = "Armaduras";
+    } else if (["OFF", "SHIELD"].includes(categoria)) {
+      mainCat = "Escudos";
+    } else if (categoria === "MOUNT") {
+      mainCat = "Montarias";
+    } else if (["POTION", "MEAL", "DRINK", "SPICE"].includes(categoria)) {
+      mainCat = "Consumível";
+    } else if (["ORE", "WOOD", "LEATHER", "CLOTH", "METALBAR", "HIDE", "FABRIC"].includes(categoria)) {
+      mainCat = "Materiais";
+    } else if (["RUNE", "SOUL", "RELIC", "ARTIFACT", "ARTEFACT"].includes(categoria)) {
+      mainCat = "Artefatos";
+    } else if (categoria === "BAG") {
+      mainCat = "Bolsas";
+    } else if (categoria === "BOOK" || categoria === "SCROLL") {
+      mainCat = "Livros";
+    } else if (categoria === "CAPE") {
+      mainCat = "Capas";
+    } else if (baseId.includes("UNIQUE")) {
+      mainCat = "Únicos";
+    }
+
+    if (!cats[mainCat]) cats[mainCat] = [];
+    cats[mainCat].push(uniqueName);
+  }
+
+  // Deduplicar
+  for (const cat in cats) {
+    cats[cat] = [...new Set(cats[cat])];
+  }
+
+  return cats;
 }
 
 function nomeItemEmPortugues(itemId) {
@@ -203,20 +273,18 @@ function calcularCustoTeleporteComTCM(peso, tcm, cidadeOrigem, cidadeDestino) {
 async function gerarListaItens(categoria) {
   let lista = [];
 
-  if (categoria === "Todos") {
-    const todos = await carregarItensDoJogo();
-    if (todos && todos.length) {
-      lista = todos;
-    } else {
-      // fallback para categorias estáticas (se não conseguiu carregar o dump externo)
-      const bases = Object.entries(CATEGORIAS)
-        .filter(([cat]) => cat !== "Todos")
-        .flatMap(([, itens]) => itens);
-      lista = [...new Set(bases)].flatMap((b) => {
-        return TIERS.map((t) => `${t}${b}`);
-      });
-    }
+  // Primeiro carrega os itens (que constrói CATEGORIES_CACHE)
+  await carregarItensDoJogo();
+
+  // Usar categorias dinâmicas
+  if (CATEGORIES_CACHE && CATEGORIES_CACHE[categoria]) {
+    lista = CATEGORIES_CACHE[categoria];
+  } else if (categoria === "Todos") {
+    // Se não tiver categoria específica, retorna todos
+    const todos = ALL_ITEM_IDS_CACHE || [];
+    lista = todos;
   } else {
+    // Fallback para categorias estáticas se não encontrar dinâmica
     const bases = CATEGORIAS[categoria] || [];
     lista = bases.flatMap((b) => {
       const baseIds = TIERS.map((t) => `${t}${b}`);
@@ -481,4 +549,17 @@ export async function buscarOportunidades({
   // O frontend deduplica e ordena por lucro
   console.log(`[Market] Retornando ${oportunidadesUnicas.length} oportunidades deste batch`);
   return oportunidadesUnicas;
+}
+
+export async function obterCategoriasDinamicas() {
+  // Garantir que os itens estão carregados (e categorias construídas)
+  await carregarItensDoJogo();
+  
+  // Retornar categorias dinâmicas ou fallback
+  if (CATEGORIES_CACHE && Object.keys(CATEGORIES_CACHE).length > 0) {
+    return Object.keys(CATEGORIES_CACHE).sort();
+  }
+  
+  // Fallback: retornar categorias estáticas
+  return Object.keys(CATEGORIAS);
 }

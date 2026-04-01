@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { buscarOportunidades, CATEGORIAS } from "./marketService.js";
+import { buscarOportunidades, CATEGORIAS, obterCategoriasDinamicas } from "./marketService.js";
 import { estrategiaCompleta, horariosUtc, processarWood } from "./woodService.js";
 
 const app = express();
@@ -47,8 +47,15 @@ app.get("/api/wood/schedule/:tier", async (req, res) => {
 });
 
 /** Categorias disponíveis para o analisador de mercado */
-app.get("/api/market/categories", (_req, res) => {
-  res.json({ categories: Object.keys(CATEGORIAS) });
+app.get("/api/market/categories", async (_req, res) => {
+  try {
+    const categories = await obterCategoriasDinamicas();
+    res.json({ categories });
+  } catch (e) {
+    console.error("Erro ao obter categorias:", e);
+    // Fallback para categorias estáticas
+    res.json({ categories: Object.keys(CATEGORIAS) });
+  }
 });
 
 /** Arbitragem entre cidades seguras */
