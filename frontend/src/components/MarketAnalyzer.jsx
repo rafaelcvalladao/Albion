@@ -246,6 +246,7 @@ export default function MarketAnalyzer() {
         const sortedRows = [...validRows].sort((a, b) => {
           let va, vb;
           if (sortCol === "lucro") { va = a.lucro; vb = b.lucro; }
+          else if (sortCol === "volume") { va = a.volumeDiario || 0; vb = b.volumeDiario || 0; }
           else { va = a.compra > 0 ? a.venda / a.compra : 0; vb = b.compra > 0 ? b.venda / b.compra : 0; }
           return sortAsc ? va - vb : vb - va;
         });
@@ -267,6 +268,7 @@ export default function MarketAnalyzer() {
                     <th>Venda Buy Order</th>
                     <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => handleSort("lucro")}>Lucro{sortIndicator("lucro")}</th>
                     <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => handleSort("margem")}>%{sortIndicator("margem")}</th>
+                    <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => handleSort("volume")}>Vol/dia{sortIndicator("volume")}</th>
                     <th>Stale</th>
                   </tr>
                 </thead>
@@ -315,6 +317,9 @@ export default function MarketAnalyzer() {
                           {op.lucro?.toLocaleString("pt-PT", { maximumFractionDigits: 0 })}
                         </td>
                         <td style={{ textAlign: "right" }}>{margem}%</td>
+                        <td style={{ textAlign: "right", color: (op.volumeDiario || 0) === 0 ? "#666" : (op.volumeDiario || 0) >= 10 ? "#4caf50" : "#ff9800" }}>
+                          {(op.volumeDiario || 0) > 0 ? op.volumeDiario.toLocaleString("pt-PT") : "-"}
+                        </td>
                         <td style={{ textAlign: "center" }}>{op.desatualizado ? "⚠️" : "✅"}</td>
                       </tr>
                     );

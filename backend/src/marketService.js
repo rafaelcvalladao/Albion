@@ -392,6 +392,56 @@ async function fetchPricesMarket(itemIds, locations, quality = 0) {
   return merged;
 }
 
+// Buscar histórico de vendas (volume diário) em lote
+async function fetchHistoryMarket(itemIds, locations) {
+  const unique = [...new Set(itemIds.filter(Boolean))];
+  const loc = Array.isArray(locations) ? locations.join(",") : locations;
+  const allChunks = chunk(unique, 50); // chunks menores para history
+  const merged = [];
+  const concurrency = 3;
+
+  for (let i = 0; i < allChunks.length; i += concurrency) {
+    const batch = allChunks.slice(i, i + concurrency);
+    const calls = batch.map(async (part) => {
+      const url = `https://www.albion-online-data.com/api/v2/stats/history/${part.join(",")}?locations=${encodeURIComponent(loc)}&time-scale=24`;
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (!res.ok) return [];
+      return res.json();
+    });
+
+    const results = await Promise.allSettled(calls);
+    for (const r of results) {
+      if (r.status === "fulfilled" && Array.isArray(r.value)) {
+        merged.push(...r.value);
+      }
+    }
+
+    if (i + concurrency < allChunks.length) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+  }
+
+  // Agregar: para cada item+cidade, média diária dos últimos 7 dias
+  const volumeMap = new Map(); // "itemId|city" -> avg daily volume
+  for (const entry of merged) {
+    if (!entry.data || !Array.isArray(entry.data)) continue;
+    const key = `${entry.item_id}|${entry.location}`;
+    let total = 0;
+    let days = 0;
+    for (const d of entry.data) {
+      if (d.item_count > 0) {
+        total += d.item_count;
+        days++;
+      }
+    }
+    const avg = days > 0 ? Math.round(total / Math.max(days, 1)) : 0;
+    const prev = volumeMap.get(key) || 0;
+    if (avg > prev) volumeMap.set(key, avg);
+  }
+
+  return volumeMap;
+}
+
 export async function buscarOportunidades({ 
   categoria, 
   maxIdadeHoras = 168,
@@ -589,6 +639,24 @@ export async function buscarOportunidades({
   }
   console.log(`[Market] Após deduplicar: ${oportunidadesUnicas.length} oportunidades únicas`);
   
+  // Buscar volume de vendas diário para os itens com oportunidades
+  const uniqueItemIds = [...new Set(oportunidadesUnicas.map(o => o.id))];
+  console.log(`[Market] Buscando volume diário para ${uniqueItemIds.length} itens únicos...`);
+  let volumeMap = new Map();
+  try {
+    volumeMap = await fetchHistoryMarket(uniqueItemIds, cidadesStr);
+    console.log(`[Market] ✓ Volume obtido para ${volumeMap.size} combinações item+cidade`);
+  } catch (e) {
+    console.log(`[Market] ⚠️ Erro ao buscar volume (continuando sem): ${e.message}`);
+  }
+
+  // Anexar volume a cada oportunidade
+  for (const op of oportunidadesUnicas) {
+    const volOrig = volumeMap.get(`${op.id}|${op.origem}`) || 0;
+    const volDest = volumeMap.get(`${op.id}|${op.destino}`) || 0;
+    op.volumeDiario = Math.max(volOrig, volDest);
+  }
+
   // Retornar TODOS os itens encontrados neste batch (sem limite de 100)
   // O frontend deduplica e ordena por lucro
   console.log(`[Market] Retornando ${oportunidadesUnicas.length} oportunidades deste batch`);
