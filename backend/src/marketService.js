@@ -302,17 +302,20 @@ async function gerarListaItens(categoria) {
 
   console.log(`[gerarListaItens] Solicitado: ${categoria}, CATEGORIES_CACHE existe: ${!!CATEGORIES_CACHE}`);
 
-  // Usar categorias dinâmicas
-  if (CATEGORIES_CACHE && CATEGORIES_CACHE[categoria]) {
-    lista = CATEGORIES_CACHE[categoria];
-    console.log(`[gerarListaItens] ✓ Usando categoria dinâmica "${categoria}": ${lista.length} itens`);
-  } else if (categoria === "Todos") {
-    // Se não tiver categoria específica, retorna todos
+  // IMPORTANTE: "Todos" deve sempre retornar TUDO
+  if (categoria === "Todos") {
+    // SEMPRE usar ALL_ITEM_IDS_CACHE para "Todos" pois tem realmente todos os items
     const todos = ALL_ITEM_IDS_CACHE || [];
     lista = todos;
-    console.log(`[gerarListaItens] ✓ Usando TODOS: ${lista.length} itens`);
-  } else {
-    // Fallback para categorias estáticas se não encontrar dinâmica
+    console.log(`[gerarListaItens] ✓ Usando TODOS (ALL_ITEM_IDS_CACHE): ${lista.length} itens`);
+  } 
+  // Usar categorias dinâmicas para categorias específicas
+  else if (CATEGORIES_CACHE && CATEGORIES_CACHE[categoria]) {
+    lista = CATEGORIES_CACHE[categoria];
+    console.log(`[gerarListaItens] ✓ Usando categoria dinâmica "${categoria}": ${lista.length} itens`);
+  } 
+  // Fallback para categorias estáticas se não encontrar dinâmica
+  else {
     const bases = CATEGORIAS[categoria] || [];
     lista = bases.flatMap((b) => {
       const baseIds = TIERS.map((t) => `${t}${b}`);
