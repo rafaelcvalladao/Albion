@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import { buscarOportunidades, CATEGORIAS, obterCategoriasDinamicas } from "./marketService.js";
 import { estrategiaCompleta, horariosUtc, processarWood } from "./woodService.js";
-import { processarFiber, estrategiaCompleataFiber, horariosUtcFiber } from "./fiberService.js";
+import { processarFiber, estrategiaCompletaFiber, horariosUtcFiber } from "./fiberService.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -60,7 +60,7 @@ app.post("/api/fiber/calculate", async (req, res) => {
 
 app.post("/api/fiber/strategy", async (req, res) => {
   try {
-    const data = await estrategiaCompleataFiber(req.body || {});
+    const data = await estrategiaCompletaFiber(req.body || {});
     res.json(data);
   } catch (e) {
     console.error(e);

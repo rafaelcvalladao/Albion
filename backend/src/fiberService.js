@@ -3,6 +3,7 @@ import { fetchHistory, fetchPrices } from "./albionClient.js";
 export const NIVEIS = ["", "_LEVEL1@1", "_LEVEL2@2", "_LEVEL3@3", "_LEVEL4@4"];
 
 const FOCO_BASE = { T4: 41, T5: 103, T6: 257, T7: 643, T8: 1607 };
+/** Fama base por craft (refino fibra → tecido), por tier .0 — multiplicador de enchant igual ao foco. */
 const FAMA_BASE = { T4: 22, T5: 56, T6: 140, T7: 350, T8: 875 };
 const MULT_ENCHANT = [1, 1.5, 2.5, 5, 10];
 
@@ -27,7 +28,14 @@ export function obterParametrosTabela(t, enc) {
     T7: [5, 7.5],
     T8: [5, 15],
   };
-  return dT[t] ?? [2, 0.9375];
+  const [q, n] = dT[t] || [2, 1];
+  const m = { ".0": 1, ".1": 2, ".2": 4, ".3": 8, ".4": 16 }[enc] || 1;
+  return [q, n * m];
+}
+
+function specTotalPrata(specVars) {
+  const keys = ["t4", "t5", "t6", "t7", "t8"];
+  return keys.reduce((sum, k) => sum + (parseInt(String(specVars[k] ?? "0"), 10) || 0) * 30, 0);
 }
 
 function buildIdsForTier(tSel) {
@@ -67,19 +75,24 @@ function convertToUTC3(isoDate) {
   }
 }
 
-function specTotalPrata(spec) {
-  const s = spec || {};
-  const v = [s.t4, s.t5, s.t6, s.t7, s.t8];
-  return v.reduce((total, val) => total + parseFloat(String(val ?? "0").trim() || "0"), 0);
+function convertUTCToUTC3Display(isoDateUTC3) {
+  if (!isoDateUTC3) return null;
+  try {
+    const d = new Date(isoDateUTC3);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  } catch {
+    return null;
+  }
 }
 
-function getVol(volMap, city, item) {
-  return volMap.get(`${city}|${item}`) ?? 0;
+function getVol(volMap, city, itemId) {
+  return volMap.get(`${city}|${itemId}`) ?? 0;
 }
 
-export async function processarFiber(body = {}) {
+export async function processarFiber(body) {
   const {
-    tier: tRaw = "T6",
+    tier: tSel,
     taxaNpc: taxaRaw,
     spec = {},
     buyOrder = false,
@@ -91,7 +104,7 @@ export async function processarFiber(body = {}) {
   if (Number.isNaN(txU)) txU = 800;
 
   const rrr = calcularRrrManual(foco, bonusFortSterling);
-  const { tAnt, ids, clothIds } = buildIdsForTier(tRaw);
+  const { tAnt, ids, clothIds } = buildIdsForTier(tSel);
 
   const res = await fetchPrices(ids, LOCATIONS_FIBER);
   const hist = await fetchHistory(clothIds, LOCATIONS_FIBER, 24);
@@ -141,7 +154,7 @@ export async function processarFiber(body = {}) {
   for (let idxN = 0; idxN < NIVEIS.length; idxN++) {
     const n = NIVEIS[idxN];
     const enc = n ? n.split("@")[0].replace("_LEVEL", ".") : ".0";
-    const [qt, fat] = obterParametrosTabela(tRaw, enc);
+    const [qt, fat] = obterParametrosTabela(tSel, enc);
     const txF = (txU / 100) * fat;
 
     const iT = ids[idxN * 3];
@@ -164,60 +177,61 @@ export async function processarFiber(body = {}) {
     const lOt = getV(mT, mA, mV);
     const melhor = Math.max(lLh, lFt, lOt);
 
-    const fBase = FOCO_BASE[tRaw] ?? 250;
+    const fBase = FOCO_BASE[tSel] ?? 250;
     const multNivel = [1, 1.5, 2.5, 5, 10][idxN];
     const fReal = fBase * multNivel * 0.5 ** (spTotal / 10000);
 
-    const famaRefino = famaRefinoPorCraft(tRaw, idxN);
+    const famaRefino = famaRefinoPorCraft(tSel, idxN);
 
     const row = {
-      nivel: `${tRaw}${enc}`,
+      nivel: `${tSel}${enc}`,
       enc,
-      qtFiber: qt,
+      qtTronco: qt,
       famaRefino,
       volumeFs24h: getVol(volMap, "Fort Sterling", iP),
       lymhurst: {
-        fiber: lh[0],
-        fiberDate: getDt("Lymhurst", iT),
-        clothAnt: lh[1],
-        clothAntDate: getDt("Lymhurst", iA),
-        cloth: lh[2],
-        clothDate: getDvt("Lymhurst", iP),
+        tronco: lh[0],
+        troncoDate: getDt("Lymhurst", iT),
+        tabuaAnt: lh[1],
+        tabuaAntDate: getDt("Lymhurst", iA),
+        tabua: lh[2],
+        tauaDate: getDvt("Lymhurst", iP),
         lucro: lLh,
       },
       fortSterling: {
-        fiber: ft[0],
-        fiberDate: getDt("Fort Sterling", iT),
-        clothAnt: ft[1],
-        clothAntDate: getDt("Fort Sterling", iA),
-        cloth: ft[2],
-        clothDate: getDvt("Fort Sterling", iP),
+        tronco: ft[0],
+        troncoDate: getDt("Fort Sterling", iT),
+        tabuaAnt: ft[1],
+        tabuaAntDate: getDt("Fort Sterling", iA),
+        tabua: ft[2],
+        tauaDate: getDvt("Fort Sterling", iP),
         lucro: lFt,
       },
       otimizado: lOt,
-      lucro: melhor,
-      rrr: (rrr * 100).toFixed(1),
-      foco: fReal > 0 ? { unidades: fReal, prataPorFoco: melhor / fReal } : undefined,
+      melhorLucro: melhor,
     };
+
+    if (lOt > -8e8 && foco) {
+      row.foco = {
+        unidades: fReal,
+        prataPorFoco: lOt / fReal,
+      };
+    }
     rows.push(row);
   }
 
-  const maxLucro = Math.max(...rows.map((r) => r.lucro || -Infinity));
-  let strategy = "Vender bruto";
-  if (rows.some((r) => r.lucro > 0)) strategy = "Refinar e vender";
-
-  const rrrPercent = (rrr * 100).toFixed(1);
-
   return {
-    material: "fiber",
-    tier: tRaw,
-    strategy,
-    rrrPercent,
+    tier: tSel,
+    strategy: buyOrder ? "BUY ORDER" : "SELL ORDER",
+    rrr,
+    rrrPercent: rrr * 100,
+    taxaNpc: txU,
+    lastUpdated: lastUpdated ? lastUpdated.toISOString() : null,
     rows,
   };
 }
 
-export async function estrategiaCompleataFiber(body = {}) {
+export async function estrategiaCompletaFiber(body = {}) {
   return { top7: [] };
 }
 

@@ -219,11 +219,11 @@ export default function FiberMaster() {
                           </tr>
                         )}
                         <tr>
-                          <td className={profitClass(row.lucro)}>
+                          <td className={profitClass(row.melhorLucro)}>
                             <strong>Fort Sterling</strong>
                             <br />
-                            {Number.isFinite(row.lucro)
-                              ? row.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
+                            {Number.isFinite(row.melhorLucro)
+                              ? row.melhorLucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
                               : "—"}{" "}
                             prata
                           </td>
