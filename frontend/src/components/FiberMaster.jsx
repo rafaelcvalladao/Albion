@@ -373,7 +373,7 @@ export default function FiberMaster() {
       <aside className="panel panel--sidebar wood-sidebar">
         <h2>Configurações</h2>
         <div style={{ marginBottom: "1rem", padding: "0.75rem", backgroundColor: "rgba(76, 175, 80, 0.1)", borderRadius: "4px", border: "1px solid #4CAF50" }}>
-          <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: "bold", color: "#2E7D32" }}🏴 Refino em: <strong>{REFINING_CITY}</strong></p>
+          <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: "bold", color: "#2E7D32" }}>🏴 Refino em: <strong>{REFINING_CITY}</strong></p>
         </div>
         <div className="form-grid">
           <label>
@@ -477,6 +477,29 @@ export default function FiberMaster() {
                         </tr>
                       </thead>
                       <tbody>
+                        <tr>
+                          <td>Lymhurst</td>
+                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                            <div>{row.lymhurst?.tronco?.toLocaleString("pt-PT") ?? "\u2014"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.lymhurst?.troncoDate)}</div>
+                          </td>
+                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                            <div>{row.lymhurst?.tabuaAnt?.toLocaleString("pt-PT") ?? "\u2014"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.lymhurst?.tabuaAntDate)}</div>
+                          </td>
+                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                            <div>{row.lymhurst?.tabua?.toLocaleString("pt-PT") ?? "\u2014"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.lymhurst?.tauaDate)}</div>
+                          </td>
+                          <td className={profitClass(row.lymhurst?.lucro)}>
+                            {Number.isFinite(row.lymhurst?.lucro)
+                              ? row.lymhurst.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
+                              : "\u2014"}
+                          </td>
+                          <td className="tabular-nums result-table__fama">
+                            {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "\u2014"}
+                          </td>
+                        </tr>
                         <tr style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)', fontWeight: 'bold' }}>
                           <td colSpan={3}>Otimizado (Melhor compra/venda)</td>
                           <td className="tabular-nums"></td>

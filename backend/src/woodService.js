@@ -201,10 +201,10 @@ export async function processarWood(body) {
       melhorLucro: lFt,
     };
 
-    if (lOt > -8e8 && foco) {
+    if (lFt > -8e8 && foco) {
       row.foco = {
         unidades: fReal,
-        prataPorFoco: lOt / fReal,
+        prataPorFoco: lFt / fReal,
       };
     }
     rows.push(row);
