@@ -101,9 +101,6 @@ export default function MarketAnalyzer() {
 
         const slice = Array.isArray(data) ? data : data.oportunidades || [];
         console.log(`[Market] Lote ${i + 1} retornou ${slice.length} itens`);
-        if (i === 0) setRows(slice);
-        else setRows((prev) => [...prev, ...slice]);
-
         todas = [...todas, ...slice];
 
         const pct = Math.min(100, Math.round(((offset + step) / totalMax) * 100));
@@ -116,8 +113,20 @@ export default function MarketAnalyzer() {
 
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
-      console.log(`[Market] Total final: ${todas.length} itens encontrados`);
-      setRows(todas);
+      
+      // Deduplicarar por (itemId + origem + destino)
+      const dedupSet = new Set();
+      const todasUnicas = [];
+      for (const op of todas) {
+        const chave = `${op.id}|${op.origem}|${op.destino}`;
+        if (!dedupSet.has(chave)) {
+          dedupSet.add(chave);
+          todasUnicas.push(op);
+        }
+      }
+      
+      console.log(`[Market] Total final: ${todasUnicas.length} itens únicos (antes de dedup: ${todas.length})`);
+      setRows(todasUnicas);
     } catch (e) {
       console.error(`[Market] Erro na busca:`, e);
       setErr(e.message || String(e));

@@ -456,7 +456,20 @@ export async function buscarOportunidades({
 
   oportunidadesBrutas.sort((a, b) => b.lucro - a.lucro);
   console.log(`[Market] Total oportunidades encontradas: ${oportunidadesBrutas.length}`);
-  const top = oportunidadesBrutas.slice(0, 50);
+  
+  // Deduplicar por combinação (itemId + origem + destino)
+  const dedupSet = new Set();
+  const oportunidadesUnicas = [];
+  for (const op of oportunidadesBrutas) {
+    const chave = `${op.id}|${op.origem}|${op.destino}`;
+    if (!dedupSet.has(chave)) {
+      dedupSet.add(chave);
+      oportunidadesUnicas.push(op);
+    }
+  }
+  console.log(`[Market] Após deduplicar: ${oportunidadesUnicas.length} oportunidades únicas`);
+  
+  const top = oportunidadesUnicas.slice(0, 50);
 
   const resultadosFinais = [];
   for (const op of top) {
