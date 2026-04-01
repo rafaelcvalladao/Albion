@@ -52,26 +52,6 @@ export function scheduleWood(tier) {
   return request(`/api/wood/schedule/${encodeURIComponent(tier)}`);
 }
 
-// Fibra → Tecido
-export function calculateFiber(body) {
-  return request("/api/fiber/calculate", { method: "POST", body: JSON.stringify(body) });
-}
-
-// Couro → Pelego
-export function calculateLeather(body) {
-  return request("/api/leather/calculate", { method: "POST", body: JSON.stringify(body) });
-}
-
-// Metal → Minério
-export function calculateMetal(body) {
-  return request("/api/metal/calculate", { method: "POST", body: JSON.stringify(body) });
-}
-
-// Pedra → Bloco de Pedra
-export function calculateStone(body) {
-  return request("/api/stone/calculate", { method: "POST", body: JSON.stringify(body) });
-}
-
 export function marketCategories() {
   return request("/api/market/categories");
 }
