@@ -344,25 +344,26 @@ function chunk(arr, size) {
 
 async function obterMediaVendas7d(itemId, cidade) {
   try {
-    const resposta = await fetchHistory([itemId], cidade, 24);
+    // timescale=7 pega dados dos últimos 7 dias
+    const resposta = await fetchHistory([itemId], cidade, 7);
     if (!resposta?.length || !resposta[0]?.data?.length) return 0;
 
     const dadosHistorico = resposta[0].data;
-    const limite7d = Date.now() - 7 * 24 * 60 * 60 * 1000;
     let totalVendido = 0;
-    let diasContados = 0;
 
+    // Somar TODAS as vendas nos 7 dias (sell_price_max_mov é o volume de vendas)
     for (const registro of dadosHistorico) {
-      const dataRegistro = new Date(registro.timestamp).getTime();
-      if (dataRegistro >= limite7d) {
-        totalVendido += registro.item_count || 0;
-        diasContados += 1;
-      }
+      // item_count é a quantidade vendida naquele período
+      totalVendido += registro.item_count || 0;
     }
 
-    if (diasContados === 0) return 0;
-    return Math.floor(totalVendido / 7);
-  } catch {
+    // Retorna a média por dia (total / 7 dias)
+    const mediaPerDia = Math.floor(totalVendido / 7);
+    
+    console.log(`[Volume] ${itemId} em ${cidade}: total 7 dias = ${totalVendido}, média/dia = ${mediaPerDia}`);
+    return mediaPerDia;
+  } catch (err) {
+    console.error(`[Volume] Erro ao buscar volume para ${itemId} em ${cidade}:`, err.message);
     return 0;
   }
 }
@@ -445,6 +446,9 @@ export async function buscarOportunidades({
   const qualityNum = Number(quality) || 1;
   const taxaVendaDecimal = (taxaVenda / 100);
   const taxaVendaNota = 1 - taxaVendaDecimal;
+
+  // Cache para volume de vendas por item+cidade para evitar múltiplas requisições
+  const volumeCache = {};
 
   // Aumentar concorrência para batches grandes
   const chunks = chunk(itensProcessar, 100);
@@ -558,6 +562,16 @@ export async function buscarOportunidades({
               (!isNaN(destinoDate) && agoraMs - destinoDate > 12 * 3600000) ||
               (!isNaN(origemDate) && agoraMs - origemDate > 12 * 3600000);
 
+            // 🔄 Buscar volume de vendas para o destino (com cache)
+            let volumeSemanal = 0;
+            const cacheKey = `${itemId}|${cidadeDest}`;
+            if (volumeCache[cacheKey] !== undefined) {
+              volumeSemanal = volumeCache[cacheKey];
+            } else {
+              volumeSemanal = await obterMediaVendas7d(itemId, cidadeDest);
+              volumeCache[cacheKey] = volumeSemanal;
+            }
+
             oportunidadesBrutas.push({
               id: itemId,
               nomeBase,
@@ -571,6 +585,7 @@ export async function buscarOportunidades({
               buyOrderDestino,
               custoTeleporte,
               lucro: lucroLiquido,
+              volumeSemanal, // 📊 Novo: volume médio de vendas por dia
               atualizacaoOrig: infoOri.dataStrSell,
               atualizacaoDest: infoDest.dataStrSell,
               atualizacaoBuyOrderDest: infoDest.dataStrBuy,
