@@ -2,14 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { calculateFiber, calculateLeather, calculateMetal, calculateStone } from "../api.js";
 import { profitClass, famaClass } from "../utils/profit.js";
 
-const SPEC_KEYS = [
-  { key: "t4", label: "T4" },
-  { key: "t5", label: "T5" },
-  { key: "t6", label: "T6" },
-  { key: "t7", label: "T7" },
-  { key: "t8", label: "T8" },
-];
-
 const MATERIAL_TYPES = {
   fiber: {
     label: "Tecido",
@@ -65,8 +57,8 @@ function loadConfig(storageKey) {
   try {
     const raw = localStorage.getItem(storageKey);
     if (raw) return JSON.parse(raw);
-  } catch {
-    /* ignore */
+  } catch (e) {
+    console.warn("Failed to load config:", e);
   }
   return {
     taxaNpc: "800",
@@ -75,66 +67,12 @@ function loadConfig(storageKey) {
     buyOrder: false,
     foco: false,
     bonusFortSterling: true,
-    showLymhurst: false,
   };
-}
-
-function itemIconUrl(itemId) {
-  return `https://render.albiononline.com/v1/item/${itemId}.png?quality=1`;
-}
-
-function StrategyTable({ title, kind, rows, compact }) {
-  if (!rows || rows.length === 0) return null;
-  const isFama = kind === "fama";
-
-  return (
-    <div className="strategy-table-wrapper">
-      <h4>{title}</h4>
-      <div className="table-wrap">
-        <table className="strategy-table">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th className="tabular-nums">{isFama ? "Fama" : "Lucro"}</th>
-              <th className="tabular-nums">Vol. 24h</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, idx) => (
-              <tr key={idx} className={compact ? "compact" : ""}>
-                <td>
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                    <img
-                      src={itemIconUrl(row.itemId)}
-                      alt={row.itemName}
-                      style={{ width: "32px", height: "32px" }}
-                      onError={(e) => {
-                        e.target.src = "https://via.placeholder.com/32?text=item";
-                      }}
-                    />
-                    <span>{row.itemName}</span>
-                  </div>
-                </td>
-                <td className="tabular-nums">
-                  <span className={isFama ? famaClass(row.value) : profitClass(row.value)}>
-                    {Number.isFinite(row.value) ? row.value?.toLocaleString("pt-PT") : "—"}
-                  </span>
-                </td>
-                <td className="tabular-nums">
-                  <span>{Number.isFinite(row.vol) ? row.vol?.toLocaleString("pt-PT") : "—"}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
 }
 
 export default function RefineryMaster({ materialType }) {
   const materialConfig = MATERIAL_TYPES[materialType];
-  if (!materialConfig) return <div className="error">Material type inválido</div>;
+  if (!materialConfig) return <div className="error">Material type inválido: {materialType}</div>;
 
   const [cfg, setCfg] = useState(() => loadConfig(materialConfig.storageKey));
   const [result, setResult] = useState(null);
@@ -145,13 +83,14 @@ export default function RefineryMaster({ materialType }) {
   const [strategy, setStrategy] = useState(null);
   const [strategyLoading, setStrategyLoading] = useState(false);
 
+  // Save config to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem(materialConfig.storageKey, JSON.stringify(cfg));
   }, [cfg, materialConfig.storageKey]);
 
-  const setSpec = (key, value) => {
+  const setSpec = useCallback((key, value) => {
     setCfg((c) => ({ ...c, spec: { ...c.spec, [key]: value } }));
-  };
+  }, []);
 
   const runCalculate = useCallback(async () => {
     setLoading(true);
@@ -167,6 +106,7 @@ export default function RefineryMaster({ materialType }) {
       });
       setResult(data);
     } catch (e) {
+      console.error("Calculation error:", e);
       setErr(e.message || String(e));
       setResult(null);
     } finally {
@@ -177,9 +117,9 @@ export default function RefineryMaster({ materialType }) {
   const runStrategy = useCallback(async () => {
     setStrategyLoading(true);
     try {
-      const data = { top7: [] };
-      setStrategy(data);
+      setStrategy({ fsLocalFoco: [], globalFoco: [], globalFama: [] });
     } catch (e) {
+      console.error("Strategy error:", e);
       setStrategy({ error: e.message || String(e) });
     } finally {
       setStrategyLoading(false);
@@ -190,54 +130,40 @@ export default function RefineryMaster({ materialType }) {
     await Promise.all([runCalculate(), runStrategy()]);
   }, [runCalculate, runStrategy]);
 
+  // Initial calculation on mount and when tier/options change
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setErr(null);
-    materialConfig.calcFunction({
-      tier: cfg.tier,
-      taxaNpc: cfg.taxaNpc,
-      spec: cfg.spec,
-      buyOrder: cfg.buyOrder,
-      foco: cfg.foco,
-      bonusFortSterling: cfg.bonusFortSterling,
-    })
-      .then((data) => {
+    
+    const performCalculation = async () => {
+      try {
+        const data = await materialConfig.calcFunction({
+          tier: cfg.tier,
+          taxaNpc: cfg.taxaNpc,
+          spec: cfg.spec,
+          buyOrder: cfg.buyOrder,
+          foco: cfg.foco,
+          bonusFortSterling: cfg.bonusFortSterling,
+        });
         if (!cancelled) setResult(data);
-      })
-      .catch((e) => {
+      } catch (e) {
         if (!cancelled) {
+          console.error("Fetch error:", e);
           setErr(e.message || String(e));
           setResult(null);
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    };
+    
+    performCalculation();
+    
     return () => {
       cancelled = true;
     };
   }, [cfg.tier, cfg.buyOrder, cfg.foco, cfg.bonusFortSterling, materialConfig]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setStrategyLoading(true);
-    Promise.resolve({ top7: [] })
-      .then((data) => {
-        if (!cancelled) setStrategy(data);
-      })
-      .catch((e) => {
-        if (!cancelled) setStrategy({ error: e.message || String(e) });
-      })
-      .finally(() => {
-        if (!cancelled) setStrategyLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [cfg.buyOrder, cfg.bonusFortSterling]);
-
-  const showLy = cfg.showLymhurst ?? false;
 
   return (
     <div className="wood-layout">
@@ -296,22 +222,22 @@ export default function RefineryMaster({ materialType }) {
         <section className="panel wood-results-main">
           <h2>Resultados - {materialConfig.label}</h2>
           {err && <p className="error">{err}</p>}
-          {result && (
+          {result && result.rows && result.rows.length > 0 && (
             <>
               <div className="summary-strip">
                 <span className="summary-strip__label">Estratégia</span>
-                <span className="summary-strip__value">{result.strategy}</span>
+                <span className="summary-strip__value">{result.strategy || "—"}</span>
                 <span className="summary-strip__label">RRR</span>
-                <span className="summary-strip__value">{result.rrrPercent?.toFixed(1)}%</span>
+                <span className="summary-strip__value">{result.rrrPercent?.toFixed(1) || 0}%</span>
               </div>
-              {result.rows?.map((row) => (
+              {result.rows.map((row) => (
                 <article key={row.nivel} className="result-card">
                   <h3 className="result-card__title">
                     <span className="result-card__tier">{row.nivel}</span>
                     <span className="result-card__vol">
                       Vol. FS 24h:{" "}
                       <strong className="result-card__vol-num">
-                        {row.volumeFs24h?.toLocaleString("pt-PT")} un
+                        {row.volumeFs24h?.toLocaleString("pt-PT") || "—"} un
                       </strong>
                     </span>
                   </h3>
@@ -335,7 +261,7 @@ export default function RefineryMaster({ materialType }) {
                               : "—"}{" "}
                             prata
                           </td>
-                          <td className="tabular-nums">{result.rrrPercent?.toFixed(1)}%</td>
+                          <td className="tabular-nums">{result.rrrPercent?.toFixed(1) || 0}%</td>
                           <td className="tabular-nums result-table__fama">
                             {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
                           </td>
@@ -348,6 +274,9 @@ export default function RefineryMaster({ materialType }) {
               ))}
             </>
           )}
+          {!err && (!result || !result.rows || result.rows.length === 0) && !loading && (
+            <p style={{ opacity: 0.6 }}>Clique em "Refresh preços" para carregar dados…</p>
+          )}
         </section>
 
         <aside className="panel wood-strategy-panel" aria-label="Indicações">
@@ -358,13 +287,8 @@ export default function RefineryMaster({ materialType }) {
             Top 15 com volume (todas as tiers). Atualiza ao mudar buy order / bónus ou com Refresh.
           </p>
           {strategyLoading && <p className="mono strategy-hint">A carregar…</p>}
-          {strategy?.error && <p className="error">{strategy.error}</p>}
-          {strategy && !strategy.error && (
-            <>
-              <StrategyTable title="Local com Foco" kind="foco" rows={strategy.fsLocalFoco} compact />
-              {showLy && <StrategyTable title="Global com Foco" kind="foco" rows={strategy.globalFoco} compact />}
-              {showLy && <StrategyTable title="Global: Fama" kind="fama" rows={strategy.globalFama} compact />}
-            </>
+          {!strategyLoading && (
+            <p style={{ opacity: 0.6 }}>Dados estão sendo preparados…</p>
           )}
         </aside>
       </div>
