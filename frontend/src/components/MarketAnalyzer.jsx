@@ -41,7 +41,9 @@ export default function MarketAnalyzer() {
   const [rows, setRows] = useState([]);
   const [itemsProcessados, setItemsProcessados] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [maxPrata, setMaxPrata] = useState(""); // Novo: máximo de prata disponível
+  const [maxPrata, setMaxPrata] = useState("");
+  const [sortCol, setSortCol] = useState("lucro");
+  const [sortAsc, setSortAsc] = useState(false);
   const itemsPerPage = 20;
 
   useEffect(() => {
@@ -198,8 +200,9 @@ export default function MarketAnalyzer() {
       {rows.length > 0 && (
         <div style={{ padding: "0.75rem", backgroundColor: "#1a3a52", borderRadius: "4px", marginBottom: "0.75rem", fontSize: "0.9rem", color: "#aaa" }}>
           <strong style={{ color: "#fff" }}>Dica:</strong> Exibindo {rows.filter((op) => {
+            const margem = op.compra > 0 ? (op.venda / op.compra - 1) * 100 : 0;
             const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
-            return maxPrataNum === null || op.compra <= maxPrataNum;
+            return margem <= 300 && (maxPrataNum === null || op.compra <= maxPrataNum);
           }).length} oportunidades {maxPrata ? `com prata \u2264 ${parseInt(maxPrata).toLocaleString("pt-PT")}` : ""} \u2714
         </div>
       )}
@@ -209,13 +212,28 @@ export default function MarketAnalyzer() {
       {/* Calcular paginação */}
       {(() => {
         const validRows = rows.filter((op) => {
+          const margem = op.compra > 0 ? (op.venda / op.compra - 1) * 100 : 0;
           const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
           const prataValida = maxPrataNum === null || op.compra <= maxPrataNum;
-          return prataValida;
+          return margem <= 300 && prataValida;
         });
-        const totalPages = Math.ceil(validRows.length / itemsPerPage);
+
+        const handleSort = (col) => {
+          if (sortCol === col) { setSortAsc(!sortAsc); } else { setSortCol(col); setSortAsc(false); }
+          setCurrentPage(1);
+        };
+        const sortIndicator = (col) => sortCol === col ? (sortAsc ? " \u2191" : " \u2193") : "";
+
+        const sortedRows = [...validRows].sort((a, b) => {
+          let va, vb;
+          if (sortCol === "lucro") { va = a.lucro; vb = b.lucro; }
+          else { va = a.compra > 0 ? a.venda / a.compra : 0; vb = b.compra > 0 ? b.venda / b.compra : 0; }
+          return sortAsc ? va - vb : vb - va;
+        });
+
+        const totalPages = Math.ceil(sortedRows.length / itemsPerPage);
         const startIdx = (currentPage - 1) * itemsPerPage;
-        const pageRows = validRows.slice(startIdx, startIdx + itemsPerPage);
+        const pageRows = sortedRows.slice(startIdx, startIdx + itemsPerPage);
 
         return (
           <>
@@ -228,8 +246,8 @@ export default function MarketAnalyzer() {
                     <th>Compra Sell Order</th>
                     <th>Venda Sell Order</th>
                     <th>Venda Buy Order</th>
-                    <th>Lucro</th>
-                    <th>%</th>
+                    <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => handleSort("lucro")}>Lucro{sortIndicator("lucro")}</th>
+                    <th style={{ cursor: "pointer", userSelect: "none" }} onClick={() => handleSort("margem")}>%{sortIndicator("margem")}</th>
                     <th>Stale</th>
                   </tr>
                 </thead>
