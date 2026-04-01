@@ -18,8 +18,9 @@ export default function LoginGate({ onSuccess }) {
         sessionStorage.setItem("albion_token", token.trim());
         onSuccess();
       }
-    } catch {
-      setError("Token inválido. Tente novamente.");
+    } catch (err) {
+      console.error("[LoginGate] Erro na validação:", err);
+      setError(err.message || "Erro ao validar token.");
     } finally {
       setLoading(false);
     }
