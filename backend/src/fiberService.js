@@ -231,8 +231,100 @@ export async function processarFiber(body) {
   };
 }
 
-export async function estrategiaCompletaFiber(body = {}) {
-  return { top7: [] };
+export async function estrategiaCompletaFiber(body) {
+  const {
+    taxaNpc: taxaRaw,
+    spec = {},
+    buyOrder = false,
+    bonusFortSterling = true,
+  } = body;
+
+  let taxaU = parseFloat(String(taxaRaw ?? "800").trim() || "800");
+  if (Number.isNaN(taxaU)) taxaU = 800;
+
+  const specTotal = specTotalPrata(spec);
+  const niveis = NIVEIS;
+
+  const allIds = [];
+  const clothIds = [];
+  for (const t of ["T4", "T5", "T6", "T7", "T8"]) {
+    const tAnt = parseInt(t[1], 10) > 4 ? `T${parseInt(t[1], 10) - 1}` : "T3";
+    for (const n of niveis) {
+      allIds.push(`${t}_FIBER${n}`, `${t}_CLOTH${n}`, tAnt === "T3" ? `${tAnt}_CLOTH` : `${tAnt}_CLOTH${n}`);
+      clothIds.push(`${t}_CLOTH${n}`);
+    }
+  }
+
+  const res = await fetchPrices([...new Set(allIds)], LOCATIONS_FIBER);
+  const hist = await fetchHistory([...new Set(clothIds)], LOCATIONS_FIBER, 24);
+  const volData = volumeMapFromHistory(hist);
+
+  const dc = new Map();
+  const dv = new Map();
+  for (const p of res) {
+    const key = `${p.city}|${p.item_id}`;
+    const val = buyOrder && p.buy_price_max > 0 ? p.buy_price_max : p.sell_price_min;
+    if (val > 0) dc.set(key, val);
+    if (p.sell_price_min > 0) dv.set(key, p.sell_price_min);
+  }
+
+  const getDc = (c, it) => dc.get(`${c}|${it}`) ?? 0;
+  const getDv = (c, it) => dv.get(`${c}|${it}`) ?? 0;
+
+  const fsFoco = [];
+  const fsFama = [];
+
+  for (const t of ["T4", "T5", "T6", "T7", "T8"]) {
+    const tAnt = parseInt(t[1], 10) > 4 ? `T${parseInt(t[1], 10) - 1}` : "T3";
+    for (let idxN = 0; idxN < niveis.length; idxN++) {
+      const n = niveis[idxN];
+      const enc = n ? n.split("@")[0].replace("_LEVEL", ".") : ".0";
+      const [qt, fat] = obterParametrosTabela(t, enc);
+      const txF = (taxaU / 100) * fat;
+
+      const iT = `${t}_FIBER${n}`;
+      const iP = `${t}_CLOTH${n}`;
+      const iA = tAnt === "T3" ? `${tAnt}_CLOTH` : `${tAnt}_CLOTH${n}`;
+
+      const fsT = getDc("Fort Sterling", iT);
+      const fsA = getDc("Fort Sterling", iA);
+      const fsP = getDv("Fort Sterling", iP);
+
+      const vFs = getVol(volData, "Fort Sterling", iP);
+
+      const rrrFoco = calcularRrrManual(true, bonusFortSterling);
+      const rrrFama = calcularRrrManual(false, bonusFortSterling);
+      const fBase = FOCO_BASE[t] ?? 250;
+      const fReal = fBase * [1, 1.5, 2.5, 5, 10][idxN] * 0.5 ** (specTotal / 10000);
+      const fama = famaRefinoPorCraft(t, idxN);
+
+      if (fsT && fsA && fsP) {
+        fsFoco.push({
+          item: `${t}${enc}`,
+          lucro: (fsP - ((fsT * qt + fsA) * (1 - rrrFoco) + txF)) / fReal,
+          volume: vFs,
+        });
+        const lucroBrutoFamaLocal = fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF);
+        fsFama.push({
+          item: `${t}${enc}`,
+          fama,
+          famaPerPrata: Math.abs(lucroBrutoFamaLocal) > 0 ? fama / Math.abs(lucroBrutoFamaLocal) : 0,
+          lucro: lucroBrutoFamaLocal,
+          volume: vFs,
+        });
+      }
+    }
+  }
+
+  const sortDesc = (a, b) => b.lucro - a.lucro;
+  const sortDescFama = (a, b) => b.fama - a.fama;
+  const top = (arr, n = 15) => [...arr].sort(sortDesc).slice(0, n);
+  const topFama = (arr, n = 15) => [...arr].sort(sortDescFama).slice(0, n);
+
+  return {
+    fsLocalFoco: top(fsFoco),
+    fsLocalFama: topFama(fsFama),
+  };
 }
 
 export async function horariosUtcFiber(tier) {

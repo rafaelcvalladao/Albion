@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { calculateFiber, scheduleFiber } from "../api.js";
+import { calculateFiber, strategyFiber } from "../api.js";
 import { profitClass, famaClass } from "../utils/profit.js";
 
 const SPEC_KEYS = [
@@ -57,6 +57,116 @@ function itemIconUrl(itemId) {
   return `https://render.albiononline.com/v1/item/${itemId}.png?quality=1`;
 }
 
+function FinalProductIcon({ item }) {
+  return (
+    <div className="strategy-final-product-icon">
+      <img src={itemIconUrl(item)} alt={item} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/56?text=product"; }} />
+    </div>
+  );
+}
+
+function StrategyTable({ title, kind, rows, compact }) {
+  const [sortColumn, setSortColumn] = useState(kind === "foco" ? "volume" : null);
+  const [sortAsc, setSortAsc] = useState(kind === "foco" ? false : true);
+
+  if (!rows?.length) return null;
+
+  const headClass =
+    kind === "foco"
+      ? "strategy-section-title strategy-section-title--foco"
+      : kind === "fama"
+        ? "strategy-section-title strategy-section-title--fama"
+        : "strategy-section-title";
+
+  const colHeaderLabel = kind === "foco" ? "Lucro/1 foco" : "Fama por Prata";
+
+  const handleHeaderClick = (column) => {
+    if (sortColumn === column) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortColumn(column);
+      setSortAsc(false);
+    }
+  };
+
+  const sortedRows = [...rows].sort((a, b) => {
+    let valA, valB;
+
+    if (sortColumn === "lucro" || sortColumn === "fama") {
+      valA = kind === "foco" ? a.lucro : a.famaPerPrata;
+      valB = kind === "foco" ? b.lucro : b.famaPerPrata;
+    } else if (sortColumn === "volume") {
+      valA = a.volume ?? 0;
+      valB = b.volume ?? 0;
+    } else {
+      valA = a.item;
+      valB = b.item;
+    }
+
+    if (typeof valA === "string") {
+      return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    }
+    return sortAsc ? valA - valB : valB - valA;
+  });
+
+  const getSortIndicator = (column) => {
+    if (sortColumn !== column) return "";
+    return sortAsc ? " ↑" : " ↓";
+  };
+
+  return (
+    <div className={`strategy-block${compact ? " strategy-block--compact" : ""}`}>
+      <div className={headClass} role="heading" aria-level={3}>
+        {title}
+      </div>
+      <div className="table-wrap">
+        <table className="result-table">
+          <thead>
+            <tr>
+              <th
+                style={{ cursor: "pointer" }}
+                onClick={() => handleHeaderClick("item")}
+              >
+                Item{getSortIndicator("item")}
+              </th>
+              <th
+                style={{ cursor: "pointer" }}
+                onClick={() => handleHeaderClick("lucro")}
+              >
+                {colHeaderLabel}
+                {getSortIndicator("lucro")}
+              </th>
+              <th
+                style={{ cursor: "pointer" }}
+                onClick={() => handleHeaderClick("volume")}
+              >
+                Vol. 24h{getSortIndicator("volume")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedRows.map((r) => (
+              <tr key={r.item}>
+                <td>
+                  <div className="strategy-item-cell">
+                    <FinalProductIcon item={r.item} />
+                  </div>
+                </td>
+                <td className={kind === "fama" ? famaClass(r.lucro) : profitClass(r.lucro)} style={{ fontSize: "1.1rem", fontWeight: 700, textAlign: "center" }}>
+                  {kind === "foco"
+                    ? Math.round(r.lucro).toLocaleString("pt-PT")
+                    : r.famaPerPrata?.toFixed(4).toLocaleString("pt-PT") ?? "—"}
+                </td>
+                <td className="tabular-nums strategy-table-vol">{r.volume?.toLocaleString("pt-PT") ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function FiberMaster() {
   const [cfg, setCfg] = useState(loadConfig);
   const [result, setResult] = useState(null);
@@ -64,6 +174,8 @@ export default function FiberMaster() {
   const [err, setErr] = useState(null);
   const [showConfig, setShowConfig] = useState(false);
   const [showFarmFama, setShowFarmFama] = useState(false);
+  const [strategy, setStrategy] = useState(null);
+  const [strategyLoading, setStrategyLoading] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(STORAGE, JSON.stringify(cfg));
@@ -147,6 +259,31 @@ export default function FiberMaster() {
       cancelled = true;
     };
   }, [cfg.tier, cfg.buyOrder, cfg.foco, cfg.bonusFortSterling]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setStrategyLoading(true);
+    strategyFiber({
+      taxaNpc: cfg.taxaNpc,
+      spec: cfg.spec,
+      buyOrder: cfg.buyOrder,
+      bonusFortSterling: cfg.bonusFortSterling,
+    })
+      .then((data) => {
+        if (!cancelled) setStrategy(data);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setStrategy({ error: e.message || String(e) });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setStrategyLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cfg.buyOrder, cfg.bonusFortSterling]);
 
   const showLy = cfg.showLymhurst ?? false;
 
@@ -315,6 +452,13 @@ export default function FiberMaster() {
           <p className="strategy-hint">
             Top 15 com volume (todas as tiers). Atualiza ao mudar buy order / bónus ou com Refresh.
           </p>
+          {strategyLoading && <p className="mono strategy-hint">A carregar…</p>}
+          {strategy?.error && <p className="error">{strategy.error}</p>}
+          {strategy && !strategy.error && (
+            <>
+              <StrategyTable title="Local com Foco" kind="foco" rows={strategy.fsLocalFoco} compact />
+            </>
+          )}
         </aside>
       </div>
 
