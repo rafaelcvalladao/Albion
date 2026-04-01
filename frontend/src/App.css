@@ -725,6 +725,13 @@ table.result-table {
   min-width: 180px;
 }
 
+.search-item-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 180px;
+}
+
 .max-prata-input {
   padding: 0.6rem 0.8rem;
   background: linear-gradient(135deg, #1a3a52 0%, #0f2235 100%);

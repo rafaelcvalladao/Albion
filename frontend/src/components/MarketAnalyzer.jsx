@@ -44,6 +44,7 @@ export default function MarketAnalyzer() {
   const [maxPrata, setMaxPrata] = useState("");
   const [sortCol, setSortCol] = useState("lucro");
   const [sortAsc, setSortAsc] = useState(false);
+  const [searchItem, setSearchItem] = useState("");
   const itemsPerPage = 20;
 
   useEffect(() => {
@@ -184,6 +185,17 @@ export default function MarketAnalyzer() {
           />
         </div>
 
+        <div className="search-item-wrapper">
+          <label className="category-label-text">Pesquisar Item</label>
+          <input
+            type="text"
+            value={searchItem}
+            onChange={(e) => { setSearchItem(e.target.value); setCurrentPage(1); }}
+            placeholder="Ex: runa, claymore..."
+            className="max-prata-input"
+          />
+        </div>
+
         <button type="button" className="btn btn-primary" onClick={buscar} disabled={loading || scanning}>
           {scanning ? "Escaneando…" : "Buscar oportunidades"}
         </button>
@@ -202,8 +214,10 @@ export default function MarketAnalyzer() {
           <strong style={{ color: "#fff" }}>Dica:</strong> Exibindo {rows.filter((op) => {
             const margem = op.compra > 0 ? (op.venda / op.compra - 1) * 100 : 0;
             const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
+            const sl = searchItem.trim().toLowerCase();
+            if (sl && !(op.nomeBase || op.id || "").toLowerCase().includes(sl)) return false;
             return margem <= 300 && (maxPrataNum === null || op.compra <= maxPrataNum);
-          }).length} oportunidades {maxPrata ? `com prata \u2264 ${parseInt(maxPrata).toLocaleString("pt-PT")}` : ""} \u2714
+          }).length} oportunidades {maxPrata ? `com prata \u2264 ${parseInt(maxPrata).toLocaleString("pt-PT")}` : ""} {searchItem.trim() ? `filtrado por "${searchItem.trim()}"` : ""} ✔
         </div>
       )}
 
@@ -211,10 +225,15 @@ export default function MarketAnalyzer() {
       
       {/* Calcular paginação */}
       {(() => {
+        const searchLower = searchItem.trim().toLowerCase();
         const validRows = rows.filter((op) => {
           const margem = op.compra > 0 ? (op.venda / op.compra - 1) * 100 : 0;
           const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
           const prataValida = maxPrataNum === null || op.compra <= maxPrataNum;
+          if (searchLower) {
+            const name = (op.nomeBase || op.id || "").toLowerCase();
+            if (!name.includes(searchLower)) return false;
+          }
           return margem <= 300 && prataValida;
         });
 
