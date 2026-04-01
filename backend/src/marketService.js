@@ -229,6 +229,24 @@ function construirMapaCategorias(allItems) {
     cats[cat] = [...new Set(cats[cat])];
   }
 
+  // Criar categorias de grupo (agregar subcategorias com " - ")
+  const groupAgg = {};
+  for (const cat of Object.keys(cats)) {
+    if (cat === "Todos") continue;
+    const parts = cat.split(" - ");
+    if (parts.length === 2) {
+      const group = parts[0];
+      if (!groupAgg[group]) groupAgg[group] = [];
+      groupAgg[group].push(...cats[cat]);
+    }
+  }
+  for (const [group, items] of Object.entries(groupAgg)) {
+    // Só criar grupo se tiver mais de 1 subcategoria
+    if (!cats[group]) {
+      cats[group] = [...new Set(items)];
+    }
+  }
+
   // Ordenar categorias alfabeticamente
   const sortedCats = {};
   Object.keys(cats).sort().forEach(key => {

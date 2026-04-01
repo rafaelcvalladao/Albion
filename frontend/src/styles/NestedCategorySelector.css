@@ -181,7 +181,27 @@
 /* Group header (accordion) */
 .ncs-group-header {
   width: 100%;
-  padding: 0.55rem 0.8rem;
+  display: flex;
+  align-items: center;
+  transition: background 0.12s;
+}
+
+.ncs-group-header:hover {
+  background: rgba(0, 163, 224, 0.06);
+}
+
+.ncs-group-header.expanded {
+  background: rgba(0, 163, 224, 0.05);
+}
+
+.ncs-group-header.has-active {
+  background: rgba(0, 163, 224, 0.04);
+}
+
+/* Selectable group label (left part) */
+.ncs-group-label {
+  flex: 1;
+  padding: 0.55rem 0.4rem 0.55rem 0.8rem;
   border: none;
   background: transparent;
   color: #c0d0da;
@@ -192,21 +212,40 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  transition: background 0.12s, color 0.12s;
+  transition: color 0.12s;
 }
 
-.ncs-group-header:hover {
-  background: rgba(0, 163, 224, 0.06);
+.ncs-group-label:hover {
   color: #fff;
 }
 
-.ncs-group-header.expanded {
+.ncs-group-label.active {
   color: #00a3e0;
-  background: rgba(0, 163, 224, 0.05);
+  font-weight: 600;
 }
 
-.ncs-group-header.has-active {
+.ncs-group-header.expanded .ncs-group-label {
   color: #00a3e0;
+}
+
+.ncs-group-header.has-active .ncs-group-label {
+  color: #00a3e0;
+}
+
+/* Expand/collapse toggle (right part) */
+.ncs-group-toggle {
+  padding: 0.55rem 0.7rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-left: 1px solid rgba(42, 74, 98, 0.4);
+  transition: background 0.12s;
+}
+
+.ncs-group-toggle:hover {
+  background: rgba(0, 163, 224, 0.12);
 }
 
 .ncs-group-badge {
