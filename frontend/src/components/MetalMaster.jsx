@@ -49,8 +49,8 @@ function buildOreId(tier, level) {
 }
 
 function buildMetalId(tier, level) {
-  if (level === "0") return `${tier}_METAL`;
-  return `${tier}_METAL_LEVEL${level}`;
+  if (level === "0") return `${tier}_METALBAR`;
+  return `${tier}_METALBAR_LEVEL${level}`;
 }
 
 function itemIconUrl(itemId) {

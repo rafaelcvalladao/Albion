@@ -44,8 +44,8 @@ function buildIdsForTier(tSel) {
   const ids = [];
   const metalIds = [];
   for (const n of NIVEIS) {
-    ids.push(`${tSel}_ORE${n}`, `${tSel}_METAL${n}`, tAnt === "T3" ? `${tAnt}_METAL` : `${tAnt}_METAL${n}`);
-    metalIds.push(`${tSel}_METAL${n}`);
+    ids.push(`${tSel}_ORE${n}`, `${tSel}_METALBAR${n}`, tAnt === "T3" ? `${tAnt}_METALBAR` : `${tAnt}_METALBAR${n}`);
+    metalIds.push(`${tSel}_METALBAR${n}`);
   }
   return { tAnt, ids, metalIds };
 }
@@ -250,8 +250,8 @@ export async function estrategiaCompletaMetal(body) {
   for (const t of ["T4", "T5", "T6", "T7", "T8"]) {
     const tAnt = parseInt(t[1], 10) > 4 ? `T${parseInt(t[1], 10) - 1}` : "T3";
     for (const n of niveis) {
-      allIds.push(`${t}_ORE${n}`, `${t}_METAL${n}`, tAnt === "T3" ? `${tAnt}_METAL` : `${tAnt}_METAL${n}`);
-      metalIds.push(`${t}_METAL${n}`);
+      allIds.push(`${t}_ORE${n}`, `${t}_METALBAR${n}`, tAnt === "T3" ? `${tAnt}_METALBAR` : `${tAnt}_METALBAR${n}`);
+      metalIds.push(`${t}_METALBAR${n}`);
     }
   }
 
@@ -283,8 +283,8 @@ export async function estrategiaCompletaMetal(body) {
       const txF = (taxaU / 100) * fat;
 
       const iT = `${t}_ORE${n}`;
-      const iP = `${t}_METAL${n}`;
-      const iA = tAnt === "T3" ? `${tAnt}_METAL` : `${tAnt}_METAL${n}`;
+      const iP = `${t}_METALBAR${n}`;
+      const iA = tAnt === "T3" ? `${tAnt}_METALBAR` : `${tAnt}_METALBAR${n}`;
 
       const fsT = getDc("Fort Sterling", iT);
       const fsA = getDc("Fort Sterling", iA);
