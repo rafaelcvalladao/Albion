@@ -10,7 +10,7 @@ const SPEC_KEYS = [
   { key: "t8", label: "Minério (T8)" },
 ];
 
-const REFINING_CITY = "Bridgewatch";
+const REFINING_CITY = "Thetford";
 const STORAGE = "albion-metal-config-v1";
 
 function loadConfig() {
@@ -496,22 +496,22 @@ export default function MetalMaster() {
                       </thead>
                       <tbody>
                         <tr>
-                          <td>Bridgewatch</td>
+                          <td>Thetford</td>
                           <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                            <div>{row.bridgewatch?.tronco?.toLocaleString("pt-PT") ?? "\u2014"}</div>
-                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.bridgewatch?.troncoDate)}</div>
+                            <div>{row.thetford?.tronco?.toLocaleString("pt-PT") ?? "\u2014"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.thetford?.troncoDate)}</div>
                           </td>
                           <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                            <div>{row.bridgewatch?.tabuaAnt?.toLocaleString("pt-PT") ?? "\u2014"}</div>
-                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.bridgewatch?.tabuaAntDate)}</div>
+                            <div>{row.thetford?.tabuaAnt?.toLocaleString("pt-PT") ?? "\u2014"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.thetford?.tabuaAntDate)}</div>
                           </td>
                           <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                            <div>{row.bridgewatch?.tabua?.toLocaleString("pt-PT") ?? "\u2014"}</div>
-                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.bridgewatch?.tauaDate)}</div>
+                            <div>{row.thetford?.tabua?.toLocaleString("pt-PT") ?? "\u2014"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.thetford?.tauaDate)}</div>
                           </td>
-                          <td className={profitClass(row.bridgewatch?.lucro)}>
-                            {Number.isFinite(row.bridgewatch?.lucro)
-                              ? row.bridgewatch.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
+                          <td className={profitClass(row.thetford?.lucro)}>
+                            {Number.isFinite(row.thetford?.lucro)
+                              ? row.thetford.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
                               : "\u2014"}
                           </td>
                           <td className="tabular-nums result-table__fama">

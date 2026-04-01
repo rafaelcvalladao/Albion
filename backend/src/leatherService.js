@@ -271,37 +271,31 @@ export async function estrategiaCompletaLeather(body) {
       const famaRef = famaRefinoPorCraft(t, idxN);
 
       if (fsT && fsA && fsP) {
-        const lucrFoco = fsP - ((fsT * qt + fsA) * (1 - rrrFoco) + txF);
-        const lucrFama = fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF);
-
-        if (lucrFoco > 0) {
-          fsFoco.push({
-            item: `${t}${enc}`,
-            lucro: lucrFoco,
-            volume: vFs,
-            foco: fReal,
-            lucroPerFoco: fReal ? lucrFoco / fReal : 0,
-          });
-        }
-        if (lucrFama > 0) {
-          const famaPerPrata = famaRef / Math.abs(lucrFama);
-          fsFama.push({
-            item: `${t}${enc}`,
-            lucro: lucrFama,
-            volume: vFs,
-            fama: famaRef,
-            famaPerPrata,
-          });
-        }
+        fsFoco.push({
+          item: `${t}${enc}`,
+          lucro: fsP - ((fsT * qt + fsA) * (1 - rrrFoco) + txF),
+          volume: vFs,
+        });
+        const lucroBrutoFamaLocal = fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF);
+        fsFama.push({
+          item: `${t}${enc}`,
+          fama: famaRef,
+          famaPerPrata: Math.abs(lucroBrutoFamaLocal) > 0 ? famaRef / Math.abs(lucroBrutoFamaLocal) : 0,
+          lucro: lucroBrutoFamaLocal,
+          volume: vFs,
+        });
       }
     }
   }
 
-  fsFoco.sort((a, b) => b.lucro - a.lucro);
-  fsFama.sort((a, b) => b.famaPerPrata - a.famaPerPrata);
+  const sortDesc = (a, b) => b.lucro - a.lucro;
+  const sortDescFama = (a, b) => b.fama - a.fama;
+  const top = (arr, n = 8) => [...arr].sort(sortDesc).slice(0, n);
+  const topFama = (arr, n = 8) => [...arr].sort(sortDescFama).slice(0, n);
 
   return {
-    fsLocalFoco: fsFoco.slice(0, 8),
-    fsLocalFama: fsFama.slice(0, 8),
+    fsLocalFoco: top(fsFoco),
+    fsLocalFama: topFama(fsFama),
+    fsLocalFamaAll: fsFama,
   };
 }

@@ -7,7 +7,7 @@ const FOCO_BASE = { T4: 41, T5: 103, T6: 257, T7: 643, T8: 1607 };
 const FAMA_BASE = { T4: 22, T5: 56, T6: 140, T7: 350, T8: 875 };
 const MULT_ENCHANT = [1, 1.5, 2.5, 5, 10];
 
-const LOCATIONS_METAL = ["Bridgewatch"];
+const LOCATIONS_METAL = ["Thetford"];
 
 function famaRefinoPorCraft(tSel, idxN) {
   const base = FAMA_BASE[tSel] ?? 22;
@@ -149,7 +149,7 @@ export async function processarMetal(body) {
     const iP = ids[idxN * 3 + 1];
     const iA = ids[idxN * 3 + 2];
 
-    const bw = [getDc("Bridgewatch", iT), getDc("Bridgewatch", iA), getDv("Bridgewatch", iP)];
+    const bw = [getDc("Thetford", iT), getDc("Thetford", iA), getDv("Thetford", iP)];
 
     function getV(t, a, v) {
       if (t && a && v) return v - ((t * qt + a) * (1 - rrr) + txF);
@@ -169,14 +169,14 @@ export async function processarMetal(body) {
       enc,
       qtTronco: qt,
       famaRefino,
-      volumeFs24h: getVol(volMap, "Bridgewatch", iP),
-      bridgewatch: {
+      volumeFs24h: getVol(volMap, "Thetford", iP),
+      thetford: {
         tronco: bw[0],
-        troncoDate: getDt("Bridgewatch", iT),
+        troncoDate: getDt("Thetford", iT),
         tabuaAnt: bw[1],
-        tabuaAntDate: getDt("Bridgewatch", iA),
+        tabuaAntDate: getDt("Thetford", iA),
         tabua: bw[2],
-        tauaDate: getDvt("Bridgewatch", iP),
+        tauaDate: getDvt("Thetford", iP),
         lucro: lBw,
       },
       otimizado: lBw,
@@ -258,11 +258,11 @@ export async function estrategiaCompletaMetal(body) {
       const iP = `${t}_METALBAR${n}`;
       const iA = tAnt === "T3" ? `${tAnt}_METALBAR` : `${tAnt}_METALBAR${n}`;
 
-      const fsT = getDc("Bridgewatch", iT);
-      const fsA = getDc("Bridgewatch", iA);
-      const fsP = getDv("Bridgewatch", iP);
+      const fsT = getDc("Thetford", iT);
+      const fsA = getDc("Thetford", iA);
+      const fsP = getDv("Thetford", iP);
 
-      const vFs = getVol(volData, "Bridgewatch", iP);
+      const vFs = getVol(volData, "Thetford", iP);
 
       const rrrFoco = calcularRrrManual(foco, true);
       const rrrFama = calcularRrrManual(false, true);
@@ -271,37 +271,31 @@ export async function estrategiaCompletaMetal(body) {
       const famaRef = famaRefinoPorCraft(t, idxN);
 
       if (fsT && fsA && fsP) {
-        const lucrFoco = fsP - ((fsT * qt + fsA) * (1 - rrrFoco) + txF);
-        const lucrFama = fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF);
-
-        if (lucrFoco > 0) {
-          fsFoco.push({
-            item: `${t}${enc}`,
-            lucro: lucrFoco,
-            volume: vFs,
-            foco: fReal,
-            lucroPerFoco: fReal ? lucrFoco / fReal : 0,
-          });
-        }
-        if (lucrFama > 0) {
-          const famaPerPrata = famaRef / Math.abs(lucrFama);
-          fsFama.push({
-            item: `${t}${enc}`,
-            lucro: lucrFama,
-            volume: vFs,
-            fama: famaRef,
-            famaPerPrata,
-          });
-        }
+        fsFoco.push({
+          item: `${t}${enc}`,
+          lucro: fsP - ((fsT * qt + fsA) * (1 - rrrFoco) + txF),
+          volume: vFs,
+        });
+        const lucroBrutoFamaLocal = fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF);
+        fsFama.push({
+          item: `${t}${enc}`,
+          fama: famaRef,
+          famaPerPrata: Math.abs(lucroBrutoFamaLocal) > 0 ? famaRef / Math.abs(lucroBrutoFamaLocal) : 0,
+          lucro: lucroBrutoFamaLocal,
+          volume: vFs,
+        });
       }
     }
   }
 
-  fsFoco.sort((a, b) => b.lucro - a.lucro);
-  fsFama.sort((a, b) => b.famaPerPrata - a.famaPerPrata);
+  const sortDesc = (a, b) => b.lucro - a.lucro;
+  const sortDescFama = (a, b) => b.fama - a.fama;
+  const top = (arr, n = 8) => [...arr].sort(sortDesc).slice(0, n);
+  const topFama = (arr, n = 8) => [...arr].sort(sortDescFama).slice(0, n);
 
   return {
-    fsLocalFoco: fsFoco.slice(0, 8),
-    fsLocalFama: fsFama.slice(0, 8),
+    fsLocalFoco: top(fsFoco),
+    fsLocalFama: topFama(fsFama),
+    fsLocalFamaAll: fsFama,
   };
 }
