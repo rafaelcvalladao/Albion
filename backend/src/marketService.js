@@ -299,7 +299,7 @@ export async function buscarOportunidades({
   quality = 1,
   usarBuyOrder = false,
   taxaVenda = 6.5,
-  maxItensProcessar = 2500,
+  maxItensProcessar = 999999, // Sem limite efetivo
   offset = 0,
   step = 500,
 }) {
@@ -312,13 +312,9 @@ export async function buscarOportunidades({
     return [];
   }
 
-  if (itens.length > maxItensProcessar) {
-    itens = itens.slice(0, maxItensProcessar);
-    console.log(`[Market] Limitado a ${maxItensProcessar} itens`);
-  }
-
+  // Processa TODOS os itens (sem limitar)
   const itensProcessar = itens.slice(offset, Math.min(offset + step, itens.length));
-  console.log(`[Market] Processando slice: offset=${offset}, step=${step}, itens neste batch=${itensProcessar.length}`);
+  console.log(`[Market] Processando slice: offset=${offset}, step=${step}, itens neste batch=${itensProcessar.length}/${itens.length}`);
   
   if (!itensProcessar.length) {
     console.log(`[Market] Slice vazio! Retornando []`);

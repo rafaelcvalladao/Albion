@@ -35,14 +35,12 @@ export default function MarketAnalyzer() {
   const [categories, setCategories] = useState([]);
   const [categoria, setCategoria] = useState("Todos");
   const [maxHoras, setMaxHoras] = useState("6");
-  const [maxItens, setMaxItens] = useState("2500");
   const [taxaVenda, setTaxaVenda] = useState("6.5");
-  const [stepSize, setStepSize] = useState("500");
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [err, setErr] = useState(null);
   const [rows, setRows] = useState([]);
+  const [itemsProcessados, setItemsProcessados] = useState(0);
 
   useEffect(() => {
     marketCategories()
@@ -79,59 +77,64 @@ export default function MarketAnalyzer() {
     setLoading(true);
     setErr(null);
     setRows([]);
-    setProgress(0);
+    setItemsProcessados(0);
 
-    const totalMax = parseInt(maxItens, 10) || 2500;
-    const step = parseInt(stepSize, 10) || 500;
-    const maxRounds = Math.ceil(totalMax / step);
+    const step = 1500; // Tamanho do lote interno (otimizado)
 
     try {
       let todas = [];
-      for (let i = 0; i < maxRounds; i += 1) {
-        const offset = i * step;
-        console.log(`[Market] Buscando lote ${i + 1}/${maxRounds} (offset: ${offset}, step: ${step})`);
+      let offset = 0;
+      let hasMore = true;
+      let roundCount = 0;
+
+      while (hasMore) {
+        roundCount++;
+        console.log(`[Market] Buscando lote ${roundCount} (offset: ${offset}, step: ${step})`);
+        
         const data = await marketOpportunities({
           categoria,
           maxIdadeHoras: parseInt(maxHoras, 10) || 6,
           taxaVenda: parseFloat(taxaVenda) || 6.5,
-          maxItensProcessar: totalMax,
+          maxItensProcessar: 999999, // Sem limite
           offset,
           step,
         });
 
         const slice = Array.isArray(data) ? data : data.oportunidades || [];
-        console.log(`[Market] Lote ${i + 1} retornou ${slice.length} itens`);
+        console.log(`[Market] Lote ${roundCount} retornou ${slice.length} itens`);
+        
         todas = [...todas, ...slice];
+        setItemsProcessados(offset + slice.length);
 
-        const pct = Math.min(100, Math.round(((offset + step) / totalMax) * 100));
-        setProgress(pct);
-
-        if (slice.length === 0) {
-          console.log(`[Market] Lote ${i + 1} vazio, parando busca`);
-          break;
+        // Se retornou menos itens que o esperado, chegou ao final
+        if (slice.length < step) {
+          hasMore = false;
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 120));
-      }
-      
-      // Deduplicar por (tier + encanto + qualidade + origem + destino)
-      // IMPORTANTE: só comparamos preços de itens com as MESMAS características!
-      const dedupSet = new Set();
-      const todasUnicas = [];
-      for (const op of todas) {
-        const chave = `${op.tier}|${op.encanto}|${op.estado}|${op.origem}|${op.destino}`;
-        if (!dedupSet.has(chave)) {
-          dedupSet.add(chave);
-          todasUnicas.push(op);
+        // Deduplicar por (tier + encanto + qualidade + origem + destino)
+        const dedupSet = new Set();
+        const todasUnicas = [];
+        for (const op of todas) {
+          const chave = `${op.tier}|${op.encanto}|${op.estado}|${op.origem}|${op.destino}`;
+          if (!dedupSet.has(chave)) {
+            dedupSet.add(chave);
+            todasUnicas.push(op);
+          }
         }
+
+        // Ordenar por lucro descente e mostrar na tela
+        todasUnicas.sort((a, b) => b.lucro - a.lucro);
+        setRows(todasUnicas);
+
+        console.log(`[Market] Total acumulado: ${todasUnicas.length} itens únicos`);
+
+        if (!hasMore) break;
+
+        offset += step;
+        await new Promise((resolve) => setTimeout(resolve, 150));
       }
-      
-      // Ordenar por lucro descente e pegar só top 20
-      todasUnicas.sort((a, b) => b.lucro - a.lucro);
-      const top20 = todasUnicas.slice(0, 20);
-      
-      console.log(`[Market] Total final: ${top20.length} itens únicos (antes de dedup: ${todas.length}, após dedup: ${todasUnicas.length})`);
-      setRows(top20);
+
+      console.log(`[Market] Busca concluída! Total: ${todas.length} brutos, ${rows.length} únicos`);
     } catch (e) {
       console.error(`[Market] Erro na busca:`, e);
       setErr(e.message || String(e));
@@ -139,7 +142,6 @@ export default function MarketAnalyzer() {
     } finally {
       setScanning(false);
       setLoading(false);
-      setProgress(100);
     }
   };
 
@@ -150,40 +152,39 @@ export default function MarketAnalyzer() {
         Compara preços entre cidades seguras; lucro líquido estimado com todas as taxas incluídas.
       </p>
       
-      {/* Categoria */}
+      {/* Toolbar */}
       <div className="market-toolbar">
         <label>
           <span>Categoria</span>
           <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-            {(categories.length ? categories : ["Armas"]).map((c) => (
+            {(categories.length ? categories : ["Consumível"]).map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
             ))}
           </select>
         </label>
-      </div>
 
-      {/* Linha 2: Configurações */}
-      <div className="market-toolbar">
         <label>
-          <span>Máx. itens processados</span>
+          <span>Máx. idade (h)</span>
           <input
             type="text"
-            value={maxItens}
-            onChange={(e) => setMaxItens(e.target.value)}
-            style={{ width: "80px" }}
+            value={maxHoras}
+            onChange={(e) => setMaxHoras(e.target.value)}
+            style={{ width: "60px" }}
           />
         </label>
+
         <label>
-          <span>Tamanho do lote</span>
+          <span>Taxa venda (%)</span>
           <input
             type="text"
-            value={stepSize}
-            onChange={(e) => setStepSize(e.target.value)}
-            style={{ width: "80px" }}
+            value={taxaVenda}
+            onChange={(e) => setTaxaVenda(e.target.value)}
+            style={{ width: "60px" }}
           />
         </label>
+
         <button type="button" className="btn btn-primary" onClick={buscar} disabled={loading || scanning}>
           {scanning ? "Escaneando…" : "Buscar oportunidades"}
         </button>
@@ -191,9 +192,9 @@ export default function MarketAnalyzer() {
 
       <div className="market-progress" style={{ marginBottom: "0.75rem" }}>
         {scanning ? (
-          <span>Progresso: {progress}% (escaneando)</span>
+          <span>Escaneando... ({itemsProcessados} itens processados, {rows.length} oportunidades encontradas)</span>
         ) : (
-          <span>Último escaneamento: {progress === 100 ? "Concluído" : "Aguardando"}</span>
+          <span>Último escaneamento: {rows.length > 0 ? `Concluído (${rows.length} oportunidades)` : "Aguardando"}</span>
         )}
       </div>
 
