@@ -10,6 +10,7 @@ const SPEC_KEYS = [
   { key: "t8", label: "Abrunheiro (T8)" },
 ];
 
+const REFINING_CITY = "Fort Sterling";
 const STORAGE = "albion-wood-config-v1";
 
 function loadConfig() {
@@ -25,7 +26,6 @@ function loadConfig() {
     tier: "T6",
     buyOrder: false,
     foco: false,
-    bonusFortSterling: true,
     showLymhurst: false,
   };
 }
@@ -123,7 +123,6 @@ export default function WoodMaster() {
         spec: cfg.spec,
         buyOrder: cfg.buyOrder,
         foco: cfg.foco,
-        bonusFortSterling: cfg.bonusFortSterling,
       });
       setResult(data);
     } catch (e) {
@@ -141,7 +140,6 @@ export default function WoodMaster() {
         taxaNpc: cfg.taxaNpc,
         spec: cfg.spec,
         buyOrder: cfg.buyOrder,
-        bonusFortSterling: cfg.bonusFortSterling,
       });
       setStrategy(data);
     } catch (e) {
@@ -165,7 +163,6 @@ export default function WoodMaster() {
       spec: cfg.spec,
       buyOrder: cfg.buyOrder,
       foco: cfg.foco,
-      bonusFortSterling: cfg.bonusFortSterling,
     })
       .then((data) => {
         if (!cancelled) setResult(data);
@@ -184,7 +181,7 @@ export default function WoodMaster() {
     };
     // Igual ao desktop: recalcular ao mudar tier / opções de estratégia (não a cada tecla nas specs).
     // eslint-disable-next-line react-hooks/exhaustive-deps -- usa cfg atual em cada disparo destes campos
-  }, [cfg.tier, cfg.buyOrder, cfg.foco, cfg.bonusFortSterling]);
+  }, [cfg.tier, cfg.buyOrder, cfg.foco]);
 
   useEffect(() => {
     let cancelled = false;
@@ -193,7 +190,6 @@ export default function WoodMaster() {
       taxaNpc: cfg.taxaNpc,
       spec: cfg.spec,
       buyOrder: cfg.buyOrder,
-      bonusFortSterling: cfg.bonusFortSterling,
     })
       .then((data) => {
         if (!cancelled) setStrategy(data);
@@ -208,7 +204,7 @@ export default function WoodMaster() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- taxa/spec atualizados no refresh ou blur
-  }, [cfg.buyOrder, cfg.bonusFortSterling]);
+  }, [cfg.buyOrder]);
 
   const convertUtcToUtc3 = (utcTime) => {
     if (utcTime === "---") return "---";
@@ -314,14 +310,7 @@ export default function WoodMaster() {
               />
               Usar foco
             </label>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={cfg.bonusFortSterling}
-                onChange={(e) => setCfg({ ...cfg, bonusFortSterling: e.target.checked })}
-              />
-              Bónus Fort Sterling
-            </label>
+
             <label className="checkbox-row">
               <input
                 type="checkbox"

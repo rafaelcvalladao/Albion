@@ -7,7 +7,7 @@ const FOCO_BASE = { T4: 41, T5: 103, T6: 257, T7: 643, T8: 1607 };
 const FAMA_BASE = { T4: 22, T5: 56, T6: 140, T7: 350, T8: 875 };
 const MULT_ENCHANT = [1, 1.5, 2.5, 5, 10];
 
-const LOCATIONS_STONE = ["Lymhurst", "FortSterling"];
+const LOCATIONS_STONE = ["Thetford"];
 
 function famaRefinoPorCraft(tSel, idxN) {
   const base = FAMA_BASE[tSel] ?? 22;
@@ -97,13 +97,12 @@ export async function processarStone(body) {
     spec = {},
     buyOrder = false,
     foco = false,
-    bonusFortSterling = true,
   } = body;
 
   let txU = parseFloat(String(taxaRaw ?? "800").trim() || "800");
   if (Number.isNaN(txU)) txU = 800;
 
-  const rrr = calcularRrrManual(foco, bonusFortSterling);
+  const rrr = calcularRrrManual(foco, true);
   const { tAnt, ids, stoneIds } = buildIdsForTier(tSel);
 
   const res = await fetchPrices(ids, LOCATIONS_STONE);
@@ -236,7 +235,6 @@ export async function estrategiaCompleteStone(body) {
     taxaNpc: taxaRaw,
     spec = {},
     buyOrder = false,
-    bonusFortSterling = true,
   } = body;
 
   let taxaU = parseFloat(String(taxaRaw ?? "800").trim() || "800");
@@ -292,8 +290,8 @@ export async function estrategiaCompleteStone(body) {
 
       const vFs = getVol(volData, "Fort Sterling", iP);
 
-      const rrrFoco = calcularRrrManual(true, bonusFortSterling);
-      const rrrFama = calcularRrrManual(false, bonusFortSterling);
+      const rrrFoco = calcularRrrManual(true, true);
+      const rrrFama = calcularRrrManual(false, true);
       const fBase = FOCO_BASE[t] ?? 250;
       const fReal = fBase * [1, 1.5, 2.5, 5, 10][idxN] * 0.5 ** (specTotal / 10000);
       const famaRef = famaRefinoPorCraft(t, idxN);
