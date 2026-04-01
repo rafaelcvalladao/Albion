@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { buscarOportunidades, CATEGORIAS, obterCategoriasDinamicas } from "./marketService.js";
 import { estrategiaCompleta, horariosUtc, processarWood } from "./woodService.js";
+import { processarFiber, estrategiaCompleataFiber, horariosUtcFiber } from "./fiberService.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -39,6 +40,37 @@ app.post("/api/wood/strategy", async (req, res) => {
 app.get("/api/wood/schedule/:tier", async (req, res) => {
   try {
     const data = await horariosUtc(req.params.tier);
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+/** Refino de fibra → tecido */
+app.post("/api/fiber/calculate", async (req, res) => {
+  try {
+    const data = await processarFiber(req.body || {});
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/fiber/strategy", async (req, res) => {
+  try {
+    const data = await estrategiaCompleataFiber(req.body || {});
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.get("/api/fiber/schedule/:tier", async (req, res) => {
+  try {
+    const data = await horariosUtcFiber(req.params.tier);
     res.json(data);
   } catch (e) {
     console.error(e);

@@ -52,6 +52,18 @@ export function scheduleWood(tier) {
   return request(`/api/wood/schedule/${encodeURIComponent(tier)}`);
 }
 
+export function calculateFiber(body) {
+  return request("/api/fiber/calculate", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function strategyFiber(body) {
+  return request("/api/fiber/strategy", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function scheduleFiber(tier) {
+  return request(`/api/fiber/schedule/${encodeURIComponent(tier)}`);
+}
+
 export function marketCategories() {
   return request("/api/market/categories");
 }
