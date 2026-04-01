@@ -4,6 +4,7 @@ import { buscarOportunidades, CATEGORIAS, obterCategoriasDinamicas } from "./mar
 import { estrategiaCompleta, horariosUtc, processarWood } from "./woodService.js";
 import { processarFiber, estrategiaCompletaFiber, horariosUtcFiber } from "./fiberService.js";
 import { processarLeather, estrategiaCompletaLeather, horariosUtcLeather } from "./leatherService.js";
+import { processarMetal, estrategiaCompletaMetal, horariosUtcMetal } from "./metalService.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -103,6 +104,37 @@ app.post("/api/leather/strategy", async (req, res) => {
 app.get("/api/leather/schedule/:tier", async (req, res) => {
   try {
     const data = await horariosUtcLeather(req.params.tier);
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+/** Refino de minério → metal */
+app.post("/api/metal/calculate", async (req, res) => {
+  try {
+    const data = await processarMetal(req.body || {});
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/metal/strategy", async (req, res) => {
+  try {
+    const data = await estrategiaCompletaMetal(req.body || {});
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.get("/api/metal/schedule/:tier", async (req, res) => {
+  try {
+    const data = await horariosUtcMetal(req.params.tier);
     res.json(data);
   } catch (e) {
     console.error(e);

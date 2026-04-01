@@ -76,6 +76,18 @@ export function scheduleLeather(tier) {
   return request(`/api/leather/schedule/${encodeURIComponent(tier)}`);
 }
 
+export function calculateMetal(body) {
+  return request("/api/metal/calculate", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function strategyMetal(body) {
+  return request("/api/metal/strategy", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function scheduleMetal(tier) {
+  return request(`/api/metal/schedule/${encodeURIComponent(tier)}`);
+}
+
 export function marketCategories() {
   return request("/api/market/categories");
 }
