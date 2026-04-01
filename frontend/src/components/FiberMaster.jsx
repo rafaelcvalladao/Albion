@@ -170,6 +170,90 @@ function StrategyTable({ title, kind, rows, compact }) {
   );
 }
 
+function TieredFamaTables({ rows }) {
+  const [sortBy, setSortBy] = useState("famaPerPrata");
+  const [sortAsc, setSortAsc] = useState(false);
+  if (!rows?.length) return null;
+
+  const tiers = ["T4", "T5", "T6", "T7", "T8"];
+  const grouped = tiers
+    .map((tier) => {
+      const tierRows = rows.filter((r) => r.item.startsWith(tier));
+      const sorted = [...tierRows].sort((a, b) => {
+        let aVal = sortBy === "famaPerPrata" ? a.famaPerPrata ?? 0 : a.volume ?? 0;
+        let bVal = sortBy === "famaPerPrata" ? b.famaPerPrata ?? 0 : b.volume ?? 0;
+        if (aVal < bVal) return sortAsc ? -1 : 1;
+        if (aVal > bVal) return sortAsc ? 1 : -1;
+        return 0;
+      });
+      return { tier, items: sorted };
+    })
+    .filter((g) => g.items.length > 0);
+
+  if (!grouped.length) return null;
+
+  const getIndicator = (column) => {
+    if (sortBy !== column) return "";
+    return sortAsc ? " ↑" : " ↓";
+  };
+
+  const handleSort = (column) => {
+    if (sortBy === column) {
+      setSortAsc((cur) => !cur);
+    } else {
+      setSortBy(column);
+      setSortAsc(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="strategy-section-title strategy-section-title--fama">Local: Fama (Todos os enchantments)</div>
+      <div className="tiered-fama-grid">
+        {grouped.map(({ tier, items }) => (
+          <div key={tier} className="strategy-block strategy-block--compact">
+            <div className="strategy-section-title strategy-section-title--fama">{tier}</div>
+            <div className="table-wrap">
+              <table className="result-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("famaPerPrata")}
+                    >
+                      Fama/Prata{getIndicator("famaPerPrata")}
+                    </th>
+                    <th
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleSort("volume")}
+                    >
+                      Vol. 24h{getIndicator("volume")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((r) => (
+                    <tr key={r.item}>
+                      <td>
+                        <FinalProductIcon item={r.item} />
+                      </td>
+                      <td className={famaClass(r.lucro)} style={{ fontSize: "1.1rem", fontWeight: 700, textAlign: "center" }}>
+                        {r.famaPerPrata?.toFixed(4).toLocaleString("pt-PT") ?? "—"}
+                      </td>
+                      <td className="tabular-nums strategy-table-vol" style={{ textAlign: "center" }}>{r.volume?.toLocaleString("pt-PT") ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function FiberMaster() {
   const [cfg, setCfg] = useState(loadConfig);
   const [result, setResult] = useState(null);
@@ -532,7 +616,13 @@ export default function FiberMaster() {
                 ×
               </button>
             </header>
-            <p style={{ opacity: 0.7 }}>Funcionalidade em desenvolvimento…</p>
+            {strategyLoading ? (
+              <p>A carregar…</p>
+            ) : strategy?.error ? (
+              <p className="error">{strategy.error}</p>
+            ) : (
+              <TieredFamaTables rows={strategy?.fsLocalFama} />
+            )}
           </div>
         </div>
       )}
