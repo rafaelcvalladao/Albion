@@ -114,11 +114,12 @@ export default function MarketAnalyzer() {
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
       
-      // Deduplicarar por (itemId + origem + destino)
+      // Deduplicar por (itemId + qualidade + origem + destino)
+      // IMPORTANTE: só comparamos preços de itens com a MESMA qualidade!
       const dedupSet = new Set();
       const todasUnicas = [];
       for (const op of todas) {
-        const chave = `${op.id}|${op.origem}|${op.destino}`;
+        const chave = `${op.id}|${op.estado}|${op.origem}|${op.destino}`;
         if (!dedupSet.has(chave)) {
           dedupSet.add(chave);
           todasUnicas.push(op);
@@ -207,7 +208,6 @@ export default function MarketAnalyzer() {
               <th>Venda</th>
               <th>Lucro</th>
               <th>%</th>
-              <th>Última</th>
               <th>Stale</th>
             </tr>
           </thead>
@@ -216,7 +216,6 @@ export default function MarketAnalyzer() {
               const margem = op.compra > 0 ? ((op.venda / op.compra - 1) * 100).toFixed(1) : "0.0";
               // Filtrar itens com lucro % maior que 200%
               if (parseFloat(margem) > 200) return null;
-              const ultima = timeAgo(op.atualizacaoDest || op.atualizacaoOrig);
               return (
                 <tr key={`${op.id}-${op.origem}-${op.destino}`}> 
                   <td style={{ textAlign: "right" }}>{idx + 1}</td>
@@ -253,7 +252,6 @@ export default function MarketAnalyzer() {
                     {op.lucro?.toLocaleString("pt-PT", { maximumFractionDigits: 0 })}
                   </td>
                   <td style={{ textAlign: "right" }}>{margem}%</td>
-                  <td>{ultima}</td>
                   <td style={{ textAlign: "center" }}>{op.desatualizado ? "⚠️" : "✅"}</td>
                 </tr>
               );

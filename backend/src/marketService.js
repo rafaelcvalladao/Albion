@@ -457,11 +457,12 @@ export async function buscarOportunidades({
   oportunidadesBrutas.sort((a, b) => b.lucro - a.lucro);
   console.log(`[Market] Total oportunidades encontradas: ${oportunidadesBrutas.length}`);
   
-  // Deduplicar por combinação (itemId + origem + destino)
+  // Deduplicar por combinação (itemId + qualidade + origem + destino)
+  // IMPORTANTE: só comparamos preços de itens com a MESMA qualidade!
   const dedupSet = new Set();
   const oportunidadesUnicas = [];
   for (const op of oportunidadesBrutas) {
-    const chave = `${op.id}|${op.origem}|${op.destino}`;
+    const chave = `${op.id}|${op.estado}|${op.origem}|${op.destino}`;
     if (!dedupSet.has(chave)) {
       dedupSet.add(chave);
       oportunidadesUnicas.push(op);
