@@ -88,6 +88,18 @@ export function scheduleMetal(tier) {
   return request(`/api/metal/schedule/${encodeURIComponent(tier)}`);
 }
 
+export function calculateStone(body) {
+  return request("/api/stone/calculate", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function strategyStone(body) {
+  return request("/api/stone/strategy", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function scheduleStone(tier) {
+  return request(`/api/stone/schedule/${encodeURIComponent(tier)}`);
+}
+
 export function marketCategories() {
   return request("/api/market/categories");
 }
