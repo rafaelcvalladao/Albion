@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { buscarOportunidades, CATEGORIAS, obterCategoriasDinamicas } from "./marketService.js";
 import { estrategiaCompleta, horariosUtc, processarWood } from "./woodService.js";
+import { processarFiber, processarLeather, processarMetal, processarStone } from "./refineryService.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -94,6 +95,50 @@ app.post("/api/market/opportunities", async (req, res) => {
     res.status(500).json({ 
       erro: erro.message || 'Erro ao buscar oportunidades' 
     });
+  }
+});
+
+/** Refino de fibra → tecido */
+app.post("/api/fiber/calculate", async (req, res) => {
+  try {
+    const data = await processarFiber(req.body || {});
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+/** Refino de couro → pelego */
+app.post("/api/leather/calculate", async (req, res) => {
+  try {
+    const data = await processarLeather(req.body || {});
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+/** Refino de metal → minério */
+app.post("/api/metal/calculate", async (req, res) => {
+  try {
+    const data = await processarMetal(req.body || {});
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+/** Refino de pedra → bloco de pedra */
+app.post("/api/stone/calculate", async (req, res) => {
+  try {
+    const data = await processarStone(req.body || {});
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message || e) });
   }
 });
 

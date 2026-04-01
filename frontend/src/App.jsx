@@ -1,5 +1,9 @@
 import { useState } from "react";
 import WoodMaster from "./components/WoodMaster.jsx";
+import FiberMaster from "./components/FiberMaster.jsx";
+import LeatherMaster from "./components/LeatherMaster.jsx";
+import MetalMaster from "./components/MetalMaster.jsx";
+import StoneMaster from "./components/StoneMaster.jsx";
 import MarketAnalyzer from "./components/MarketAnalyzer.jsx";
 import "./App.css";
 
@@ -19,7 +23,35 @@ export default function App() {
             className={tab === "wood" ? "tab active" : "tab"}
             onClick={() => setTab("wood")}
           >
-            Wood Master
+            Madeira
+          </button>
+          <button
+            type="button"
+            className={tab === "fiber" ? "tab active" : "tab"}
+            onClick={() => setTab("fiber")}
+          >
+            Tecido
+          </button>
+          <button
+            type="button"
+            className={tab === "leather" ? "tab active" : "tab"}
+            onClick={() => setTab("leather")}
+          >
+            Couro
+          </button>
+          <button
+            type="button"
+            className={tab === "metal" ? "tab active" : "tab"}
+            onClick={() => setTab("metal")}
+          >
+            Metal
+          </button>
+          <button
+            type="button"
+            className={tab === "stone" ? "tab active" : "tab"}
+            onClick={() => setTab("stone")}
+          >
+            Pedra
           </button>
           <button
             type="button"
@@ -31,7 +63,12 @@ export default function App() {
         </nav>
       </header>
       <main className="app-main">
-        {tab === "wood" ? <WoodMaster /> : <MarketAnalyzer />}
+        {tab === "wood" && <WoodMaster />}
+        {tab === "fiber" && <FiberMaster />}
+        {tab === "leather" && <LeatherMaster />}
+        {tab === "metal" && <MetalMaster />}
+        {tab === "stone" && <StoneMaster />}
+        {tab === "market" && <MarketAnalyzer />}
       </main>
     </div>
   );
