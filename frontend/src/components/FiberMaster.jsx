@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { calculateFiber, scheduleFiber, strategyFiber } from "../api.js";
+import { calculateFiber, scheduleFiber } from "../api.js";
 import { profitClass, famaClass } from "../utils/profit.js";
 
 const SPEC_KEYS = [
@@ -49,8 +49,6 @@ export default function FiberMaster() {
   const [err, setErr] = useState(null);
   const [showConfig, setShowConfig] = useState(false);
   const [showFarmFama, setShowFarmFama] = useState(false);
-  const [strategy, setStrategy] = useState(null);
-  const [strategyLoading, setStrategyLoading] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(STORAGE, JSON.stringify(cfg));
@@ -81,26 +79,9 @@ export default function FiberMaster() {
     }
   }, [cfg]);
 
-  const runStrategy = useCallback(async () => {
-    setStrategyLoading(true);
-    try {
-      const data = await strategyFiber({
-        taxaNpc: cfg.taxaNpc,
-        spec: cfg.spec,
-        buyOrder: cfg.buyOrder,
-        bonusFortSterling: cfg.bonusFortSterling,
-      });
-      setStrategy(data);
-    } catch (e) {
-      setStrategy({ error: e.message || String(e) });
-    } finally {
-      setStrategyLoading(false);
-    }
-  }, [cfg]);
-
   const refreshAll = useCallback(async () => {
-    await Promise.all([runCalculate(), runStrategy()]);
-  }, [runCalculate, runStrategy]);
+    await runCalculate();
+  }, [runCalculate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,29 +111,6 @@ export default function FiberMaster() {
       cancelled = true;
     };
   }, [cfg.tier, cfg.buyOrder, cfg.foco, cfg.bonusFortSterling]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setStrategyLoading(true);
-    strategyFiber({
-      taxaNpc: cfg.taxaNpc,
-      spec: cfg.spec,
-      buyOrder: cfg.buyOrder,
-      bonusFortSterling: cfg.bonusFortSterling,
-    })
-      .then((data) => {
-        if (!cancelled) setStrategy(data);
-      })
-      .catch((e) => {
-        if (!cancelled) setStrategy({ error: e.message || String(e) });
-      })
-      .finally(() => {
-        if (!cancelled) setStrategyLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [cfg.buyOrder, cfg.bonusFortSterling]);
 
   const showLy = cfg.showLymhurst ?? false;
 
@@ -200,8 +158,8 @@ export default function FiberMaster() {
               Bónus Fort Sterling
             </label>
           </div>
-          <button type="button" className="btn btn-primary" onClick={refreshAll} disabled={loading || strategyLoading}>
-            {loading || strategyLoading ? "A carregar…" : "Refresh preços"}
+          <button type="button" className="btn btn-primary" onClick={refreshAll} disabled={loading}>
+            {loading ? "A carregar…" : "Refresh preços"}
           </button>
           <button type="button" className="btn btn-primary" onClick={() => setShowFarmFama(true)}>
             Farm Fama
@@ -291,8 +249,6 @@ export default function FiberMaster() {
           <p className="strategy-hint">
             Top 15 com volume (todas as tiers). Atualiza ao mudar buy order / bónus ou com Refresh.
           </p>
-          {strategyLoading && <p className="mono strategy-hint">A carregar…</p>}
-          {strategy?.error && <p className="error">{strategy.error}</p>}
         </aside>
       </div>
 
