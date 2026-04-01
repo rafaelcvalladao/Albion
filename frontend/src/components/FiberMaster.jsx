@@ -68,7 +68,7 @@ function FinalProductIcon({ item }) {
 }
 
 function StrategyTable({ title, kind, rows, compact }) {
-  const [sortColumn, setSortColumn] = useState(kind === "foco" ? "volume" : null);
+  const [sortColumn, setSortColumn] = useState(kind === "foco" ? "lucro" : null);
   const [sortAsc, setSortAsc] = useState(kind === "foco" ? false : true);
 
   if (!rows?.length) return null;
@@ -565,7 +565,7 @@ export default function FiberMaster() {
         <div className="modal-backdrop" role="presentation" onClick={() => setShowConfig(false)}>
           <div className="modal" role="dialog" aria-labelledby="config-title" onClick={(e) => e.stopPropagation()}>
             <header>
-              <h3 id="config-title">Taxa NPC, Tier e Spec</h3>
+              <h3 id="config-title">Taxa NPC e Spec</h3>
               <button type="button" className="modal-close" onClick={() => setShowConfig(false)} aria-label="Fechar">
                 ×
               </button>
@@ -578,16 +578,6 @@ export default function FiberMaster() {
                   value={cfg.taxaNpc}
                   onChange={(e) => setCfg({ ...cfg, taxaNpc: e.target.value })}
                 />
-              </label>
-              <label>
-                Tier
-                <select value={cfg.tier} onChange={(e) => setCfg({ ...cfg, tier: e.target.value })}>
-                  {["T4", "T5", "T6", "T7", "T8"].map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
               </label>
               {SPEC_KEYS.map(({ key, label }) => (
                 <label key={key}>
