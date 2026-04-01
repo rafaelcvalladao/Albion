@@ -305,16 +305,23 @@ export async function buscarOportunidades({
 }) {
   let itens = await gerarListaItens(categoria);
 
+  console.log(`[Market] Categoria: ${categoria}, Total itens carregados: ${itens?.length || 0}`);
+
   if (!Array.isArray(itens) || itens.length === 0) {
+    console.log(`[Market] Erro: itens inválido ou vazio. Retornando []`);
     return [];
   }
 
   if (itens.length > maxItensProcessar) {
     itens = itens.slice(0, maxItensProcessar);
+    console.log(`[Market] Limitado a ${maxItensProcessar} itens`);
   }
 
   const itensProcessar = itens.slice(offset, Math.min(offset + step, itens.length));
+  console.log(`[Market] Processando slice: offset=${offset}, step=${step}, itens neste batch=${itensProcessar.length}`);
+  
   if (!itensProcessar.length) {
+    console.log(`[Market] Slice vazio! Retornando []`);
     return [];
   }
 
@@ -328,7 +335,9 @@ export async function buscarOportunidades({
   const chunks = chunk(itensProcessar, 100);
   const oportunidadesBrutas = [];
   for (const chunkItems of chunks) {
+    console.log(`[Market] Buscando preços para chunk de ${chunkItems.length} itens...`);
     const respostaPrecos = await fetchPricesMarket(chunkItems, cidadesStr, qualityNum);
+    console.log(`[Market] API retornou ${respostaPrecos?.length || 0} registros de preço`);
 
     const mapaPrecos = new Map();
     for (const p of respostaPrecos) {
@@ -446,6 +455,7 @@ export async function buscarOportunidades({
   }
 
   oportunidadesBrutas.sort((a, b) => b.lucro - a.lucro);
+  console.log(`[Market] Total oportunidades encontradas: ${oportunidadesBrutas.length}`);
   const top = oportunidadesBrutas.slice(0, 50);
 
   const resultadosFinais = [];
@@ -458,5 +468,6 @@ export async function buscarOportunidades({
     if (resultadosFinais.length >= 20) break;
   }
 
+  console.log(`[Market] Retornando ${resultadosFinais.length} oportunidades finais`);
   return resultadosFinais;
 }

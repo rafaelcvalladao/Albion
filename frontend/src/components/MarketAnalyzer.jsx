@@ -89,6 +89,7 @@ export default function MarketAnalyzer() {
       let todas = [];
       for (let i = 0; i < maxRounds; i += 1) {
         const offset = i * step;
+        console.log(`[Market] Buscando lote ${i + 1}/${maxRounds} (offset: ${offset}, step: ${step})`);
         const data = await marketOpportunities({
           categoria,
           maxIdadeHoras: parseInt(maxHoras, 10) || 6,
@@ -99,6 +100,7 @@ export default function MarketAnalyzer() {
         });
 
         const slice = Array.isArray(data) ? data : data.oportunidades || [];
+        console.log(`[Market] Lote ${i + 1} retornou ${slice.length} itens`);
         if (i === 0) setRows(slice);
         else setRows((prev) => [...prev, ...slice]);
 
@@ -107,12 +109,17 @@ export default function MarketAnalyzer() {
         const pct = Math.min(100, Math.round(((offset + step) / totalMax) * 100));
         setProgress(pct);
 
-        if (slice.length === 0) break;
+        if (slice.length === 0) {
+          console.log(`[Market] Lote ${i + 1} vazio, parando busca`);
+          break;
+        }
 
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
+      console.log(`[Market] Total final: ${todas.length} itens encontrados`);
       setRows(todas);
     } catch (e) {
+      console.error(`[Market] Erro na busca:`, e);
       setErr(e.message || String(e));
       setRows([]);
     } finally {
@@ -242,7 +249,7 @@ export default function MarketAnalyzer() {
         </table>
       </div>
       {!loading && rows.length === 0 && !err && (
-        <p className="market-empty">Carregue uma pesquisa para ver oportunidades.</p>
+        <p className="market-empty">Carregue uma pesquisa para ver oportunidades. Se escaneou mas não encontrou resultados, pode estar filtrando todos (>200%).</p>
       )}
     </div>
   );
