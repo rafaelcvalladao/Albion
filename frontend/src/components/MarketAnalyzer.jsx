@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { marketCategories, marketOpportunities } from "../api.js";
 import { profitClass } from "../utils/profit.js";
+import NestedCategorySelector from "./NestedCategorySelector.jsx";
 
 function tierStyle(tier) {
   const colors = {
@@ -158,16 +159,14 @@ export default function MarketAnalyzer() {
       
       {/* Toolbar */}
       <div className="market-toolbar">
-        <label>
-          <span>Categoria</span>
-          <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-            {(categories.length ? categories : ["Consumível"]).map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="categories-wrapper">
+          <label className="category-label-text">Categoria</label>
+          <NestedCategorySelector
+            categories={categories}
+            selectedCategory={categoria}
+            onCategoryChange={setCategoria}
+          />
+        </div>
 
         <button type="button" className="btn btn-primary" onClick={buscar} disabled={loading || scanning}>
           {scanning ? "Escaneando…" : "Buscar oportunidades"}
