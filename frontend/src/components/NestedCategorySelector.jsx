@@ -1,140 +1,188 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import "../styles/NestedCategorySelector.css";
 
 export default function NestedCategorySelector({ categories = [], selectedCategory, onCategoryChange }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
+  const [search, setSearch] = useState("");
+  const [expandedGroups, setExpandedGroups] = useState(new Set());
   const containerRef = useRef(null);
+  const searchRef = useRef(null);
 
-  // Agrupar categorias por prefixo (parte antes do " - ")
-  const groupedCategories = categories.reduce((acc, cat) => {
-    if (cat === "Todos") {
-      acc.push({ group: null, label: "Todos", value: "Todos", isSpecial: true });
-      return acc;
-    }
-
-    const parts = cat.split(" - ");
-    if (parts.length === 2) {
-      const [group, subcat] = parts;
-      if (!acc.find(g => g.group === group && !g.isSpecial)) {
-        acc.push({ group, label: group, value: null, isSpecial: false });
+  // Agrupar categorias: { group -> [{ label, value }] } + specials
+  const { groups, specials } = useMemo(() => {
+    const grpMap = {};
+    const spc = [];
+    for (const cat of categories) {
+      if (cat === "Todos") continue;
+      const parts = cat.split(" - ");
+      if (parts.length === 2) {
+        const [group, sub] = parts;
+        if (!grpMap[group]) grpMap[group] = [];
+        grpMap[group].push({ label: sub, value: cat });
+      } else {
+        spc.push({ label: cat, value: cat });
       }
-      acc.push({ group, label: subcat, value: cat, isSpecial: false });
-    } else {
-      acc.push({ group: null, label: cat, value: cat, isSpecial: true });
     }
-    return acc;
-  }, []);
+    const sorted = Object.keys(grpMap).sort().map(g => ({
+      name: g,
+      items: grpMap[g].sort((a, b) => a.label.localeCompare(b.label))
+    }));
+    return { groups: sorted, specials: spc.sort((a, b) => a.label.localeCompare(b.label)) };
+  }, [categories]);
 
-  const groups = [...new Set(groupedCategories
-    .filter(item => item.group !== null)
-    .map(item => item.group)
-  )].sort();
-
-  const subcategories = selectedGroup
-    ? groupedCategories
-        .filter(item => item.group === selectedGroup && item.value !== null)
-        .map(item => ({ label: item.label, value: item.value }))
-    : [];
-
-  const specialCategories = groupedCategories.filter(item => item.isSpecial && item.value !== null);
-
-  // Encontrar label do selected
-  const selectedLabel = categories.find(c => c === selectedCategory) === selectedCategory 
-    ? selectedCategory 
-    : "Selecione uma categoria";
+  // Filtro de busca
+  const searchLower = search.toLowerCase();
+  const filtered = useMemo(() => {
+    if (!searchLower) return null; // null = show tree view
+    const results = [];
+    if ("todos".includes(searchLower)) results.push({ label: "Todos", value: "Todos" });
+    for (const s of specials) {
+      if (s.label.toLowerCase().includes(searchLower)) results.push(s);
+    }
+    for (const g of groups) {
+      for (const item of g.items) {
+        if (item.label.toLowerCase().includes(searchLower) || g.name.toLowerCase().includes(searchLower)) {
+          results.push({ label: `${g.name} › ${item.label}`, value: item.value });
+        }
+      }
+    }
+    return results;
+  }, [searchLower, groups, specials]);
 
   // Fechar ao clicar fora
   useEffect(() => {
-    const handleClickOutside = (e) => {
+    if (!isOpen) return;
+    const handler = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setIsOpen(false);
+        setSearch("");
       }
     };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [isOpen]);
 
-  const handleSelectCategory = (value) => {
+  // Auto-focus search on open
+  useEffect(() => {
+    if (isOpen && searchRef.current) searchRef.current.focus();
+  }, [isOpen]);
+
+  const handleSelect = (value) => {
     onCategoryChange(value);
     setIsOpen(false);
-    setSelectedGroup(null);
-    setSelectedSubcategory(null);
+    setSearch("");
+    setExpandedGroups(new Set());
   };
 
-  const handleGroupSelect = (group) => {
-    setSelectedGroup(selectedGroup === group ? null : group);
-    setSelectedSubcategory(null);
+  const toggleGroup = (name) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
+      return next;
+    });
   };
+
+  const selectedLabel = selectedCategory || "Selecione uma categoria";
 
   return (
-    <div className="nested-category-selector" ref={containerRef}>
-      <button
-        type="button"
-        className="category-button"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className="category-label">{selectedLabel}</span>
-        <span className={`category-arrow ${isOpen ? "open" : ""}`}>▼</span>
+    <div className="ncs" ref={containerRef}>
+      <button type="button" className="ncs-trigger" onClick={() => setIsOpen(!isOpen)}>
+        <span className="ncs-label">{selectedLabel}</span>
+        <span className={`ncs-arrow ${isOpen ? "open" : ""}`}>▼</span>
       </button>
 
       {isOpen && (
-        <div className="category-dropdown">
-          <div className="category-content">
-            {/* Coluna Esquerda: Grupos */}
-            <div className="category-column">
-              <div className="column-title">Categorias</div>
-              
-              {/* Especiais (sem grupo) */}
-              {specialCategories.length > 0 && (
-                <>
-                  {specialCategories.map((item) => (
-                    <button
-                      key={item.value}
-                      type="button"
-                      className={`category-item ${selectedCategory === item.value ? "active" : ""}`}
-                      onClick={() => handleSelectCategory(item.value)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                  {groups.length > 0 && <div className="divider" />}
-                </>
-              )}
+        <div className="ncs-dropdown">
+          <div className="ncs-search-wrap">
+            <input
+              ref={searchRef}
+              type="text"
+              className="ncs-search"
+              placeholder="Buscar categoria..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button type="button" className="ncs-search-clear" onClick={() => setSearch("")}>✕</button>
+            )}
+          </div>
 
-              {/* Grupos */}
-              {groups.map((group) => (
-                <button
-                  key={group}
-                  type="button"
-                  className={`category-item ${selectedGroup === group ? "selected" : ""}`}
-                  onClick={() => handleGroupSelect(group)}
-                >
-                  {group}
-                  <span className={`indicator ${selectedGroup === group ? "open" : ""}`}>›</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Coluna Direita: Subcategorias */}
-            {selectedGroup && subcategories.length > 0 && (
-              <div className="category-column">
-                <div className="column-title">{selectedGroup}</div>
-                {subcategories.map((subcat) => (
+          <div className="ncs-list">
+            {filtered ? (
+              /* Modo busca: lista plana */
+              filtered.length === 0 ? (
+                <div className="ncs-empty">Nenhuma categoria encontrada</div>
+              ) : (
+                filtered.map((item) => (
                   <button
-                    key={subcat.value}
+                    key={item.value}
                     type="button"
-                    className={`category-item ${selectedCategory === subcat.value ? "active" : ""}`}
-                    onClick={() => handleSelectCategory(subcat.value)}
+                    className={`ncs-item ${selectedCategory === item.value ? "active" : ""}`}
+                    onClick={() => handleSelect(item.value)}
                   >
-                    {subcat.label}
+                    {item.label}
+                  </button>
+                ))
+              )
+            ) : (
+              /* Modo árvore: accordion */
+              <>
+                {/* Todos */}
+                <button
+                  type="button"
+                  className={`ncs-item ncs-item--todos ${selectedCategory === "Todos" ? "active" : ""}`}
+                  onClick={() => handleSelect("Todos")}
+                >
+                  Todos
+                </button>
+
+                {/* Especiais */}
+                {specials.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={`ncs-item ${selectedCategory === item.value ? "active" : ""}`}
+                    onClick={() => handleSelect(item.value)}
+                  >
+                    {item.label}
                   </button>
                 ))}
-              </div>
+
+                {specials.length > 0 && groups.length > 0 && <div className="ncs-divider" />}
+
+                {/* Grupos expansíveis */}
+                {groups.map((group) => {
+                  const isExpanded = expandedGroups.has(group.name);
+                  const hasActiveChild = group.items.some(i => i.value === selectedCategory);
+                  return (
+                    <div key={group.name} className="ncs-group">
+                      <button
+                        type="button"
+                        className={`ncs-group-header ${isExpanded ? "expanded" : ""} ${hasActiveChild ? "has-active" : ""}`}
+                        onClick={() => toggleGroup(group.name)}
+                      >
+                        <span>{group.name}</span>
+                        <span className="ncs-group-badge">{group.items.length}</span>
+                        <span className={`ncs-chevron ${isExpanded ? "open" : ""}`}>›</span>
+                      </button>
+                      {isExpanded && (
+                        <div className="ncs-group-items">
+                          {group.items.map((item) => (
+                            <button
+                              key={item.value}
+                              type="button"
+                              className={`ncs-item ncs-item--child ${selectedCategory === item.value ? "active" : ""}`}
+                              onClick={() => handleSelect(item.value)}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
             )}
           </div>
         </div>
