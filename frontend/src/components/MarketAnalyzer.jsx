@@ -35,7 +35,6 @@ export default function MarketAnalyzer() {
   const [categories, setCategories] = useState([]);
   const [categoria, setCategoria] = useState("Todos");
   const [maxHoras, setMaxHoras] = useState("6");
-  const [itemFiltro, setItemFiltro] = useState("");
   const [maxItens, setMaxItens] = useState("2500");
   const [taxaVenda, setTaxaVenda] = useState("6.5");
   const [stepSize, setStepSize] = useState("500");
@@ -93,7 +92,6 @@ export default function MarketAnalyzer() {
         const data = await marketOpportunities({
           categoria,
           maxIdadeHoras: parseInt(maxHoras, 10) || 6,
-          itemFiltro,
           taxaVenda: parseFloat(taxaVenda) || 6.5,
           maxItensProcessar: totalMax,
           offset,
@@ -131,7 +129,7 @@ export default function MarketAnalyzer() {
         Compara preços entre cidades seguras; lucro líquido estimado com todas as taxas incluídas.
       </p>
       
-      {/* Linha 1: Categoria e Filtro */}
+      {/* Categoria */}
       <div className="market-toolbar">
         <label>
           <span>Categoria</span>
@@ -142,15 +140,6 @@ export default function MarketAnalyzer() {
               </option>
             ))}
           </select>
-        </label>
-        <label>
-          <span>Item (filtro)</span>
-          <input
-            type="text"
-            value={itemFiltro}
-            onChange={(e) => setItemFiltro(e.target.value)}
-            placeholder="ex: sword, wood"
-          />
         </label>
       </div>
 

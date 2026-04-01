@@ -130,12 +130,20 @@ async function carregarItensDoJogo() {
       }, {});
     }
 
+    console.log(`Carregados ${ids.length} itens do jogo com sucesso`);
     return ids;
   } catch (err) {
     console.warn("Não foi possível carregar itens completos do jogo:", err.message || err);
-    ALL_ITEM_IDS_CACHE = [];
-    ITEM_NAME_PT_BR_CACHE = {};
-    return [];
+    // Fallback: gerar lista a partir de todas as categorias
+    const bases = Object.entries(CATEGORIAS)
+      .filter(([cat]) => cat !== "Todos")
+      .flatMap(([, itens]) => itens);
+    const fallbackIds = [...new Set(bases)].flatMap((b) => {
+      return TIERS.map((t) => `${t}${b}`);
+    });
+    ALL_ITEM_IDS_CACHE = fallbackIds;
+    console.log(`Usando fallback: ${fallbackIds.length} itens gerados a partir de categorias estáticas`);
+    return fallbackIds;
   }
 }
 
@@ -190,7 +198,7 @@ function calcularCustoTeleporteComTCM(peso, tcm, cidadeOrigem, cidadeDestino) {
   return Math.round(custoCalculado);
 }
 
-async function gerarListaItens(categoria, itemFiltro = "") {
+async function gerarListaItens(categoria) {
   let lista = [];
 
   if (categoria === "Todos") {
@@ -212,12 +220,6 @@ async function gerarListaItens(categoria, itemFiltro = "") {
       const baseIds = TIERS.map((t) => `${t}${b}`);
       return baseIds;
     });
-  }
-
-  // Se for filtro por texto, aplicar correspondência em todos os IDs disponíveis.
-  if (itemFiltro && itemFiltro.trim()) {
-    const filtro = itemFiltro.trim().toLowerCase();
-    lista = lista.filter((id) => id.toLowerCase().includes(filtro));
   }
 
   return [...new Set(lista)];
@@ -297,20 +299,14 @@ export async function buscarOportunidades({
   quality = 1,
   usarBuyOrder = false,
   taxaVenda = 6.5,
-  itemFiltro = "",
   maxItensProcessar = 2500,
   offset = 0,
   step = 500,
 }) {
-  let itens = await gerarListaItens(categoria, itemFiltro);
+  let itens = await gerarListaItens(categoria);
 
   if (!Array.isArray(itens) || itens.length === 0) {
     return [];
-  }
-
-  if (itemFiltro && String(itemFiltro).trim()) {
-    const filtro = String(itemFiltro).trim().toLowerCase();
-    itens = itens.filter((itemId) => itemId.toLowerCase().includes(filtro));
   }
 
   if (itens.length > maxItensProcessar) {
