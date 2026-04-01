@@ -58,9 +58,12 @@ function itemIconUrl(itemId) {
 }
 
 function FinalProductIcon({ item }) {
+  const { tier, level } = parseTierItem(item);
+  const clothId = buildClothId(tier, level);
+
   return (
     <div className="strategy-final-product-icon">
-      <img src={itemIconUrl(item)} alt={item} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/56?text=product"; }} />
+      <img src={itemIconUrl(clothId)} alt={`${tier} tecido`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/56?text=cloth"; }} />
     </div>
   );
 }
