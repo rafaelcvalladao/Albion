@@ -112,9 +112,12 @@ const TIERS = ["T4", "T5", "T6", "T7", "T8"];
 async function carregarItensDoJogo() {
   if (ALL_ITEM_IDS_CACHE && ALL_ITEM_IDS_CACHE.length > 0) return ALL_ITEM_IDS_CACHE;
   try {
+    console.log("[Items] Iniciando carregamento de itens do jogo...");
     const res = await fetch(ITEM_ID_SOURCE_URL, { headers: { Accept: "application/json" } });
     if (!res.ok) throw new Error(`Falha ao buscar itens do jogo (${res.status})`);
     const data = await res.json();
+
+    console.log(`[Items] JSON carregado: ${Array.isArray(data) ? data.length : "não é array"} registros`);
 
     // Carregar TODOS os items que têm UniqueName
     const ids = Array.isArray(data)
@@ -133,20 +136,24 @@ async function carregarItensDoJogo() {
       }, {});
 
       // Construir mapa de categorias dinamicamente
+      console.log("[Items] Construindo mapa de categorias...");
       CATEGORIES_CACHE = construirMapaCategorias(data);
+      console.log(`[Items] ✓ Mapa de categorias construído com ${Object.keys(CATEGORIES_CACHE || {}).length} categorias`);
     }
 
-    console.log(`Carregados ${ids.length} itens do jogo com sucesso`);
-    console.log(`Categorias dinâmicas identificadas: ${Object.keys(CATEGORIES_CACHE || {}).length}`);
+    console.log(`[Items] Carregados ${ids.length} itens do jogo com sucesso`);
     
     // Log de distribuição
     if (CATEGORIES_CACHE) {
-      const dist = Object.entries(CATEGORIES_CACHE).map(([cat, items]) => `${cat}: ${items.length}`).sort();
-      console.log(`Distribuição de categorias:`, dist);
+      const dist = Object.entries(CATEGORIES_CACHE)
+        .map(([cat, items]) => `${cat}: ${items.length}`)
+        .sort((a, b) => parseInt(b.split(": ")[1]) - parseInt(a.split(": ")[1]))
+        .slice(0, 15);
+      console.log(`[Items] Top 15 categorias:`, dist);
     }
     return ids;
   } catch (err) {
-    console.warn("Não foi possível carregar itens completos do jogo:", err.message || err);
+    console.error("[Items] ❌ Erro ao carregar itens:", err.message || err);
     // Fallback: gerar lista a partir de todas as categorias
     const bases = Object.entries(CATEGORIAS)
       .filter(([cat]) => cat !== "Todos")
@@ -155,7 +162,7 @@ async function carregarItensDoJogo() {
       return TIERS.map((t) => `${t}${b}`);
     });
     ALL_ITEM_IDS_CACHE = fallbackIds;
-    console.log(`Usando fallback: ${fallbackIds.length} itens gerados a partir de categorias estáticas`);
+    console.log(`[Items] Usando fallback: ${fallbackIds.length} itens gerados a partir de categorias estáticas`);
     return fallbackIds;
   }
 }
@@ -163,12 +170,20 @@ async function carregarItensDoJogo() {
 function construirMapaCategorias(allItems) {
   const cats = { Todos: [] };
 
-  if (!Array.isArray(allItems)) return cats;
+  if (!Array.isArray(allItems)) {
+    console.warn("[Categories] allItems não é um array!", typeof allItems);
+    return cats;
+  }
+
+  console.log(`[Categories] Iniciando parse de ${allItems.length} items...`);
+  let itemsComUniqueName = 0;
+  let itemsComCategoria = 0;
 
   for (const item of allItems) {
     const uniqueName = String(item.UniqueName || "");
     if (!uniqueName) continue;
 
+    itemsComUniqueName++;
     cats.Todos.push(uniqueName);
 
     // Parse: T#_CATEGORIA_SUBCATEGORIA_...@QUALIDADE
@@ -177,6 +192,8 @@ function construirMapaCategorias(allItems) {
     const parts = baseId.split("_");
 
     if (parts.length < 2) continue;
+
+    itemsComCategoria++;
 
     // Extrair categoria base (segundo elemento após tier)
     const categoria = parts[1]; // 2H, MAIN, HEAD, ARMOR, SHOES, ARTEFACT, etc
@@ -219,6 +236,9 @@ function construirMapaCategorias(allItems) {
   Object.keys(cats).sort().forEach(key => {
     sortedCats[key] = cats[key];
   });
+
+  console.log(`[Categories] ✓ Parse completo: ${itemsComUniqueName} com UniqueName, ${itemsComCategoria} com categoria`);
+  console.log(`[Categories] ✓ Total de categorias criadas: ${Object.keys(sortedCats).length}`);
 
   return sortedCats;
 }
@@ -280,13 +300,17 @@ async function gerarListaItens(categoria) {
   // Primeiro carrega os itens (que constrói CATEGORIES_CACHE)
   await carregarItensDoJogo();
 
+  console.log(`[gerarListaItens] Solicitado: ${categoria}, CATEGORIES_CACHE existe: ${!!CATEGORIES_CACHE}`);
+
   // Usar categorias dinâmicas
   if (CATEGORIES_CACHE && CATEGORIES_CACHE[categoria]) {
     lista = CATEGORIES_CACHE[categoria];
+    console.log(`[gerarListaItens] ✓ Usando categoria dinâmica "${categoria}": ${lista.length} itens`);
   } else if (categoria === "Todos") {
     // Se não tiver categoria específica, retorna todos
     const todos = ALL_ITEM_IDS_CACHE || [];
     lista = todos;
+    console.log(`[gerarListaItens] ✓ Usando TODOS: ${lista.length} itens`);
   } else {
     // Fallback para categorias estáticas se não encontrar dinâmica
     const bases = CATEGORIAS[categoria] || [];
@@ -294,6 +318,7 @@ async function gerarListaItens(categoria) {
       const baseIds = TIERS.map((t) => `${t}${b}`);
       return baseIds;
     });
+    console.log(`[gerarListaItens] ⚠️ Fallback estático para "${categoria}": ${lista.length} itens`);
   }
 
   return [...new Set(lista)];
@@ -564,11 +589,17 @@ export async function obterCategoriasDinamicas() {
   // Garantir que os itens estão carregados (e categorias construídas)
   await carregarItensDoJogo();
   
+  console.log(`[Categories] Obtendo categorias... CATEGORIES_CACHE: ${CATEGORIES_CACHE ? "existe" : "null"}`);
+  console.log(`[Categories] Keys disponíveis: ${CATEGORIES_CACHE ? Object.keys(CATEGORIES_CACHE).length : 0}`);
+
   // Retornar categorias dinâmicas ou fallback
   if (CATEGORIES_CACHE && Object.keys(CATEGORIES_CACHE).length > 0) {
-    return Object.keys(CATEGORIES_CACHE).sort();
+    const cats = Object.keys(CATEGORIES_CACHE).sort();
+    console.log(`[Categories] ✓ Retornando ${cats.length} categorias dinâmicas`);
+    return cats;
   }
   
+  console.log(`[Categories] ⚠️ Usando fallback para categorias estáticas`);
   // Fallback: retornar categorias estáticas
   return Object.keys(CATEGORIAS);
 }
