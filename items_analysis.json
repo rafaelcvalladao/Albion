@@ -1,0 +1,250 @@
+{
+  "metadata": {
+    "source": "https://github.com/ao-data/ao-bin-dumps",
+    "file": "formatted/items.json",
+    "size_mb": 23.7,
+    "total_items": 11963,
+    "last_updated": "2026-03-11",
+    "analysis_date": "2026-03-31"
+  },
+  "json_structure": {
+    "format": "Array of objects",
+    "fields_per_item": 6,
+    "fields": {
+      "Index": "string (numeric 1-11963)",
+      "UniqueName": "string (unique identifier)",
+      "LocalizationNameVariable": "string (i18n key)",
+      "LocalizationDescriptionVariable": "string (i18n key)",
+      "LocalizedNames": "dict with 15 languages (EN-US, DE-DE, FR-FR, RU-RU, PL-PL, ES-ES, PT-BR, IT-IT, ZH-CN, KO-KR, JA-JP, ZH-TW, ID-ID, TR-TR, AR-SA)",
+      "LocalizedDescriptions": "dict with 15 languages"
+    }
+  },
+  "distribution_by_tier": {
+    "T1": {
+      "total": 68,
+      "with_quality_suffix": 6,
+      "without_quality_suffix": 62,
+      "percent_of_total": 0.57
+    },
+    "T2": {
+      "total": 169,
+      "with_quality_suffix": 13,
+      "without_quality_suffix": 156,
+      "percent_of_total": 1.41
+    },
+    "T3": {
+      "total": 273,
+      "with_quality_suffix": 46,
+      "without_quality_suffix": 227,
+      "percent_of_total": 2.28
+    },
+    "T4": {
+      "total": 1858,
+      "with_quality_suffix": 1201,
+      "without_quality_suffix": 657,
+      "percent_of_total": 15.54,
+      "quality_breakdown": {
+        "@1": 305,
+        "@2": 305,
+        "@3": 305,
+        "@4": 286
+      }
+    },
+    "T5": {
+      "total": 1867,
+      "with_quality_suffix": 1202,
+      "without_quality_suffix": 665,
+      "percent_of_total": 15.62,
+      "quality_breakdown": {
+        "@1": 306,
+        "@2": 305,
+        "@3": 305,
+        "@4": 286
+      }
+    },
+    "T6": {
+      "total": 1850,
+      "with_quality_suffix": 1208,
+      "without_quality_suffix": 642,
+      "percent_of_total": 15.48,
+      "quality_breakdown": {
+        "@1": 307,
+        "@2": 307,
+        "@3": 307,
+        "@4": 287
+      }
+    },
+    "T7": {
+      "total": 1842,
+      "with_quality_suffix": 1202,
+      "without_quality_suffix": 640,
+      "percent_of_total": 15.41,
+      "quality_breakdown": {
+        "@1": 305,
+        "@2": 305,
+        "@3": 305,
+        "@4": 287
+      }
+    },
+    "T8": {
+      "total": 1905,
+      "with_quality_suffix": 1241,
+      "without_quality_suffix": 664,
+      "percent_of_total": 15.94,
+      "quality_breakdown": {
+        "@1": 319,
+        "@2": 313,
+        "@3": 313,
+        "@4": 296
+      }
+    },
+    "special_no_tier": {
+      "total": 2131,
+      "percent_of_total": 17.83
+    },
+    "totals": {
+      "tier_prefixed_items": 9853,
+      "items_with_quality": 6119,
+      "items_without_quality": 5513,
+      "all_items": 11963
+    }
+  },
+  "distribution_by_prefix": {
+    "T-PREFIXED": {
+      "count": 9853,
+      "percent": 82.41,
+      "description": "Items with tier (T1_..., T8_...)"
+    },
+    "UNIQUE_": {
+      "count": 1656,
+      "percent": 13.84,
+      "description": "Unique/legendary items"
+    },
+    "QUESTITEM_": {
+      "count": 239,
+      "percent": 2.00,
+      "description": "Quest items"
+    },
+    "SKIN_": {
+      "count": 158,
+      "percent": 1.32,
+      "description": "Character skins"
+    },
+    "OTHER": {
+      "count": 57,
+      "percent": 0.48,
+      "description": "Other special types"
+    }
+  },
+  "top_25_categories": [
+    {"category": "2H", "count": 2645, "percent": 22.11},
+    {"category": "MAIN", "count": 890, "percent": 7.44},
+    {"category": "HEAD", "count": 847, "percent": 7.09},
+    {"category": "ARMOR", "count": 847, "percent": 7.09},
+    {"category": "SHOES", "count": 847, "percent": 7.09},
+    {"category": "ARTEFACT", "count": 765, "percent": 6.40},
+    {"category": "OFF", "count": 456, "percent": 3.81},
+    {"category": "CAPEITEM", "count": 420, "percent": 3.51},
+    {"category": "JOURNAL", "count": 399, "percent": 3.34},
+    {"category": "MEAL", "count": 206, "percent": 1.72},
+    {"category": "POTION", "count": 160, "percent": 1.34},
+    {"category": "BACKPACK", "count": 150, "percent": 1.25},
+    {"category": "RANDOM", "count": 108, "percent": 0.90},
+    {"category": "FARM", "count": 107, "percent": 0.89},
+    {"category": "FURNITUREITEM", "count": 96, "percent": 0.80},
+    {"category": "LOOTBAG", "count": 79, "percent": 0.66},
+    {"category": "LABOURER", "count": 77, "percent": 0.64},
+    {"category": "SKILLBOOK", "count": 59, "percent": 0.49},
+    {"category": "MOUNT", "count": 59, "percent": 0.49},
+    {"category": "FISH", "count": 38, "percent": 0.32},
+    {"category": "BAG", "count": 32, "percent": 0.27},
+    {"category": "TOKEN", "count": 29, "percent": 0.24},
+    {"category": "WOOD", "count": 28, "percent": 0.23},
+    {"category": "HIDE", "count": 28, "percent": 0.23},
+    {"category": "ORE", "count": 27, "percent": 0.23}
+  ],
+  "category_groupings": {
+    "weapons": {
+      "categories": ["2H", "MAIN", "OFF"],
+      "total_items": 3991,
+      "percent": 33.37
+    },
+    "armor": {
+      "categories": ["HEAD", "ARMOR", "SHOES", "CAPEITEM"],
+      "total_items": 2961,
+      "percent": 24.77
+    },
+    "craftables": {
+      "categories": ["ARTEFACT", "BACKPACK"],
+      "total_items": 915,
+      "percent": 7.65
+    },
+    "consumables": {
+      "categories": ["MEAL", "POTION", "FISH"],
+      "total_items": 404,
+      "percent": 3.38
+    },
+    "other": {
+      "categories": ["JOURNAL", "MOUNT", "LABOURER", "BAG", "TOKEN", "etc."],
+      "total_items": 1722,
+      "percent": 14.40
+    }
+  },
+  "quality_levels": [
+    {"suffix": "@1", "name": "Rare", "description": "Standard crafted variant"},
+    {"suffix": "@2", "name": "Exceptional", "description": "Exceptional crafted variant"},
+    {"suffix": "@3", "name": "Exceptional", "description": "Exceptional crafted variant (alternate path)"},
+    {"suffix": "@4", "name": "Pristine", "description": "Maximum quality (T4-T8 only)"}
+  ],
+  "naming_convention": {
+    "tier_prefixed_pattern": "T[TIER]_[CATEGORY]_[SUBCATEGORY]_[TYPE]_[VARIANT][@QUALITY]",
+    "tier_prefixed_example": "T8_ARTEFACT_2H_CORRUPTED_STAFF_HELL@3",
+    "unique_pattern": "UNIQUE_[TYPE]_[DESCRIPTOR]",
+    "unique_example": "UNIQUE_MOUNT_RAM_XMAS",
+    "questitem_pattern": "QUESTITEM_[TYPE]_[DESCRIPTOR]",
+    "questitem_example": "QUESTITEM_TRANSFER_LETTER",
+    "other_patterns": [
+      "TREASURE_[TYPE]",
+      "SKIN_[DESCRIPTOR]",
+      "UNLOCK_[TYPE]"
+    ]
+  },
+  "files_in_formatted_directory": [
+    {
+      "filename": "items.json",
+      "size_mb": 22.6,
+      "format": "JSON array",
+      "records": 11963,
+      "description": "Complete item database"
+    },
+    {
+      "filename": "items.txt",
+      "format": "Text reference",
+      "records": 11823,
+      "description": "Human-readable item index"
+    },
+    {
+      "filename": "world.json",
+      "size_mb": 3,
+      "format": "JSON",
+      "description": "World locations and zones"
+    },
+    {
+      "filename": "world.txt",
+      "format": "Text reference",
+      "description": "Human-readable world data"
+    }
+  ],
+  "key_findings": {
+    "total_unique_categories": 98,
+    "languages_supported": 15,
+    "tiers": 8,
+    "quality_suffixes": 4,
+    "special_item_types": 5,
+    "main_item_types": 5,
+    "categorization_method": "Embedded in UniqueName field (no separate categories.json)",
+    "mapping_files_found": 0,
+    "mapping_files_expected": ["categories.json", "tiers.json", "itemtypelist.json"],
+    "mapping_files_status": "NOT FOUND - all data encoded in UniqueName"
+  }
+}

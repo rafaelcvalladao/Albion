@@ -176,6 +176,15 @@ export default function MarketAnalyzer() {
         )}
       </div>
 
+      {rows.length > 0 && (
+        <div style={{ padding: "0.75rem", backgroundColor: "#1a3a52", borderRadius: "4px", marginBottom: "0.75rem", fontSize: "0.9rem", color: "#aaa" }}>
+          <strong style={{ color: "#fff" }}>Dica:</strong> Exibindo {rows.filter((op) => {
+            const margem = op.compra > 0 ? ((op.venda / op.compra - 1) * 100).toFixed(1) : "0.0";
+            return parseFloat(margem) <= 200;
+          }).length} oportunidades com lucro realista ✓
+        </div>
+      )}
+
       {err && <p className="error">{err}</p>}
       
       {/* Calcular paginação */}

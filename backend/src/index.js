@@ -63,22 +63,23 @@ app.post("/api/market/opportunities", async (req, res) => {
   try {
     const {
       categoria = 'Consumível',
-      maxIdadeHoras = 6,
+      offset = 0,
+      step = 1500,
+      maxIdadeHoras = 24, // Aumentado para 24h
       quality = 1,
       usarBuyOrder = false,
       taxaVenda = 6.5,
-      itemFiltro = '',
-      maxItensProcessar = 2500,
     } = req.body;
 
     const resultados = await buscarOportunidades({
       categoria,
+      offset,
+      step,
       maxIdadeHoras,
       quality,
       usarBuyOrder,
       taxaVenda,
-      itemFiltro,
-      maxItensProcessar,
+      maxItensProcessar: 999999,
     });
 
     res.json({ oportunidades: resultados });
@@ -88,6 +89,7 @@ app.post("/api/market/opportunities", async (req, res) => {
       erro: erro.message || 'Erro ao buscar oportunidades' 
     });
   }
+});
 });
 
 app.listen(PORT, () => {

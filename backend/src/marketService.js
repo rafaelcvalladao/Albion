@@ -138,6 +138,12 @@ async function carregarItensDoJogo() {
 
     console.log(`Carregados ${ids.length} itens do jogo com sucesso`);
     console.log(`Categorias dinâmicas identificadas: ${Object.keys(CATEGORIES_CACHE || {}).length}`);
+    
+    // Log de distribuição
+    if (CATEGORIES_CACHE) {
+      const dist = Object.entries(CATEGORIES_CACHE).map(([cat, items]) => `${cat}: ${items.length}`).sort();
+      console.log(`Distribuição de categorias:`, dist);
+    }
     return ids;
   } catch (err) {
     console.warn("Não foi possível carregar itens completos do jogo:", err.message || err);
@@ -165,58 +171,56 @@ function construirMapaCategorias(allItems) {
 
     cats.Todos.push(uniqueName);
 
-    // Parse: T#_CATEGORIA_SUBCATEGORIA_...
-    // Remover encantamento (@#)
+    // Parse: T#_CATEGORIA_SUBCATEGORIA_...@QUALIDADE
+    // Remover qualidade (@#)
     const baseId = uniqueName.split("@")[0];
     const parts = baseId.split("_");
 
     if (parts.length < 2) continue;
 
-    // Extrair tier e categoria base
-    const tier = parts[0]; // T1, T2, ..., T8
-    const categoria = parts[1]; // 2H, MAIN, HEAD, ARMOR, SHOES, etc
+    // Extrair categoria base (segundo elemento após tier)
+    const categoria = parts[1]; // 2H, MAIN, HEAD, ARMOR, SHOES, ARTEFACT, etc
 
-    // Determinar categoria logicamente
-    let mainCat = "Outros";
+    // Mapear para categoria amigável ou usar o próprio
+    let mainCat = categoria; // Usar categoria do UniqueName como padrão
 
-    if (categoria === "2H") {
-      mainCat = "Armas 2H";
-    } else if (categoria === "MAIN") {
-      mainCat = "Armas 1H";
-    } else if (categoria === "RANGED") {
-      mainCat = "Armas Ranged";
-    } else if (["HEAD", "ARMOR", "SHOES", "GLOVES", "CAPE"].includes(categoria)) {
-      mainCat = "Armaduras";
-    } else if (["OFF", "SHIELD"].includes(categoria)) {
-      mainCat = "Escudos";
-    } else if (categoria === "MOUNT") {
-      mainCat = "Montarias";
-    } else if (["POTION", "MEAL", "DRINK", "SPICE"].includes(categoria)) {
-      mainCat = "Consumível";
-    } else if (["ORE", "WOOD", "LEATHER", "CLOTH", "METALBAR", "HIDE", "FABRIC"].includes(categoria)) {
-      mainCat = "Materiais";
-    } else if (["RUNE", "SOUL", "RELIC", "ARTIFACT", "ARTEFACT"].includes(categoria)) {
-      mainCat = "Artefatos";
-    } else if (categoria === "BAG") {
-      mainCat = "Bolsas";
-    } else if (categoria === "BOOK" || categoria === "SCROLL") {
-      mainCat = "Livros";
-    } else if (categoria === "CAPE") {
-      mainCat = "Capas";
-    } else if (baseId.includes("UNIQUE")) {
-      mainCat = "Únicos";
-    }
+    // Agrupamentos lógicos (opcional, mas melhora UX)
+    const armasCategorias = ["2H", "MAIN", "RANGED"];
+    const armaduracategorias = ["HEAD", "ARMOR", "SHOES", "GLOVES", "CAPE"];
+    const escudoCategorias = ["OFF", "SHIELD"];
+    const consumívelCategorias = ["POTION", "MEAL", "DRINK", "SPICE"];
+    const materialCategorias = ["ORE", "WOOD", "LEATHER", "CLOTH", "METALBAR", "HIDE", "FABRIC"];
+    const artefatoCategorias = ["RUNE", "SOUL", "RELIC", "ARTEFACT", "ARTIFACT"];
+
+    // Usar categoria específica OU criar agrupamento
+    if (armasCategorias.includes(categoria)) mainCat = "Armas - " + categoria;
+    else if (armaduracategorias.includes(categoria)) mainCat = "Armaduras - " + categoria;
+    else if (escudoCategorias.includes(categoria)) mainCat = "Escudos - " + categoria;
+    else if (consumívelCategorias.includes(categoria)) mainCat = "Consumível - " + categoria;
+    else if (materialCategorias.includes(categoria)) mainCat = "Materiais - " + categoria;
+    else if (artefatoCategorias.includes(categoria)) mainCat = "Artefatos - " + categoria;
+    else if (categoria === "MOUNT") mainCat = "Montarias";
+    else if (categoria === "BAG") mainCat = "Bolsas";
+    else if (["BOOK", "SCROLL"].includes(categoria)) mainCat = "Documentos";
+    else if (uniqueName.includes("UNIQUE")) mainCat = "Itens Únicos";
+    else mainCat = "Outros - " + categoria; // Fallback
 
     if (!cats[mainCat]) cats[mainCat] = [];
     cats[mainCat].push(uniqueName);
   }
 
-  // Deduplicar
+  // Deduplicar todos
   for (const cat in cats) {
     cats[cat] = [...new Set(cats[cat])];
   }
 
-  return cats;
+  // Ordenar categorias alfabeticamente
+  const sortedCats = {};
+  Object.keys(cats).sort().forEach(key => {
+    sortedCats[key] = cats[key];
+  });
+
+  return sortedCats;
 }
 
 function nomeItemEmPortugues(itemId) {
@@ -392,7 +396,7 @@ export async function buscarOportunidades({
   }
 
   const cidadesStr = CIDADES_SEGURAS.join(",");
-  const maxIdade = Number(maxIdadeHoras) || 6;
+  const maxIdade = Number(maxIdadeHoras) || 24; // Aumentado para 24h por padrão
   const agora = Date.now();
   const qualityNum = Number(quality) || 1;
   const taxaVendaDecimal = (taxaVenda / 100);
@@ -404,6 +408,10 @@ export async function buscarOportunidades({
     console.log(`[Market] Buscando preços para chunk de ${chunkItems.length} itens...`);
     const respostaPrecos = await fetchPricesMarket(chunkItems, cidadesStr, qualityNum);
     console.log(`[Market] API retornou ${respostaPrecos?.length || 0} registros de preço`);
+
+    // Contar items com preço vs sem
+    const itemsComPreco = new Set(respostaPrecos.map(p => p.item_id));
+    console.log(`[Market] ${itemsComPreco.size}/${chunkItems.length} items do chunk têm preço`);
 
     const mapaPrecos = new Map();
     for (const p of respostaPrecos) {
@@ -527,6 +535,7 @@ export async function buscarOportunidades({
 
   oportunidadesBrutas.sort((a, b) => b.lucro - a.lucro);
   console.log(`[Market] Total oportunidades encontradas: ${oportunidadesBrutas.length}`);
+  console.log(`[Market] Items processados do batch ${itensProcessar.length}, itens com preço: ${[...new Set(oportunidadesBrutas.map(o => o.id))].length}`);
   
   // Deduplicar por combinação (tier + encanto + qualidade + origem + destino)
   // IMPORTANTE: Comparamos preços de itens com as MESMAS características!
