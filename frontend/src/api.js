@@ -12,20 +12,31 @@ function getApiBase() {
 const base = getApiBase();
 
 async function request(path, options = {}) {
-  const res = await fetch(`${base}${path}`, {
+  const fullUrl = `${base}${path}`;
+  console.log(`[API] 🌐 Chamando: ${fullUrl}`, options.method ? `(${options.method})` : "(GET)");
+  
+  const res = await fetch(fullUrl, {
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     ...options,
   });
+  
   const text = await res.text();
+  console.log(`[API] 📨 Status ${res.status} para ${path}`);
+  
   let data;
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
+    console.error(`[API] ❌ Erro ao fazer parse do JSON para ${path}:`, text);
     throw new Error(text || `HTTP ${res.status}`);
   }
+  
   if (!res.ok) {
+    console.error(`[API] ❌ Erro HTTP ${res.status} para ${path}:`, data?.error || data);
     throw new Error(data?.error || `HTTP ${res.status}`);
   }
+  
+  console.log(`[API] ✓ Sucesso para ${path}:`, data);
   return data;
 }
 

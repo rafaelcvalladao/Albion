@@ -43,15 +43,21 @@ export default function MarketAnalyzer() {
   const itemsPerPage = 20;
 
   useEffect(() => {
+    console.log("[MarketAnalyzer] 🚀 Iniciando carregamento de categorias...");
     marketCategories()
       .then((d) => {
+        console.log("[MarketAnalyzer] ✓ Resposta recebida:", d);
         const cats = d.categories || [];
+        console.log(`[MarketAnalyzer] ✓ Categorias carregadas: ${cats.length} categorias`);
+        console.log(`[MarketAnalyzer] Primeiras 5: ${cats.slice(0, 5).join(", ")}`);
         setCategories(cats);
         if (cats.length && !cats.includes(categoria)) {
           setCategoria(cats[0]);
         }
       })
-      .catch(() =>
+      .catch((err) => {
+        console.error("[MarketAnalyzer] ❌ Erro ao carregar categorias:", err);
+        console.error("[MarketAnalyzer] Usando categorias estáticas como fallback");
         setCategories([
           "Todos",
           "Armas",
@@ -69,7 +75,7 @@ export default function MarketAnalyzer() {
           "Ferragens",
           "Outros",
         ])
-      );
+      });
   }, []);
 
   const buscar = async () => {
