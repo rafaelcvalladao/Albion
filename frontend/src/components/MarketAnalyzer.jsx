@@ -229,7 +229,7 @@ export default function MarketAnalyzer() {
                             />
                             <div>
                               <strong>{op.nomeBase}</strong>
-                              <div style={{ marginTop: "0.1rem", fontSize: "0.80rem", color: "#aaa" }}>
+                              <div style={{ marginTop: "0.1rem", fontSize: "0.80rem", color: "#aaa", textAlign: "left" }}>
                                 <span style={{ color: tierStyle(op.tier), fontWeight: 700 }}>[{op.tier}]</span>
                                 <span style={{ marginLeft: "0.4rem" }}>{op.encanto !== "0" ? `.${op.encanto}` : ""} {op.estado}</span>
                               </div>
