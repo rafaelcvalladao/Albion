@@ -718,6 +718,38 @@ table.result-table {
   max-width: 100%;
 }
 
+.max-prata-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 180px;
+}
+
+.max-prata-input {
+  padding: 0.6rem 0.8rem;
+  background: linear-gradient(135deg, #1a3a52 0%, #0f2235 100%);
+  border: 2px solid #3a5f7a;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.max-prata-input:hover {
+  border-color: #00a3e0;
+}
+
+.max-prata-input:focus {
+  outline: none;
+  border-color: #00a3e0;
+  box-shadow: 0 0 0 3px rgba(0, 163, 224, 0.1);
+}
+
+.max-prata-input::placeholder {
+  color: #666;
+}
+
 .category-label-text {
   display: block;
   font-size: 0.75rem;

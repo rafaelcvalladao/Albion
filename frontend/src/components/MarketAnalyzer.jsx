@@ -41,6 +41,7 @@ export default function MarketAnalyzer() {
   const [rows, setRows] = useState([]);
   const [itemsProcessados, setItemsProcessados] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [maxPrata, setMaxPrata] = useState(""); // Novo: máximo de prata disponível
   const itemsPerPage = 20;
 
   useEffect(() => {
@@ -170,6 +171,17 @@ export default function MarketAnalyzer() {
           />
         </div>
 
+        <div className="max-prata-wrapper">
+          <label className="category-label-text">Máx. Prata Disponível</label>
+          <input
+            type="number"
+            value={maxPrata}
+            onChange={(e) => setMaxPrata(e.target.value)}
+            placeholder="Ex: 100000000"
+            className="max-prata-input"
+          />
+        </div>
+
         <button type="button" className="btn btn-primary" onClick={buscar} disabled={loading || scanning}>
           {scanning ? "Escaneando…" : "Buscar oportunidades"}
         </button>
@@ -187,8 +199,9 @@ export default function MarketAnalyzer() {
         <div style={{ padding: "0.75rem", backgroundColor: "#1a3a52", borderRadius: "4px", marginBottom: "0.75rem", fontSize: "0.9rem", color: "#aaa" }}>
           <strong style={{ color: "#fff" }}>Dica:</strong> Exibindo {rows.filter((op) => {
             const margem = op.compra > 0 ? ((op.venda / op.compra - 1) * 100).toFixed(1) : "0.0";
-            return parseFloat(margem) <= 200;
-          }).length} oportunidades com lucro realista ✓
+            const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
+            return parseFloat(margem) <= 200 && (maxPrataNum === null || op.compra <= maxPrataNum);
+          }).length} oportunidades {maxPrata ? `com lucro realista e prata ≤ ${parseInt(maxPrata).toLocaleString("pt-PT")}` : "com lucro realista"} ✓
         </div>
       )}
 
@@ -198,7 +211,13 @@ export default function MarketAnalyzer() {
       {(() => {
         const validRows = rows.filter((op) => {
           const margem = op.compra > 0 ? ((op.venda / op.compra - 1) * 100).toFixed(1) : "0.0";
-          return parseFloat(margem) <= 200;
+          const margemValida = parseFloat(margem) <= 200;
+          
+          // Filtro de máximo de prata disponível
+          const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
+          const prataValida = maxPrataNum === null || op.compra <= maxPrataNum;
+          
+          return margemValida && prataValida;
         });
         const totalPages = Math.ceil(validRows.length / itemsPerPage);
         const startIdx = (currentPage - 1) * itemsPerPage;
