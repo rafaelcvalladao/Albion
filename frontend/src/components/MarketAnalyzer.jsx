@@ -114,12 +114,12 @@ export default function MarketAnalyzer() {
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
       
-      // Deduplicar por (itemId + qualidade + origem + destino)
-      // IMPORTANTE: só comparamos preços de itens com a MESMA qualidade!
+      // Deduplicar por (tier + encanto + qualidade + origem + destino)
+      // IMPORTANTE: só comparamos preços de itens com as MESMAS características!
       const dedupSet = new Set();
       const todasUnicas = [];
       for (const op of todas) {
-        const chave = `${op.id}|${op.estado}|${op.origem}|${op.destino}`;
+        const chave = `${op.tier}|${op.encanto}|${op.estado}|${op.origem}|${op.destino}`;
         if (!dedupSet.has(chave)) {
           dedupSet.add(chave);
           todasUnicas.push(op);

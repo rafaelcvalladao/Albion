@@ -457,12 +457,16 @@ export async function buscarOportunidades({
   oportunidadesBrutas.sort((a, b) => b.lucro - a.lucro);
   console.log(`[Market] Total oportunidades encontradas: ${oportunidadesBrutas.length}`);
   
-  // Deduplicar por combinação (itemId + qualidade + origem + destino)
-  // IMPORTANTE: só comparamos preços de itens com a MESMA qualidade!
+  // Deduplicar por combinação (tier + encanto + qualidade + origem + destino)
+  // IMPORTANTE: Comparamos preços de itens com as MESMAS características!
+  // - Tier: T4, T5, ... T8
+  // - Encanto: .0 (ou sem), .1, .2, .3, .4
+  // - Qualidade: Normal, Bom, Excepcional, Excelente, Obra-prima
+  // Itens sem encanto têm encanto="0", itens sem esses atributos usam valor padrão
   const dedupSet = new Set();
   const oportunidadesUnicas = [];
   for (const op of oportunidadesBrutas) {
-    const chave = `${op.id}|${op.estado}|${op.origem}|${op.destino}`;
+    const chave = `${op.tier}|${op.encanto}|${op.estado}|${op.origem}|${op.destino}`;
     if (!dedupSet.has(chave)) {
       dedupSet.add(chave);
       oportunidadesUnicas.push(op);
