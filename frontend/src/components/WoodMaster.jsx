@@ -26,7 +26,6 @@ function loadConfig() {
     tier: "T6",
     buyOrder: false,
     foco: false,
-    showLymhurst: false,
   };
 }
 
@@ -273,7 +272,6 @@ export default function WoodMaster() {
   };
 
   const colAntLabel = cfg.tier === "T4" ? "Tábua T3" : "Tábua Ant.";
-  const showLy = cfg.showLymhurst ?? false;
 
   return (
     <div className="wood-layout">
@@ -309,15 +307,6 @@ export default function WoodMaster() {
                 onChange={(e) => setCfg({ ...cfg, foco: e.target.checked })}
               />
               Usar foco
-            </label>
-
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={showLy}
-                onChange={(e) => setCfg({ ...cfg, showLymhurst: e.target.checked })}
-              />
-              Lymhurst
             </label>
           </div>
           <button type="button" className="btn btn-primary" onClick={refreshAll} disabled={loading || strategyLoading}>
@@ -389,31 +378,6 @@ export default function WoodMaster() {
                         </tr>
                       </thead>
                       <tbody>
-                        {showLy && (
-                        <tr>
-                          <td>Lymhurst</td>
-                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                            <div>{row.lymhurst.tronco?.toLocaleString("pt-PT") ?? "—"}</div>
-                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.lymhurst.troncoDate)}</div>
-                          </td>
-                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                            <div>{row.lymhurst.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</div>
-                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.lymhurst.tabuaAntDate)}</div>
-                          </td>
-                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                            <div>{row.lymhurst.tabua?.toLocaleString("pt-PT") ?? "—"}</div>
-                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.lymhurst.tauaDate)}</div>
-                          </td>
-                          <td className={profitClass(row.lymhurst.lucro)}>
-                            {Number.isFinite(row.lymhurst.lucro)
-                              ? row.lymhurst.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
-                              : "—"}
-                          </td>
-                          <td className="tabular-nums result-table__fama">
-                            {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
-                          </td>
-                        </tr>
-                        )}
                         <tr>
                           <td>Fort Sterling</td>
                           <td className="tabular-nums" style={{ textAlign: 'center' }}>
@@ -475,8 +439,6 @@ export default function WoodMaster() {
           {strategy && !strategy.error && (
             <>
               <StrategyTable title="Local com Foco" kind="foco" rows={strategy.fsLocalFoco} compact />
-              {showLy && <StrategyTable title="Global com Foco" kind="foco" rows={strategy.globalFoco} compact />}
-              {showLy && <StrategyTable title="Global: Fama" kind="fama" rows={strategy.globalFama} compact />}
             </>
           )}
         </aside>

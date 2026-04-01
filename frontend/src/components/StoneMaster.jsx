@@ -26,7 +26,6 @@ function loadConfig() {
     tier: "T6",
     buyOrder: false,
     foco: false,
-    showLymhurst: false,
   };
 }
 
@@ -369,8 +368,6 @@ export default function StoneMaster() {
     };
   }, [cfg.buyOrder]);
 
-  const showLy = cfg.showLymhurst ?? false;
-
   return (
     <div className="wood-layout">
       <aside className="panel panel--sidebar wood-sidebar">
@@ -480,29 +477,6 @@ export default function StoneMaster() {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr>
-                          <td>Fort Sterling</td>
-                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                            <div>{row.fortSterling.tronco?.toLocaleString("pt-PT") ?? "—"}</div>
-                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.fortSterling.troncoDate)}</div>
-                          </td>
-                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                            <div>{row.fortSterling.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</div>
-                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.fortSterling.tabuaAntDate)}</div>
-                          </td>
-                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                            <div>{row.fortSterling.tabua?.toLocaleString("pt-PT") ?? "—"}</div>
-                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.fortSterling.tauaDate)}</div>
-                          </td>
-                          <td className={profitClass(row.fortSterling.lucro)}>
-                            {Number.isFinite(row.fortSterling.lucro)
-                              ? row.fortSterling.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
-                              : "—"}
-                          </td>
-                          <td className="tabular-nums result-table__fama">
-                            {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
-                          </td>
-                        </tr>
                         <tr style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)', fontWeight: 'bold' }}>
                           <td colSpan={3}>Otimizado (Melhor compra/venda)</td>
                           <td className="tabular-nums"></td>

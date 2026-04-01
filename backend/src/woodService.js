@@ -167,7 +167,6 @@ export async function processarWood(body) {
     const iP = ids[idxN * 3 + 1];
     const iA = ids[idxN * 3 + 2];
 
-    const lh = [getDc("Lymhurst", iT), getDc("Lymhurst", iA), getDv("Lymhurst", iP)];
     const ft = [getDc("Fort Sterling", iT), getDc("Fort Sterling", iA), getDv("Fort Sterling", iP)];
 
     function getV(t, a, v) {
@@ -175,13 +174,7 @@ export async function processarWood(body) {
       return -9e8;
     }
 
-    const lLh = getV(...lh);
     const lFt = getV(...ft);
-    const mT = lh[0] && ft[0] ? Math.min(lh[0], ft[0]) : lh[0] || ft[0];
-    const mA = lh[1] && ft[1] ? Math.min(lh[1], ft[1]) : lh[1] || ft[1];
-    const mV = lh[2] && ft[2] ? Math.max(lh[2], ft[2]) : lh[2] || ft[2];
-    const lOt = getV(mT, mA, mV);
-    const melhor = Math.max(lLh, lFt, lOt);
 
     const fBase = FOCO_BASE[tSel] ?? 250;
     const multNivel = [1, 1.5, 2.5, 5, 10][idxN];
@@ -195,15 +188,6 @@ export async function processarWood(body) {
       qtTronco: qt,
       famaRefino,
       volumeFs24h: getVol(volMap, "Fort Sterling", iP),
-      lymhurst: {
-        tronco: lh[0],
-        troncoDate: getDt("Lymhurst", iT),
-        tabuaAnt: lh[1],
-        tabuaAntDate: getDt("Lymhurst", iA),
-        tabua: lh[2],
-        tauaDate: getDvt("Lymhurst", iP),
-        lucro: lLh,
-      },
       fortSterling: {
         tronco: ft[0],
         troncoDate: getDt("Fort Sterling", iT),
@@ -213,8 +197,8 @@ export async function processarWood(body) {
         tauaDate: getDvt("Fort Sterling", iP),
         lucro: lFt,
       },
-      otimizado: lOt,
-      melhorLucro: melhor,
+      otimizado: lFt,
+      melhorLucro: lFt,
     };
 
     if (lOt > -8e8 && foco) {
@@ -276,8 +260,6 @@ export async function estrategiaCompleta(body) {
   const getDc = (c, it) => dc.get(`${c}|${it}`) ?? 0;
   const getDv = (c, it) => dv.get(`${c}|${it}`) ?? 0;
 
-  const gbFoco = [];
-  const gbFama = [];
   const fsFoco = [];
   const fsFama = [];
 
@@ -296,39 +278,14 @@ export async function estrategiaCompleta(body) {
       const fsT = getDc("Fort Sterling", iT);
       const fsA = getDc("Fort Sterling", iA);
       const fsP = getDv("Fort Sterling", iP);
-      const lyT = getDc("Lymhurst", iT);
-      const lyA = getDc("Lymhurst", iA);
-      const lyP = getDv("Lymhurst", iP);
 
       const vFs = getVol(volData, "Fort Sterling", iP);
-      const vLy = getVol(volData, "Lymhurst", iP);
 
       const rrrFoco = calcularRrrManual(true, true);
       const rrrFama = calcularRrrManual(false, true);
       const fBase = FOCO_BASE[t] ?? 250;
       const fReal = fBase * [1, 1.5, 2.5, 5, 10][idxN] * 0.5 ** (specTotal / 10000);
       const fama = famaRefinoPorCraft(t, idxN);
-
-      const bestP = Math.max(fsP, lyP);
-      const vGb = fsP >= lyP ? vFs : vLy;
-      const bT = Math.min(fsT || 9e9, lyT || 9e9);
-      const bA = Math.min(fsA || 9e9, lyA || 9e9);
-
-      if (bestP > 0 && bT < 9e8) {
-        gbFoco.push({
-          item: `${t}${enc}`,
-          lucro: (bestP - ((bT * qt + bA) * (1 - rrrFoco) + txF)) / fReal,
-          volume: vGb,
-        });
-        const lucroBrutoFama = bestP - ((bT * qt + bA) * (1 - rrrFama) + txF);
-        gbFama.push({
-          item: `${t}${enc}`,
-          fama,
-          famaPerPrata: Math.abs(lucroBrutoFama) > 0 ? fama / Math.abs(lucroBrutoFama) : 0,
-          lucro: lucroBrutoFama,
-          volume: vGb,
-        });
-      }
 
       if (fsT && fsA && fsP) {
         fsFoco.push({
@@ -354,8 +311,6 @@ export async function estrategiaCompleta(body) {
   const topFama = (arr, n = 15) => [...arr].sort(sortDescFama).slice(0, n);
 
   return {
-    globalFoco: top(gbFoco),
-    globalFama: topFama(gbFama),
     fsLocalFoco: top(fsFoco),
     fsLocalFama: topFama(fsFama),
     fsLocalFamaAll: fsFama,

@@ -161,7 +161,6 @@ export async function processarFiber(body) {
     const iA = ids[idxN * 3 + 2];
 
     const lh = [getDc("Lymhurst", iT), getDc("Lymhurst", iA), getDv("Lymhurst", iP)];
-    const ft = [getDc("Fort Sterling", iT), getDc("Fort Sterling", iA), getDv("Fort Sterling", iP)];
 
     function getV(t, a, v) {
       if (t && a && v) return v - ((t * qt + a) * (1 - rrr) + txF);
@@ -169,12 +168,6 @@ export async function processarFiber(body) {
     }
 
     const lLh = getV(...lh);
-    const lFt = getV(...ft);
-    const mT = lh[0] && ft[0] ? Math.min(lh[0], ft[0]) : lh[0] || ft[0];
-    const mA = lh[1] && ft[1] ? Math.min(lh[1], ft[1]) : lh[1] || ft[1];
-    const mV = lh[2] && ft[2] ? Math.max(lh[2], ft[2]) : lh[2] || ft[2];
-    const lOt = getV(mT, mA, mV);
-    const melhor = Math.max(lLh, lFt, lOt);
 
     const fBase = FOCO_BASE[tSel] ?? 250;
     const multNivel = [1, 1.5, 2.5, 5, 10][idxN];
@@ -187,7 +180,7 @@ export async function processarFiber(body) {
       enc,
       qtTronco: qt,
       famaRefino,
-      volumeFs24h: getVol(volMap, "Fort Sterling", iP),
+      volumeFs24h: getVol(volMap, "Lymhurst", iP),
       lymhurst: {
         tronco: lh[0],
         troncoDate: getDt("Lymhurst", iT),
@@ -197,23 +190,14 @@ export async function processarFiber(body) {
         tauaDate: getDvt("Lymhurst", iP),
         lucro: lLh,
       },
-      fortSterling: {
-        tronco: ft[0],
-        troncoDate: getDt("Fort Sterling", iT),
-        tabuaAnt: ft[1],
-        tabuaAntDate: getDt("Fort Sterling", iA),
-        tabua: ft[2],
-        tauaDate: getDvt("Fort Sterling", iP),
-        lucro: lFt,
-      },
-      otimizado: lOt,
-      melhorLucro: melhor,
+      otimizado: lLh,
+      melhorLucro: lLh,
     };
 
-    if (lOt > -8e8 && foco) {
+    if (lLh > -8e8 && foco) {
       row.foco = {
         unidades: fReal,
-        prataPorFoco: lOt / fReal,
+        prataPorFoco: lLh / fReal,
       };
     }
     rows.push(row);
@@ -284,11 +268,11 @@ export async function estrategiaCompletaFiber(body) {
       const iP = `${t}_CLOTH${n}`;
       const iA = tAnt === "T3" ? `${tAnt}_CLOTH` : `${tAnt}_CLOTH${n}`;
 
-      const fsT = getDc("Fort Sterling", iT);
-      const fsA = getDc("Fort Sterling", iA);
-      const fsP = getDv("Fort Sterling", iP);
+      const fsT = getDc("Lymhurst", iT);
+      const fsA = getDc("Lymhurst", iA);
+      const fsP = getDv("Lymhurst", iP);
 
-      const vFs = getVol(volData, "Fort Sterling", iP);
+      const vFs = getVol(volData, "Lymhurst", iP);
 
       const rrrFoco = calcularRrrManual(true, true);
       const rrrFama = calcularRrrManual(false, true);
