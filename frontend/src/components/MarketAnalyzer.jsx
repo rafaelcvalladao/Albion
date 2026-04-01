@@ -87,7 +87,7 @@ export default function MarketAnalyzer() {
     setItemsProcessados(0);
     setCurrentPage(1);
 
-    const step = 1500; // Tamanho do lote interno (otimizado)
+    const step = categoria === "Todos" ? 25000 : 1500; // "Todos" processa tudo de uma vez
 
     try {
       let todas = [];
@@ -97,7 +97,7 @@ export default function MarketAnalyzer() {
 
       while (hasMore) {
         roundCount++;
-        console.log(`[Market] Buscando lote ${roundCount} (offset: ${offset}, step: ${step})`);
+        console.log(`[Market] Buscando lote ${roundCount} (categoria: ${categoria}, offset: ${offset}, step: ${step})`);
         
         const data = await marketOpportunities({
           categoria,
@@ -136,7 +136,9 @@ export default function MarketAnalyzer() {
         if (!hasMore) break;
 
         offset += step;
-        await new Promise((resolve) => setTimeout(resolve, 150));
+        // Dar mais tempo entre requisições grandes
+        const delay = categoria === "Todos" ? 500 : 150;
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
 
       console.log(`[Market] Busca concluída! Total: ${todas.length} brutos, ${rows.length} únicos`);

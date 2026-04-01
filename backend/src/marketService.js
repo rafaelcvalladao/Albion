@@ -300,21 +300,28 @@ async function gerarListaItens(categoria) {
   // Primeiro carrega os itens (que constrói CATEGORIES_CACHE)
   await carregarItensDoJogo();
 
-  console.log(`[gerarListaItens] Solicitado: ${categoria}, CATEGORIES_CACHE existe: ${!!CATEGORIES_CACHE}`);
+  console.log(`[gerarListaItens] Solicitado: ${categoria}`);
+  console.log(`[gerarListaItens] CATEGORIES_CACHE disponível: ${!!CATEGORIES_CACHE}, keys: ${CATEGORIES_CACHE ? Object.keys(CATEGORIES_CACHE).length : 0}`);
+  console.log(`[gerarListaItens] ALL_ITEM_IDS_CACHE disponível: ${ALL_ITEM_IDS_CACHE ? ALL_ITEM_IDS_CACHE.length + " items" : "null"}`);
 
-  // IMPORTANTE: "Todos" deve sempre retornar TUDO
+  // PRIORIDADE: "Todos" deve retornar REALMENTE TUDO
   if (categoria === "Todos") {
-    // SEMPRE usar ALL_ITEM_IDS_CACHE para "Todos" pois tem realmente todos os items
-    const todos = ALL_ITEM_IDS_CACHE || [];
-    lista = todos;
-    console.log(`[gerarListaItens] ✓ Usando TODOS (ALL_ITEM_IDS_CACHE): ${lista.length} itens`);
+    // Preferir CATEGORIES_CACHE["Todos"] pois é construído do json dinâmico
+    if (CATEGORIES_CACHE && CATEGORIES_CACHE["Todos"] && CATEGORIES_CACHE["Todos"].length > 0) {
+      lista = CATEGORIES_CACHE["Todos"];
+      console.log(`[gerarListaItens] ✓ Usando CATEGORIES_CACHE["Todos"]: ${lista.length} itens`);
+    } else {
+      // Fallback para ALL_ITEM_IDS_CACHE
+      lista = ALL_ITEM_IDS_CACHE || [];
+      console.log(`[gerarListaItens] ⚠️ Usando ALL_ITEM_IDS_CACHE: ${lista.length} itens`);
+    }
   } 
-  // Usar categorias dinâmicas para categorias específicas
-  else if (CATEGORIES_CACHE && CATEGORIES_CACHE[categoria]) {
+  // Categorias específicas
+  else if (CATEGORIES_CACHE && CATEGORIES_CACHE[categoria] && CATEGORIES_CACHE[categoria].length > 0) {
     lista = CATEGORIES_CACHE[categoria];
-    console.log(`[gerarListaItens] ✓ Usando categoria dinâmica "${categoria}": ${lista.length} itens`);
+    console.log(`[gerarListaItens] ✓ Usando CATEGORIES_CACHE["${categoria}"]: ${lista.length} itens`);
   } 
-  // Fallback para categorias estáticas se não encontrar dinâmica
+  // Fallback para categorias estáticas
   else {
     const bases = CATEGORIAS[categoria] || [];
     lista = bases.flatMap((b) => {
@@ -324,7 +331,9 @@ async function gerarListaItens(categoria) {
     console.log(`[gerarListaItens] ⚠️ Fallback estático para "${categoria}": ${lista.length} itens`);
   }
 
-  return [...new Set(lista)];
+  const result = [...new Set(lista)];
+  console.log(`[gerarListaItens] Retornando ${result.length} items únicos para categoria "${categoria}"`);
+  return result;
 }
 
 function chunk(arr, size) {
@@ -414,9 +423,16 @@ export async function buscarOportunidades({
     return [];
   }
 
-  // Processa TODOS os itens (sem limitar)
-  const itensProcessar = itens.slice(offset, Math.min(offset + step, itens.length));
-  console.log(`[Market] Processando slice: offset=${offset}, step=${step}, itens neste batch=${itensProcessar.length}/${itens.length}`);
+  // ⚠️ IMPORTANTE: Para "Todos", SEMPRE processar TUDO sem paginação
+  let itensProcessar;
+  if (categoria === "Todos") {
+    itensProcessar = itens; // Processar TODOS os items
+    console.log(`[Market] ✓ Categoria "Todos": processando ${itensProcessar.length} items (SEM paginação)`);
+  } else {
+    // Para categorias específicas, usar offset/step para paginação
+    itensProcessar = itens.slice(offset, Math.min(offset + step, itens.length));
+    console.log(`[Market] Processando slice: offset=${offset}, step=${step}, itens neste batch=${itensProcessar.length}/${itens.length}`);
+  }
   
   if (!itensProcessar.length) {
     console.log(`[Market] Slice vazio! Retornando []`);
@@ -424,22 +440,27 @@ export async function buscarOportunidades({
   }
 
   const cidadesStr = CIDADES_SEGURAS.join(",");
-  const maxIdade = Number(maxIdadeHoras) || 24; // Aumentado para 24h por padrão
+  const maxIdade = Number(maxIdadeHoras) || 24;
   const agora = Date.now();
   const qualityNum = Number(quality) || 1;
   const taxaVendaDecimal = (taxaVenda / 100);
   const taxaVendaNota = 1 - taxaVendaDecimal;
 
+  // Aumentar concorrência para batches grandes
   const chunks = chunk(itensProcessar, 100);
+  console.log(`[Market] Processa ${itensProcessar.length} items em ${chunks.length} chunks de 100`);
+  
   const oportunidadesBrutas = [];
-  for (const chunkItems of chunks) {
-    console.log(`[Market] Buscando preços para chunk de ${chunkItems.length} itens...`);
+  
+  for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
+    const chunkItems = chunks[chunkIdx];
+    console.log(`[Market] Chunk ${chunkIdx + 1}/${chunks.length}: fetching ${chunkItems.length} items...`);
+    
     const respostaPrecos = await fetchPricesMarket(chunkItems, cidadesStr, qualityNum);
-    console.log(`[Market] API retornou ${respostaPrecos?.length || 0} registros de preço`);
+    console.log(`[Market] Chunk ${chunkIdx + 1}: API retornou ${respostaPrecos?.length || 0} registros de preço`);
 
-    // Contar items com preço vs sem
     const itemsComPreco = new Set(respostaPrecos.map(p => p.item_id));
-    console.log(`[Market] ${itemsComPreco.size}/${chunkItems.length} items do chunk têm preço`);
+    console.log(`[Market] Chunk ${chunkIdx + 1}: ${itemsComPreco.size}/${chunkItems.length} items têm preço`);
 
     const mapaPrecos = new Map();
     for (const p of respostaPrecos) {
@@ -594,6 +615,7 @@ export async function obterCategoriasDinamicas() {
   
   console.log(`[Categories] Obtendo categorias... CATEGORIES_CACHE: ${CATEGORIES_CACHE ? "existe" : "null"}`);
   console.log(`[Categories] Keys disponíveis: ${CATEGORIES_CACHE ? Object.keys(CATEGORIES_CACHE).length : 0}`);
+  console.log(`[Categories] ALL_ITEM_IDS_CACHE: ${ALL_ITEM_IDS_CACHE ? ALL_ITEM_IDS_CACHE.length + " items" : "null"}`);
 
   // Retornar categorias dinâmicas ou fallback
   if (CATEGORIES_CACHE && Object.keys(CATEGORIES_CACHE).length > 0) {
