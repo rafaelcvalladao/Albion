@@ -34,13 +34,13 @@ function timeAgo(label) {
 export default function MarketAnalyzer() {
   const [categories, setCategories] = useState([]);
   const [categoria, setCategoria] = useState("Todos");
-  const [maxHoras, setMaxHoras] = useState("6");
-  const [taxaVenda, setTaxaVenda] = useState("6.5");
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [err, setErr] = useState(null);
   const [rows, setRows] = useState([]);
   const [itemsProcessados, setItemsProcessados] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   useEffect(() => {
     marketCategories()
@@ -78,6 +78,7 @@ export default function MarketAnalyzer() {
     setErr(null);
     setRows([]);
     setItemsProcessados(0);
+    setCurrentPage(1);
 
     const step = 1500; // Tamanho do lote interno (otimizado)
 
@@ -93,9 +94,6 @@ export default function MarketAnalyzer() {
         
         const data = await marketOpportunities({
           categoria,
-          maxIdadeHoras: parseInt(maxHoras, 10) || 6,
-          taxaVenda: parseFloat(taxaVenda) || 6.5,
-          maxItensProcessar: 999999, // Sem limite
           offset,
           step,
         });
@@ -165,26 +163,6 @@ export default function MarketAnalyzer() {
           </select>
         </label>
 
-        <label>
-          <span>Máx. idade (h)</span>
-          <input
-            type="text"
-            value={maxHoras}
-            onChange={(e) => setMaxHoras(e.target.value)}
-            style={{ width: "60px" }}
-          />
-        </label>
-
-        <label>
-          <span>Taxa venda (%)</span>
-          <input
-            type="text"
-            value={taxaVenda}
-            onChange={(e) => setTaxaVenda(e.target.value)}
-            style={{ width: "60px" }}
-          />
-        </label>
-
         <button type="button" className="btn btn-primary" onClick={buscar} disabled={loading || scanning}>
           {scanning ? "Escaneando…" : "Buscar oportunidades"}
         </button>
@@ -199,69 +177,116 @@ export default function MarketAnalyzer() {
       </div>
 
       {err && <p className="error">{err}</p>}
-      <div className="table-wrap">
-        <table className="result-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Item</th>
-              <th>Compra</th>
-              <th>Venda</th>
-              <th>Lucro</th>
-              <th>%</th>
-              <th>Stale</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((op, idx) => {
-              const margem = op.compra > 0 ? ((op.venda / op.compra - 1) * 100).toFixed(1) : "0.0";
-              // Filtrar itens com lucro % maior que 200%
-              if (parseFloat(margem) > 200) return null;
-              return (
-                <tr key={`${op.id}-${op.origem}-${op.destino}`}> 
-                  <td style={{ textAlign: "right" }}>{idx + 1}</td>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <img
-                        src={`https://render.albiononline.com/v1/item/${op.id}.png?quality=1`}
-                        alt={op.nomeBase}
-                        style={{ width: "32px", height: "32px", borderRadius: "4px", border: "1px solid #666" }}
-                        onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/32?text=?"; }}
-                      />
-                      <div>
-                        <strong>{op.nomeBase}</strong>
-                        <div style={{ marginTop: "0.1rem", fontSize: "0.80rem", color: "#aaa" }}>
-                          <span style={{ color: tierStyle(op.tier), fontWeight: 700 }}>[{op.tier}]</span>
-                          <span style={{ marginLeft: "0.4rem" }}>{op.estado}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{op.compra?.toLocaleString("pt-PT")}</div>
-                    <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
-                      {op.origem} · {timeAgo(op.atualizacaoOrig)}
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{op.venda?.toLocaleString("pt-PT")}</div>
-                    <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
-                      {op.destino} · {timeAgo(op.atualizacaoDest)}
-                    </div>
-                  </td>
-                  <td className={profitClass(op.lucro)} style={{ fontWeight: 700 }}>
-                    {op.lucro?.toLocaleString("pt-PT", { maximumFractionDigits: 0 })}
-                  </td>
-                  <td style={{ textAlign: "right" }}>{margem}%</td>
-                  <td style={{ textAlign: "center" }}>{op.desatualizado ? "⚠️" : "✅"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      
+      {/* Calcular paginação */}
+      {(() => {
+        const validRows = rows.filter((op) => {
+          const margem = op.compra > 0 ? ((op.venda / op.compra - 1) * 100).toFixed(1) : "0.0";
+          return parseFloat(margem) <= 200;
+        });
+        const totalPages = Math.ceil(validRows.length / itemsPerPage);
+        const startIdx = (currentPage - 1) * itemsPerPage;
+        const pageRows = validRows.slice(startIdx, startIdx + itemsPerPage);
+
+        return (
+          <>
+            <div className="table-wrap">
+              <table className="result-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Item</th>
+                    <th>Compra Sell Order</th>
+                    <th>Venda Sell Order</th>
+                    <th>Venda Buy Order</th>
+                    <th>Lucro</th>
+                    <th>%</th>
+                    <th>Stale</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRows.map((op, idx) => {
+                    const margem = op.compra > 0 ? ((op.venda / op.compra - 1) * 100).toFixed(1) : "0.0";
+                    return (
+                      <tr key={`${op.id}-${op.origem}-${op.destino}`}>
+                        <td style={{ textAlign: "right" }}>{startIdx + idx + 1}</td>
+                        <td>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <img
+                              src={`https://render.albiononline.com/v1/item/${op.id}.png?quality=1`}
+                              alt={op.nomeBase}
+                              style={{ width: "32px", height: "32px", borderRadius: "4px", border: "1px solid #666" }}
+                              onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/32?text=?"; }}
+                            />
+                            <div>
+                              <strong>{op.nomeBase}</strong>
+                              <div style={{ marginTop: "0.1rem", fontSize: "0.80rem", color: "#aaa" }}>
+                                <span style={{ color: tierStyle(op.tier), fontWeight: 700 }}>[{op.tier}]</span>
+                                <span style={{ marginLeft: "0.4rem" }}>{op.encanto !== "0" ? `.${op.encanto}` : ""} {op.estado}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{op.compra?.toLocaleString("pt-PT")}</div>
+                          <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
+                            {op.origem} · {timeAgo(op.atualizacaoOrig)}
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{op.venda?.toLocaleString("pt-PT")}</div>
+                          <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
+                            {op.destino} · {timeAgo(op.atualizacaoDest)}
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{op.buyOrderDestino?.toLocaleString("pt-PT") || "-"}</div>
+                          <div style={{ fontSize: "0.8rem", opacity: 0.8 }}>
+                            {op.destino} · {timeAgo(op.atualizacaoBuyOrderDest)}
+                          </div>
+                        </td>
+                        <td className={profitClass(op.lucro)} style={{ fontWeight: 700 }}>
+                          {op.lucro?.toLocaleString("pt-PT", { maximumFractionDigits: 0 })}
+                        </td>
+                        <td style={{ textAlign: "right" }}>{margem}%</td>
+                        <td style={{ textAlign: "center" }}>{op.desatualizado ? "⚠️" : "✅"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Paginação */}
+            {totalPages > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", marginTop: "1rem", padding: "1rem", borderTop: "1px solid #444" }}>
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  style={{ padding: "0.5rem 0.75rem", cursor: currentPage === 1 ? "not-allowed" : "pointer", opacity: currentPage === 1 ? 0.5 : 1 }}
+                >
+                  ← Anterior
+                </button>
+                
+                <span style={{ margin: "0 1rem" }}>
+                  Página {currentPage} de {totalPages}
+                </span>
+
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{ padding: "0.5rem 0.75rem", cursor: currentPage === totalPages ? "not-allowed" : "pointer", opacity: currentPage === totalPages ? 0.5 : 1 }}
+                >
+                  Próximo →
+                </button>
+              </div>
+            )}
+          </>
+        );
+      })()}
+
       {!loading && rows.length === 0 && !err && (
-        <p className="market-empty">Carregue uma pesquisa para ver oportunidades. Se escaneou mas não encontrou resultados, pode estar filtrando todos (>200%).</p>
+        <p className="market-empty">Carregue uma pesquisa para ver oportunidades.</p>
       )}
     </div>
   );

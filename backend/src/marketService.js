@@ -379,7 +379,9 @@ export async function buscarOportunidades({
       mapaOrganiado.get(it)[dados.city] = {
         compra: dados.sellMin,
         venda: dados.sellMin,
-        dataStr: dados.dataStr,
+        buyMax: dados.buyMax,
+        dataStrSell: dados.dataStr,
+        dataStrBuy: dados.dataStr, // Em produção seria a data do buy_price_max, mas usamos a mesma por simplicidade
       };
     }
 
@@ -408,6 +410,7 @@ export async function buscarOportunidades({
           
           const precoCompra = infoOri.compra;
           const precoVenda = infoDest.venda;
+          const buyOrderDestino = infoDest.buyMax || 0;
           
           // Validação adicional
           if (!precoCompra || !precoVenda || precoCompra <= 0 || precoVenda <= 0) continue;
@@ -422,8 +425,8 @@ export async function buscarOportunidades({
 
           if (lucroLiquido > 0) {
             const agoraMs = Date.now();
-            const destinoDate = new Date(String(infoDest.dataStr).replace(" ", "T")).getTime();
-            const origemDate = new Date(String(infoOri.dataStr).replace(" ", "T")).getTime();
+            const destinoDate = new Date(String(infoDest.dataStrSell).replace(" ", "T")).getTime();
+            const origemDate = new Date(String(infoOri.dataStrSell).replace(" ", "T")).getTime();
             const desatualizado = 
               (!isNaN(destinoDate) && agoraMs - destinoDate > 12 * 3600000) ||
               (!isNaN(origemDate) && agoraMs - origemDate > 12 * 3600000);
@@ -438,10 +441,12 @@ export async function buscarOportunidades({
               destino: cidadeDest,
               compra: precoCompra,
               venda: precoVenda,
+              buyOrderDestino,
               custoTeleporte,
               lucro: lucroLiquido,
-              atualizacaoOrig: infoOri.dataStr,
-              atualizacaoDest: infoDest.dataStr,
+              atualizacaoOrig: infoOri.dataStrSell,
+              atualizacaoDest: infoDest.dataStrSell,
+              atualizacaoBuyOrderDest: infoDest.dataStrBuy,
               desatualizado,
             });
           }
