@@ -115,10 +115,10 @@ async function carregarItensDoJogo() {
     if (!res.ok) throw new Error(`Falha ao buscar itens do jogo (${res.status})`);
     const data = await res.json();
 
-    // Capturar TODOS os itens que têm tier (T1-T8)
-    // não limitar apenas a T4-T8, vamos pegar tudo
+    // Carregar TODOS os items que têm UniqueName
+    // Não filtrar por padrão - deixar que a API do Albion Data filtre por disponibilidade
     const ids = Array.isArray(data)
-      ? [...new Set(data.map((item) => String(item.UniqueName || "")).filter((id) => /^T[0-9]_/.test(id) || /^T[0-9]{2}_/.test(id)))]
+      ? [...new Set(data.map((item) => String(item.UniqueName || "")).filter((id) => id.length > 0))]
       : [];
 
     ALL_ITEM_IDS_CACHE = ids;
@@ -127,7 +127,7 @@ async function carregarItensDoJogo() {
       ITEM_NAME_PT_BR_CACHE = data.reduce((acc, item) => {
         const key = String(item.UniqueName || "");
         const ptName = item.LocalizedNames?.["PT-BR"] || item.LocalizedNames?.["pt-BR"] || item.LocalizedNames?.["pt-br"];
-        if (key) acc[key] = ptName || key.replace(/_/g, " ");
+        if (key) acc[key] = ptName || item.LocalizedNames?.["EN-US"] || key.replace(/_/g, " ");
         return acc;
       }, {});
     }
