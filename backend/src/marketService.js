@@ -115,8 +115,10 @@ async function carregarItensDoJogo() {
     if (!res.ok) throw new Error(`Falha ao buscar itens do jogo (${res.status})`);
     const data = await res.json();
 
+    // Capturar TODOS os itens que têm tier (T1-T8)
+    // não limitar apenas a T4-T8, vamos pegar tudo
     const ids = Array.isArray(data)
-      ? [...new Set(data.map((item) => String(item.UniqueName || "")).filter((id) => /^(T[4-8]_)/.test(id)))]
+      ? [...new Set(data.map((item) => String(item.UniqueName || "")).filter((id) => /^T[0-9]_/.test(id) || /^T[0-9]{2}_/.test(id)))]
       : [];
 
     ALL_ITEM_IDS_CACHE = ids;
@@ -130,7 +132,7 @@ async function carregarItensDoJogo() {
       }, {});
     }
 
-    console.log(`Carregados ${ids.length} itens do jogo com sucesso`);
+    console.log(`Carregados ${ids.length} itens do jogo com sucesso (de um total de ${data.length})`);
     return ids;
   } catch (err) {
     console.warn("Não foi possível carregar itens completos do jogo:", err.message || err);
@@ -475,10 +477,8 @@ export async function buscarOportunidades({
   }
   console.log(`[Market] Após deduplicar: ${oportunidadesUnicas.length} oportunidades únicas`);
   
-  // Retornar TODOS os itens encontrados (não limitar a 20)
-  // O frontend deduplica e escolhe o top 20
-  const resultadosFinais = oportunidadesUnicas.slice(0, 100);
-  
-  console.log(`[Market] Retornando ${resultadosFinais.length} oportunidades (até 100 por batch)`);
-  return resultadosFinais;
+  // Retornar TODOS os itens encontrados neste batch (sem limite de 100)
+  // O frontend deduplica e ordena por lucro
+  console.log(`[Market] Retornando ${oportunidadesUnicas.length} oportunidades deste batch`);
+  return oportunidadesUnicas;
 }
