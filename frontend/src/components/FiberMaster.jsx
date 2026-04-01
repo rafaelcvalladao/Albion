@@ -30,16 +30,31 @@ function loadConfig() {
   };
 }
 
-function itemIconUrl(itemId) {
-  return `https://render.albiononline.com/v1/item/${itemId}.png?quality=1`;
+function parseTierItem(item) {
+  const [tier, level] = String(item).split(".");
+  return {
+    tier: tier || "T4",
+    level: level || "0",
+  };
 }
 
-function FinalProductIcon({ item }) {
-  return (
-    <div className="strategy-final-product-icon">
-      <img src={itemIconUrl(item)} alt={item} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/56?text=product"; }} />
-    </div>
-  );
+function tAntOf(tier) {
+  const tNum = parseInt(String(tier).slice(1), 10);
+  return Number.isNaN(tNum) ? "T4" : tNum > 4 ? `T${tNum - 1}` : "T3";
+}
+
+function buildFiberId(tier, level) {
+  if (level === "0") return `${tier}_FIBER`;
+  return `${tier}_FIBER_LEVEL${level}`;
+}
+
+function buildClothId(tier, level) {
+  if (level === "0") return `${tier}_CLOTH`;
+  return `${tier}_CLOTH_LEVEL${level}`;
+}
+
+function itemIconUrl(itemId) {
+  return `https://render.albiononline.com/v1/item/${itemId}.png?quality=1`;
 }
 
 export default function FiberMaster() {
@@ -53,6 +68,27 @@ export default function FiberMaster() {
   useEffect(() => {
     localStorage.setItem(STORAGE, JSON.stringify(cfg));
   }, [cfg]);
+
+  const formatTimeAgo = (isoDate) => {
+    if (!isoDate) return "—";
+    try {
+      const nowUTC = new Date();
+      const nowUTC3 = new Date(nowUTC.getTime() - (3 * 60 * 60 * 1000));
+      const then = new Date(isoDate);
+      if (Number.isNaN(then.getTime())) return "—";
+      const diffSec = Math.floor((nowUTC3 - then) / 1000);
+      if (diffSec < 0) return "—";
+      if (diffSec < 60) return `${diffSec}s`;
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}m`;
+      const diffHour = Math.floor(diffMin / 60);
+      if (diffHour < 24) return `${diffHour}h`;
+      const diffDay = Math.floor(diffHour / 24);
+      return `${diffDay}d`;
+    } catch {
+      return "—";
+    }
+  };
 
   const setSpec = (key, value) => {
     setCfg((c) => ({ ...c, spec: { ...c.spec, [key]: value } }));
@@ -179,7 +215,9 @@ export default function FiberMaster() {
                 <span className="summary-strip__label">RRR</span>
                 <span className="summary-strip__value">{result.rrrPercent?.toFixed(1)}%</span>
               </div>
-              {result.rows?.map((row) => (
+              {result.rows?.map((row) => {
+                const q = row.qtTronco ?? 0;
+                return (
                 <article key={row.nivel} className="result-card">
                   <h3 className="result-card__title">
                     <span className="result-card__tier">{row.nivel}</span>
@@ -194,50 +232,78 @@ export default function FiberMaster() {
                     <table className="result-table">
                       <thead>
                         <tr>
+                          <th>Cidade</th>
+                          <th>
+                            <div className="th-with-icon">
+                              <img src={itemIconUrl(buildFiberId(parseTierItem(row.nivel).tier, parseTierItem(row.nivel).level))} alt={`${row.nivel} fibra`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/84?text=fiber"; }} />
+                              <span className="th-with-icon__qty">x{q}</span>
+                            </div>
+                          </th>
+                          <th>
+                            <div className="th-with-icon">
+                              {(() => {
+                                const tier = parseTierItem(row.nivel).tier;
+                                const level = parseTierItem(row.nivel).level;
+                                const tierNum = parseInt(tier.slice(1), 10);
+                                const antLevel = tierNum === 4 ? "0" : level;
+                                return (
+                                  <img src={itemIconUrl(buildClothId(tAntOf(tier), antLevel))} alt={`${tAntOf(tier)} tecido ant.`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/84?text=cloth"; }} />
+                                );
+                              })()}
+                              <span className="th-with-icon__qty">x1</span>
+                            </div>
+                          </th>
+                          <th>
+                            <div className="th-with-icon">
+                              <img src={itemIconUrl(buildClothId(parseTierItem(row.nivel).tier, parseTierItem(row.nivel).level))} alt={`${row.nivel} tecido`} onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/84?text=cloth"; }} />
+                            </div>
+                          </th>
                           <th>Lucro</th>
-                          <th>RRR%</th>
                           <th>Fama</th>
-                          <th>Estratégia</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {showLy && row.lymhurst && (
-                          <tr>
-                            <td className={profitClass(row.lymhurst.lucro)}>
-                              <strong>Lymhurst</strong>
-                              <br />
-                              {Number.isFinite(row.lymhurst.lucro)
-                                ? row.lymhurst.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
-                                : "—"}{" "}
-                              prata
-                            </td>
-                            <td className="tabular-nums">{result.rrrPercent?.toFixed(1)}%</td>
-                            <td className="tabular-nums result-table__fama">
-                              {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
-                            </td>
-                            <td>Vender bruto</td>
-                          </tr>
-                        )}
                         <tr>
-                          <td className={profitClass(row.melhorLucro)}>
-                            <strong>Fort Sterling</strong>
-                            <br />
-                            {Number.isFinite(row.melhorLucro)
-                              ? row.melhorLucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
-                              : "—"}{" "}
-                            prata
+                          <td>Fort Sterling</td>
+                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                            <div>{row.fortSterling.tronco?.toLocaleString("pt-PT") ?? "—"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.fortSterling.troncoDate)}</div>
                           </td>
-                          <td className="tabular-nums">{result.rrrPercent?.toFixed(1)}%</td>
+                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                            <div>{row.fortSterling.tabuaAnt?.toLocaleString("pt-PT") ?? "—"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.fortSterling.tabuaAntDate)}</div>
+                          </td>
+                          <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                            <div>{row.fortSterling.tabua?.toLocaleString("pt-PT") ?? "—"}</div>
+                            <div style={{ fontSize: '0.85em', color: '#999' }}>{formatTimeAgo(row.fortSterling.tauaDate)}</div>
+                          </td>
+                          <td className={profitClass(row.fortSterling.lucro)}>
+                            {Number.isFinite(row.fortSterling.lucro)
+                              ? row.fortSterling.lucro.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
+                              : "—"}
+                          </td>
                           <td className="tabular-nums result-table__fama">
                             {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
                           </td>
-                          <td>Vender bruto</td>
+                        </tr>
+                        <tr style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)', fontWeight: 'bold' }}>
+                          <td colSpan={3}>Otimizado (Melhor compra/venda)</td>
+                          <td className="tabular-nums"></td>
+                          <td className={profitClass(row.otimizado)}>
+                            {Number.isFinite(row.otimizado)
+                              ? row.otimizado.toLocaleString("pt-PT", { maximumFractionDigits: 0 })
+                              : "—"}
+                          </td>
+                          <td className="tabular-nums result-table__fama">
+                            {row.famaRefino != null ? row.famaRefino.toLocaleString("pt-PT") : "—"}
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </>
           )}
         </section>
