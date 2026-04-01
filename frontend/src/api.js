@@ -87,3 +87,7 @@ export function marketCategories() {
 export function marketOpportunities(body) {
   return request("/api/market/opportunities", { method: "POST", body: JSON.stringify(body) });
 }
+
+export function validateToken(token) {
+  return request("/api/auth/validate", { method: "POST", body: JSON.stringify({ token }) });
+}

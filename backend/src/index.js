@@ -13,8 +13,19 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({ origin: true }));
 app.use(express.json());
 
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "xabufael";
+
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "calculadora-albion-api" });
+});
+
+/** Validação de token de acesso */
+app.post("/api/auth/validate", (req, res) => {
+  const { token } = req.body || {};
+  if (typeof token === "string" && token === ACCESS_TOKEN) {
+    return res.json({ valid: true });
+  }
+  res.status(401).json({ valid: false, error: "Token inválido" });
 });
 
 /** Refino de madeira — resultado principal */

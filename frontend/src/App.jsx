@@ -5,10 +5,18 @@ import LeatherMaster from "./components/LeatherMaster.jsx";
 import MetalMaster from "./components/MetalMaster.jsx";
 import StoneMaster from "./components/StoneMaster.jsx";
 import MarketAnalyzer from "./components/MarketAnalyzer.jsx";
+import LoginGate from "./components/LoginGate.jsx";
 import "./App.css";
 
 export default function App() {
   const [tab, setTab] = useState("wood");
+  const [authenticated, setAuthenticated] = useState(
+    () => sessionStorage.getItem("albion_token") != null
+  );
+
+  if (!authenticated) {
+    return <LoginGate onSuccess={() => setAuthenticated(true)} />;
+  }
 
   return (
     <div className="app">
