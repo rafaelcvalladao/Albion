@@ -121,7 +121,7 @@ export default function MarketAnalyzer() {
         const dedupSet = new Set();
         const todasUnicas = [];
         for (const op of todas) {
-          const chave = `${op.id}|${op.origem}|${op.destino}`;
+          const chave = `${op.id}|${op.estado}|${op.origem}|${op.destino}`;
           if (!dedupSet.has(chave)) {
             dedupSet.add(chave);
             todasUnicas.push(op);
@@ -198,10 +198,9 @@ export default function MarketAnalyzer() {
       {rows.length > 0 && (
         <div style={{ padding: "0.75rem", backgroundColor: "#1a3a52", borderRadius: "4px", marginBottom: "0.75rem", fontSize: "0.9rem", color: "#aaa" }}>
           <strong style={{ color: "#fff" }}>Dica:</strong> Exibindo {rows.filter((op) => {
-            const margem = op.compra > 0 ? ((op.venda / op.compra - 1) * 100).toFixed(1) : "0.0";
             const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
-            return parseFloat(margem) <= 200 && (maxPrataNum === null || op.compra <= maxPrataNum);
-          }).length} oportunidades {maxPrata ? `com lucro realista e prata ≤ ${parseInt(maxPrata).toLocaleString("pt-PT")}` : "com lucro realista"} ✓
+            return maxPrataNum === null || op.compra <= maxPrataNum;
+          }).length} oportunidades {maxPrata ? `com prata \u2264 ${parseInt(maxPrata).toLocaleString("pt-PT")}` : ""} \u2714
         </div>
       )}
 
@@ -210,14 +209,9 @@ export default function MarketAnalyzer() {
       {/* Calcular paginação */}
       {(() => {
         const validRows = rows.filter((op) => {
-          const margem = op.compra > 0 ? ((op.venda / op.compra - 1) * 100).toFixed(1) : "0.0";
-          const margemValida = parseFloat(margem) <= 200;
-          
-          // Filtro de máximo de prata disponível
           const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
           const prataValida = maxPrataNum === null || op.compra <= maxPrataNum;
-          
-          return margemValida && prataValida;
+          return prataValida;
         });
         const totalPages = Math.ceil(validRows.length / itemsPerPage);
         const startIdx = (currentPage - 1) * itemsPerPage;

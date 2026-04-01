@@ -48,7 +48,7 @@ const ITEM_TCM = {
 // Desconto global (flutuante, aqui usamos 0.15 = 15%) - em produção seria do jogo
 const GLOBAL_DISCOUNT = 0.15;
 
-const QUALITY_NAMES = { 1: "Normal", 2: "Bom", 3: "Excepcional", 4: "Excelente" };
+const QUALITY_NAMES = { 1: "Normal", 2: "Bom", 3: "Excepcional", 4: "Excelente", 5: "Obra-prima" };
 
 export const CATEGORIAS = {
   Todos: [],
@@ -340,17 +340,18 @@ function chunk(arr, size) {
   return out;
 }
 
-async function fetchPricesMarket(itemIds, locations, quality = 1) {
+async function fetchPricesMarket(itemIds, locations, quality = 0) {
   const unique = [...new Set(itemIds.filter(Boolean))];
   const loc = Array.isArray(locations) ? locations.join(",") : locations;
   const allChunks = chunk(unique, 100);
   const merged = [];
-  const concurrency = 3;
+  const concurrency = 5;
+  const qualitiesParam = quality > 0 ? `&qualities=${quality}` : "";
 
   for (let i = 0; i < allChunks.length; i += concurrency) {
     const batch = allChunks.slice(i, i + concurrency);
     const calls = batch.map(async (part) => {
-      const url = `https://www.albion-online-data.com/api/v2/stats/prices/${part.join(",")}?locations=${encodeURIComponent(loc)}&qualities=${quality}`;
+      const url = `https://www.albion-online-data.com/api/v2/stats/prices/${part.join(",")}?locations=${encodeURIComponent(loc)}${qualitiesParam}`;
       const res = await fetch(url, { headers: { Accept: "application/json" } });
       if (!res.ok) {
         throw new Error(`Albion prices HTTP ${res.status}`);
@@ -365,9 +366,8 @@ async function fetchPricesMarket(itemIds, locations, quality = 1) {
       }
     }
 
-    // Respeita limites de rate, evita burst de requisições
     if (i + concurrency < allChunks.length) {
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await new Promise((resolve) => setTimeout(resolve, 300));
     }
   }
 
@@ -376,8 +376,8 @@ async function fetchPricesMarket(itemIds, locations, quality = 1) {
 
 export async function buscarOportunidades({ 
   categoria, 
-  maxIdadeHoras = 6,
-  quality = 1,
+  maxIdadeHoras = 168,
+  quality = 0,
   usarBuyOrder = false,
   taxaVenda = 6.5,
   maxItensProcessar = 999999, // Sem limite efetivo
@@ -410,9 +410,9 @@ export async function buscarOportunidades({
   }
 
   const cidadesStr = CIDADES_SEGURAS.join(",");
-  const maxIdade = Number(maxIdadeHoras) || 24;
+  const maxIdade = Number(maxIdadeHoras) || 168;
   const agora = Date.now();
-  const qualityNum = Number(quality) || 1;
+  const qualityNum = Number(quality) || 0;
   const taxaVendaDecimal = (taxaVenda / 100);
   const taxaVendaNota = 1 - taxaVendaDecimal;
 
@@ -443,23 +443,23 @@ export async function buscarOportunidades({
       if (idadeHoras <= maxIdade && p.sell_price_min > 0) {
         const it = p.item_id;
         const cidade = p.city;
-        const chave = `${it}|${cidade}`;
+        const qual = p.quality || 1;
+        const chave = `${it}|${cidade}|${qual}`;
         
         if (!mapaPrecos.has(chave)) {
           mapaPrecos.set(chave, {
             item: it,
             city: cidade,
+            quality: qual,
             sellMin: p.sell_price_min,
             buyMax: p.buy_price_max || 0,
             dataStr: String(dataStr).replace("T", " ").slice(0, 16),
           });
         } else {
-          // Se já existe um registro, manter o com MENOR sell_price_min
           const existente = mapaPrecos.get(chave);
           if (p.sell_price_min < existente.sellMin) {
             existente.sellMin = p.sell_price_min;
           }
-          // Para buy_price_max, manter o com MAIOR valor
           if (p.buy_price_max > existente.buyMax) {
             existente.buyMax = p.buy_price_max;
           }
@@ -467,13 +467,13 @@ export async function buscarOportunidades({
       }
     }
     
-    // Converter de volta para formato por item/cidade
+    // Converter de volta para formato por item+quality/cidade
     const mapaOrganiado = new Map();
     for (const [chave, dados] of mapaPrecos) {
-      const it = dados.item;
-      if (!mapaOrganiado.has(it)) mapaOrganiado.set(it, {});
+      const groupKey = `${dados.item}|${dados.quality}`;
+      if (!mapaOrganiado.has(groupKey)) mapaOrganiado.set(groupKey, { quality: dados.quality });
       
-      mapaOrganiado.get(it)[dados.city] = {
+      mapaOrganiado.get(groupKey)[dados.city] = {
         compra: dados.sellMin,
         venda: dados.sellMin,
         buyMax: dados.buyMax,
@@ -482,14 +482,16 @@ export async function buscarOportunidades({
       };
     }
 
-    for (const [itemId, cidades] of mapaOrganiado) {
+    for (const [groupKey, groupData] of mapaOrganiado) {
+      const itemId = groupKey.split("|")[0];
+      const qualItem = groupData.quality;
       const peso = obterPesoItem(itemId);
       const tcm = obterTCMItem(itemId);
       const { tier, encanto } = extrairInfoItem(itemId);
       const nomeBase = nomeItemEmPortugues(itemId);
-      const estado = QUALITY_NAMES[qualityNum] || "?";
+      const estado = QUALITY_NAMES[qualItem] || "Normal";
       
-      const cidadesArray = Object.entries(cidades);
+      const cidadesArray = Object.entries(groupData).filter(([k]) => k !== "quality");
       
       // Validar que temos pelo menos 2 cidades com preços
       if (cidadesArray.length < 2) continue;
@@ -557,11 +559,11 @@ export async function buscarOportunidades({
   console.log(`[Market] Total oportunidades encontradas: ${oportunidadesBrutas.length}`);
   console.log(`[Market] Items processados do batch ${itensProcessar.length}, itens com preço: ${[...new Set(oportunidadesBrutas.map(o => o.id))].length}`);
   
-  // Deduplicar por item + par de cidades
+  // Deduplicar por item + qualidade + par de cidades
   const dedupSet = new Set();
   const oportunidadesUnicas = [];
   for (const op of oportunidadesBrutas) {
-    const chave = `${op.id}|${op.origem}|${op.destino}`;
+    const chave = `${op.id}|${op.estado}|${op.origem}|${op.destino}`;
     if (!dedupSet.has(chave)) {
       dedupSet.add(chave);
       oportunidadesUnicas.push(op);
