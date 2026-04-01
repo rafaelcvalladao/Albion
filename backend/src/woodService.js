@@ -226,6 +226,7 @@ export async function estrategiaCompleta(body) {
     taxaNpc: taxaRaw,
     spec = {},
     buyOrder = false,
+    foco = true,
   } = body;
 
   let taxaU = parseFloat(String(taxaRaw ?? "800").trim() || "800");
@@ -281,7 +282,7 @@ export async function estrategiaCompleta(body) {
 
       const vFs = getVol(volData, "Fort Sterling", iP);
 
-      const rrrFoco = calcularRrrManual(true, true);
+      const rrrFoco = calcularRrrManual(foco, true);
       const rrrFama = calcularRrrManual(false, true);
       const fBase = FOCO_BASE[t] ?? 250;
       const fReal = fBase * [1, 1.5, 2.5, 5, 10][idxN] * 0.5 ** (specTotal / 10000);
@@ -290,7 +291,7 @@ export async function estrategiaCompleta(body) {
       if (fsT && fsA && fsP) {
         fsFoco.push({
           item: `${t}${enc}`,
-          lucro: (fsP - ((fsT * qt + fsA) * (1 - rrrFoco) + txF)) / fReal,
+          lucro: fsP - ((fsT * qt + fsA) * (1 - rrrFoco) + txF),
           volume: vFs,
         });
         const lucroBrutoFamaLocal = fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF);
@@ -307,8 +308,8 @@ export async function estrategiaCompleta(body) {
 
   const sortDesc = (a, b) => b.lucro - a.lucro;
   const sortDescFama = (a, b) => b.fama - a.fama;
-  const top = (arr, n = 15) => [...arr].sort(sortDesc).slice(0, n);
-  const topFama = (arr, n = 15) => [...arr].sort(sortDescFama).slice(0, n);
+  const top = (arr, n = 8) => [...arr].sort(sortDesc).slice(0, n);
+  const topFama = (arr, n = 8) => [...arr].sort(sortDescFama).slice(0, n);
 
   return {
     fsLocalFoco: top(fsFoco),

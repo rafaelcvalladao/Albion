@@ -219,6 +219,7 @@ export async function estrategiaCompletaMetal(body) {
     taxaNpc: taxaRaw,
     spec = {},
     buyOrder = false,
+    foco = true,
   } = body;
 
   let taxaU = parseFloat(String(taxaRaw ?? "800").trim() || "800");
@@ -274,7 +275,7 @@ export async function estrategiaCompletaMetal(body) {
 
       const vFs = getVol(volData, "Bridgewatch", iP);
 
-      const rrrFoco = calcularRrrManual(true, true);
+      const rrrFoco = calcularRrrManual(foco, true);
       const rrrFama = calcularRrrManual(false, true);
       const fBase = FOCO_BASE[t] ?? 250;
       const fReal = fBase * [1, 1.5, 2.5, 5, 10][idxN] * 0.5 ** (specTotal / 10000);
@@ -307,12 +308,12 @@ export async function estrategiaCompletaMetal(body) {
     }
   }
 
-  fsFoco.sort((a, b) => b.lucroPerFoco - a.lucroPerFoco);
+  fsFoco.sort((a, b) => b.lucro - a.lucro);
   fsFama.sort((a, b) => b.famaPerPrata - a.famaPerPrata);
 
   return {
-    fsLocalFoco: fsFoco.slice(0, 15),
-    fsLocalFama: fsFama.slice(0, 15),
+    fsLocalFoco: fsFoco.slice(0, 8),
+    fsLocalFama: fsFama.slice(0, 8),
   };
 }
 

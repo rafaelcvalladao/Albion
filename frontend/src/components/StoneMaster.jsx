@@ -80,7 +80,7 @@ function StrategyTable({ title, kind, rows, compact }) {
         ? "strategy-section-title strategy-section-title--fama"
         : "strategy-section-title";
 
-  const colHeaderLabel = kind === "foco" ? "Lucro/1 foco" : "Fama por Prata";
+  const colHeaderLabel = kind === "foco" ? "Lucro" : "Fama por Prata";
 
   const handleHeaderClick = (column) => {
     if (sortColumn === column) {
@@ -351,6 +351,7 @@ export default function StoneMaster() {
       taxaNpc: cfg.taxaNpc,
       spec: cfg.spec,
       buyOrder: cfg.buyOrder,
+      foco: cfg.foco,
     })
       .then((data) => {
         if (!cancelled) setStrategy(data);
@@ -366,7 +367,7 @@ export default function StoneMaster() {
     return () => {
       cancelled = true;
     };
-  }, [cfg.buyOrder]);
+  }, [cfg.buyOrder, cfg.foco]);
 
   return (
     <div className="wood-layout">
@@ -515,13 +516,13 @@ export default function StoneMaster() {
             <h2>Indicações</h2>
           </div>
           <p className="strategy-hint">
-            Top 15 com volume (todas as tiers). Atualiza ao mudar buy order / bónus ou com Refresh.
+            Top 8 com volume (todas as tiers). Atualiza ao mudar buy order / foco ou com Refresh.
           </p>
           {strategyLoading && <p className="mono strategy-hint">A carregar…</p>}
           {strategy?.error && <p className="error">{strategy.error}</p>}
           {strategy && !strategy.error && (
             <>
-              <StrategyTable title="Local com Foco" kind="foco" rows={strategy.fsLocalFoco} compact />
+              <StrategyTable title="Top Lucro" kind="foco" rows={strategy.fsLocalFoco} compact />
             </>
           )}
         </aside>
