@@ -312,9 +312,26 @@ export default function FiberMaster() {
     }
   }, [cfg]);
 
+  const runStrategy = useCallback(async () => {
+    setStrategyLoading(true);
+    try {
+      const data = await strategyFiber({
+        taxaNpc: cfg.taxaNpc,
+        spec: cfg.spec,
+        buyOrder: cfg.buyOrder,
+        foco: cfg.foco,
+      });
+      setStrategy(data);
+    } catch (e) {
+      setStrategy({ error: e.message || String(e) });
+    } finally {
+      setStrategyLoading(false);
+    }
+  }, [cfg]);
+
   const refreshAll = useCallback(async () => {
-    await runCalculate();
-  }, [runCalculate]);
+    await Promise.all([runCalculate(), runStrategy()]);
+  }, [runCalculate, runStrategy]);
 
   useEffect(() => {
     let cancelled = false;
@@ -409,7 +426,7 @@ export default function FiberMaster() {
             </label>
 
           </div>
-          <button type="button" className="btn btn-primary" onClick={refreshAll} disabled={loading}>
+          <button type="button" className="btn btn-primary" onClick={refreshAll} disabled={loading || strategyLoading}>
             {loading ? "A carregar…" : "Refresh preços"}
           </button>
           <button type="button" className="btn btn-primary" onClick={() => setShowFarmFama(true)}>
@@ -504,6 +521,22 @@ export default function FiberMaster() {
                       </tbody>
                     </table>
                   </div>
+                  <p className="otimizado-line">
+                    <span className="otimizado-line__label">Otimizado (compra/venda)</span>
+                    <span className={profitClass(row.otimizado)}>
+                      {Number.isFinite(row.otimizado)
+                        ? `${row.otimizado.toLocaleString("pt-PT", { maximumFractionDigits: 0 })} prata`
+                        : "\u2014"}
+                    </span>
+                  </p>
+                  {row.foco && (
+                    <p className="foco-line">
+                      Foco: <span className="tabular-nums">{row.foco.unidades?.toFixed(1)}</span> un ·{" "}
+                      <span className={profitClass(row.foco.prataPorFoco)}>
+                        {row.foco.prataPorFoco?.toFixed(2)} prata/foco
+                      </span>
+                    </p>
+                  )}
                 </article>
                 );
               })}

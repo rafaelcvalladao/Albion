@@ -139,6 +139,7 @@ export default function WoodMaster() {
         taxaNpc: cfg.taxaNpc,
         spec: cfg.spec,
         buyOrder: cfg.buyOrder,
+        foco: cfg.foco,
       });
       setStrategy(data);
     } catch (e) {
