@@ -383,8 +383,9 @@ export default function MarketAnalyzer() {
         const sortIndicator = (col) => (sortCol === col ? (sortAsc ? ' \u2191' : ' \u2193') : '');
 
         const handleInstantToggle = () => {
-          setFilterInstant((prev) => !prev);
-          setSortCol('lucro');
+          const next = !filterInstant;
+          setFilterInstant(next);
+          setSortCol(next ? 'instant' : 'lucro');
           setSortAsc(false);
           setCurrentPage(1);
         };
@@ -395,7 +396,10 @@ export default function MarketAnalyzer() {
 
         const sortedRows = [...filteredRows].sort((a, b) => {
           let va, vb;
-          if (sortCol === 'lucro') {
+          if (sortCol === 'instant') {
+            va = a.buyOrderDestino - (a.compra + a.custoTeleporte);
+            vb = b.buyOrderDestino - (b.compra + b.custoTeleporte);
+          } else if (sortCol === 'lucro') {
             va = a.lucro;
             vb = b.lucro;
           } else if (sortCol === 'volume') {
