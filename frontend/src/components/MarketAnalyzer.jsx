@@ -419,7 +419,7 @@ export default function MarketAnalyzer() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Item</th>
+                    <th style={{ textAlign: 'center' }}>Item</th>
                     <th>Compra Sell Order</th>
                     <th>Venda Sell Order</th>
                     <th>Venda Buy Order</th>
@@ -534,7 +534,21 @@ export default function MarketAnalyzer() {
                             ? op.volumeDiario.toLocaleString('pt-PT')
                             : '-'}
                         </td>
-                        <td style={{ textAlign: 'center' }}>{op.vendaInstantanea ? '✅' : ''}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          {op.vendaInstantanea
+                            ? filterInstant
+                              ? (() => {
+                                  const lucroInstant =
+                                    op.buyOrderDestino - (op.compra + op.custoTeleporte);
+                                  return (
+                                    <span className={profitClass(lucroInstant)} style={{ fontWeight: 700 }}>
+                                      {lucroInstant.toLocaleString('pt-PT', { maximumFractionDigits: 0 })}
+                                    </span>
+                                  );
+                                })()
+                              : '✅'
+                            : ''}
+                        </td>
                       </tr>
                     );
                   })}
