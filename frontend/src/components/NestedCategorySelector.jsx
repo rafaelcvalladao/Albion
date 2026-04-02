@@ -1,22 +1,26 @@
-import { useState, useRef, useEffect, useMemo } from "react";
-import "../styles/NestedCategorySelector.css";
+import { useState, useRef, useEffect, useMemo } from 'react';
+import '../styles/NestedCategorySelector.css';
 
-export default function NestedCategorySelector({ categories = [], selectedCategory, onCategoryChange }) {
+export default function NestedCategorySelector({
+  categories = [],
+  selectedCategory,
+  onCategoryChange,
+}) {
   const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const containerRef = useRef(null);
   const searchRef = useRef(null);
 
   // Agrupar categorias: { group -> [{ label, value }] } + specials
   // Groups that also exist as standalone category (e.g., "Armas") are selectable
-  const { groups, specials, groupSet } = useMemo(() => {
+  const { groups, specials } = useMemo(() => {
     const grpMap = {};
     const spc = [];
     const standalone = new Set(); // group names that exist as standalone categories
     for (const cat of categories) {
-      if (cat === "Todos") continue;
-      const parts = cat.split(" - ");
+      if (cat === 'Todos') continue;
+      const parts = cat.split(' - ');
       if (parts.length === 2) {
         const [group, sub] = parts;
         if (!grpMap[group]) grpMap[group] = [];
@@ -30,13 +34,19 @@ export default function NestedCategorySelector({ categories = [], selectedCatego
       if (grpMap[cat]) standalone.add(cat);
     }
     // Remove standalone group names from specials (they'll appear as group headers)
-    const filteredSpc = spc.filter(s => !standalone.has(s.value));
-    const sorted = Object.keys(grpMap).sort().map(g => ({
-      name: g,
-      selectable: standalone.has(g),
-      items: grpMap[g].sort((a, b) => a.label.localeCompare(b.label))
-    }));
-    return { groups: sorted, specials: filteredSpc.sort((a, b) => a.label.localeCompare(b.label)), groupSet: standalone };
+    const filteredSpc = spc.filter((s) => !standalone.has(s.value));
+    const sorted = Object.keys(grpMap)
+      .sort()
+      .map((g) => ({
+        name: g,
+        selectable: standalone.has(g),
+        items: grpMap[g].sort((a, b) => a.label.localeCompare(b.label)),
+      }));
+    return {
+      groups: sorted,
+      specials: filteredSpc.sort((a, b) => a.label.localeCompare(b.label)),
+      groupSet: standalone,
+    };
   }, [categories]);
 
   // Filtro de busca
@@ -44,7 +54,7 @@ export default function NestedCategorySelector({ categories = [], selectedCatego
   const filtered = useMemo(() => {
     if (!searchLower) return null; // null = show tree view
     const results = [];
-    if ("todos".includes(searchLower)) results.push({ label: "Todos", value: "Todos" });
+    if ('todos'.includes(searchLower)) results.push({ label: 'Todos', value: 'Todos' });
     for (const s of specials) {
       if (s.label.toLowerCase().includes(searchLower)) results.push(s);
     }
@@ -54,7 +64,10 @@ export default function NestedCategorySelector({ categories = [], selectedCatego
         results.push({ label: `${g.name} (todos)`, value: g.name });
       }
       for (const item of g.items) {
-        if (item.label.toLowerCase().includes(searchLower) || g.name.toLowerCase().includes(searchLower)) {
+        if (
+          item.label.toLowerCase().includes(searchLower) ||
+          g.name.toLowerCase().includes(searchLower)
+        ) {
           results.push({ label: `${g.name} › ${item.label}`, value: item.value });
         }
       }
@@ -68,11 +81,11 @@ export default function NestedCategorySelector({ categories = [], selectedCatego
     const handler = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setIsOpen(false);
-        setSearch("");
+        setSearch('');
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, [isOpen]);
 
   // Auto-focus search on open
@@ -83,25 +96,25 @@ export default function NestedCategorySelector({ categories = [], selectedCatego
   const handleSelect = (value) => {
     onCategoryChange(value);
     setIsOpen(false);
-    setSearch("");
+    setSearch('');
     setExpandedGroups(new Set());
   };
 
   const toggleGroup = (name) => {
-    setExpandedGroups(prev => {
+    setExpandedGroups((prev) => {
       const next = new Set(prev);
       next.has(name) ? next.delete(name) : next.add(name);
       return next;
     });
   };
 
-  const selectedLabel = selectedCategory || "Selecione uma categoria";
+  const selectedLabel = selectedCategory || 'Selecione uma categoria';
 
   return (
     <div className="ncs" ref={containerRef}>
       <button type="button" className="ncs-trigger" onClick={() => setIsOpen(!isOpen)}>
         <span className="ncs-label">{selectedLabel}</span>
-        <span className={`ncs-arrow ${isOpen ? "open" : ""}`}>▼</span>
+        <span className={`ncs-arrow ${isOpen ? 'open' : ''}`}>▼</span>
       </button>
 
       {isOpen && (
@@ -116,7 +129,9 @@ export default function NestedCategorySelector({ categories = [], selectedCatego
               onChange={(e) => setSearch(e.target.value)}
             />
             {search && (
-              <button type="button" className="ncs-search-clear" onClick={() => setSearch("")}>✕</button>
+              <button type="button" className="ncs-search-clear" onClick={() => setSearch('')}>
+                ✕
+              </button>
             )}
           </div>
 
@@ -130,7 +145,7 @@ export default function NestedCategorySelector({ categories = [], selectedCatego
                   <button
                     key={item.value}
                     type="button"
-                    className={`ncs-item ${selectedCategory === item.value ? "active" : ""}`}
+                    className={`ncs-item ${selectedCategory === item.value ? 'active' : ''}`}
                     onClick={() => handleSelect(item.value)}
                   >
                     {item.label}
@@ -143,8 +158,8 @@ export default function NestedCategorySelector({ categories = [], selectedCatego
                 {/* Todos */}
                 <button
                   type="button"
-                  className={`ncs-item ncs-item--todos ${selectedCategory === "Todos" ? "active" : ""}`}
-                  onClick={() => handleSelect("Todos")}
+                  className={`ncs-item ncs-item--todos ${selectedCategory === 'Todos' ? 'active' : ''}`}
+                  onClick={() => handleSelect('Todos')}
                 >
                   Todos
                 </button>
@@ -154,7 +169,7 @@ export default function NestedCategorySelector({ categories = [], selectedCatego
                   <button
                     key={item.value}
                     type="button"
-                    className={`ncs-item ${selectedCategory === item.value ? "active" : ""}`}
+                    className={`ncs-item ${selectedCategory === item.value ? 'active' : ''}`}
                     onClick={() => handleSelect(item.value)}
                   >
                     {item.label}
@@ -166,16 +181,22 @@ export default function NestedCategorySelector({ categories = [], selectedCatego
                 {/* Grupos expansíveis */}
                 {groups.map((group) => {
                   const isExpanded = expandedGroups.has(group.name);
-                  const hasActiveChild = group.items.some(i => i.value === selectedCategory);
+                  const hasActiveChild = group.items.some((i) => i.value === selectedCategory);
                   const isGroupActive = group.selectable && selectedCategory === group.name;
                   return (
                     <div key={group.name} className="ncs-group">
-                      <div className={`ncs-group-header ${isExpanded ? "expanded" : ""} ${hasActiveChild || isGroupActive ? "has-active" : ""}`}>
+                      <div
+                        className={`ncs-group-header ${isExpanded ? 'expanded' : ''} ${hasActiveChild || isGroupActive ? 'has-active' : ''}`}
+                      >
                         <button
                           type="button"
-                          className={`ncs-group-label ${isGroupActive ? "active" : ""}`}
-                          onClick={() => group.selectable ? handleSelect(group.name) : toggleGroup(group.name)}
-                          title={group.selectable ? `Selecionar todos de ${group.name}` : group.name}
+                          className={`ncs-group-label ${isGroupActive ? 'active' : ''}`}
+                          onClick={() =>
+                            group.selectable ? handleSelect(group.name) : toggleGroup(group.name)
+                          }
+                          title={
+                            group.selectable ? `Selecionar todos de ${group.name}` : group.name
+                          }
                         >
                           <span>{group.name}</span>
                           <span className="ncs-group-badge">{group.items.length}</span>
@@ -184,9 +205,9 @@ export default function NestedCategorySelector({ categories = [], selectedCatego
                           type="button"
                           className="ncs-group-toggle"
                           onClick={() => toggleGroup(group.name)}
-                          title={isExpanded ? "Recolher" : "Expandir subcategorias"}
+                          title={isExpanded ? 'Recolher' : 'Expandir subcategorias'}
                         >
-                          <span className={`ncs-chevron ${isExpanded ? "open" : ""}`}>›</span>
+                          <span className={`ncs-chevron ${isExpanded ? 'open' : ''}`}>›</span>
                         </button>
                       </div>
                       {isExpanded && (
@@ -195,7 +216,7 @@ export default function NestedCategorySelector({ categories = [], selectedCatego
                             <button
                               key={item.value}
                               type="button"
-                              className={`ncs-item ncs-item--child ${selectedCategory === item.value ? "active" : ""}`}
+                              className={`ncs-item ncs-item--child ${selectedCategory === item.value ? 'active' : ''}`}
                               onClick={() => handleSelect(item.value)}
                             >
                               {item.label}

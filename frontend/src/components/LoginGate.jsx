@@ -1,26 +1,26 @@
-import { useState } from "react";
-import { validateToken } from "../api.js";
-import "../styles/LoginGate.css";
+import { useState } from 'react';
+import { validateToken } from '../api.js';
+import '../styles/LoginGate.css';
 
 export default function LoginGate({ onSuccess }) {
-  const [token, setToken] = useState("");
-  const [error, setError] = useState("");
+  const [token, setToken] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!token.trim()) return;
-    setError("");
+    setError('');
     setLoading(true);
     try {
       const res = await validateToken(token.trim());
       if (res.valid) {
-        sessionStorage.setItem("albion_token", token.trim());
+        sessionStorage.setItem('albion_token', token.trim());
         onSuccess();
       }
     } catch (err) {
-      console.error("[LoginGate] Erro na validação:", err);
-      setError(err.message || "Erro ao validar token.");
+      console.error('[LoginGate] Erro na validação:', err);
+      setError(err.message || 'Erro ao validar token.');
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,7 @@ export default function LoginGate({ onSuccess }) {
           />
           {error && <p className="login-error">{error}</p>}
           <button type="submit" className="login-btn" disabled={loading || !token.trim()}>
-            {loading ? "Validando..." : "Entrar"}
+            {loading ? 'Validando...' : 'Entrar'}
           </button>
         </form>
       </div>

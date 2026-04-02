@@ -62,7 +62,9 @@
   color: var(--text-secondary);
   font-weight: 500;
   font-size: 0.875rem;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .tab:hover {
@@ -134,14 +136,16 @@
   color: var(--text-secondary);
 }
 
-.form-grid input[type="text"],
-.form-grid input[type="number"],
+.form-grid input[type='text'],
+.form-grid input[type='number'],
 .form-grid select {
   padding: 0.55rem 0.65rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--surface-2);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .form-grid input:hover,
@@ -165,7 +169,7 @@
   font-weight: 500;
 }
 
-.checkbox-row input[type="checkbox"] {
+.checkbox-row input[type='checkbox'] {
   width: 1.05rem;
   height: 1.05rem;
   accent-color: var(--accent);
@@ -177,7 +181,10 @@
   border: none;
   font-weight: 600;
   font-size: 0.875rem;
-  transition: transform 0.1s, box-shadow 0.15s, background 0.15s;
+  transition:
+    transform 0.1s,
+    box-shadow 0.15s,
+    background 0.15s;
 }
 
 .btn:active:not(:disabled) {
@@ -875,7 +882,9 @@ table.result-table {
   font-size: 1.25rem;
   line-height: 1;
   padding: 0.2rem 0.55rem;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .modal-close:hover {

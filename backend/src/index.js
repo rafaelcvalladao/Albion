@@ -1,11 +1,25 @@
-import express from "express";
-import cors from "cors";
-import { buscarOportunidades, buscarOportunidadesStream, buscarVolumeParaItens, CATEGORIAS, obterCategoriasDinamicas } from "./marketService.js";
-import { estrategiaCompleta, horariosUtc, processarWood } from "./woodService.js";
-import { processarFiber, estrategiaCompletaFiber } from "./fiberService.js";
-import { processarLeather, estrategiaCompletaLeather } from "./leatherService.js";
-import { processarMetal, estrategiaCompletaMetal } from "./metalService.js";
-import { processarStone, estrategiaCompleteStone } from "./stoneService.js";
+import express from 'express';
+import cors from 'cors';
+import {
+  buscarOportunidades,
+  buscarOportunidadesStream,
+  buscarVolumeParaItens,
+  CATEGORIAS,
+  obterCategoriasDinamicas,
+} from './marketService.js';
+import {
+  processarWood,
+  estrategiaCompleta,
+  horariosUtc,
+  processarFiber,
+  estrategiaCompletaFiber,
+  processarLeather,
+  estrategiaCompletaLeather,
+  processarMetal,
+  estrategiaCompletaMetal,
+  processarStone,
+  estrategiaCompleteStone,
+} from './refiningService.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -13,146 +27,69 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN || "xabufael";
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN || 'xabufael';
 
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, service: "calculadora-albion-api" });
+/** Wrapper: try/catch + log + 500 automático */
+const wrap = (fn) => async (req, res) => {
+  try {
+    const data = await fn(req, res);
+    if (data !== undefined) res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+};
+
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, service: 'calculadora-albion-api' });
 });
 
 /** Validação de token de acesso */
-app.post("/api/auth/validate", (req, res) => {
+app.post('/api/auth/validate', (req, res) => {
   const { token } = req.body || {};
-  if (typeof token === "string" && token === ACCESS_TOKEN) {
+  if (typeof token === 'string' && token === ACCESS_TOKEN) {
     return res.json({ valid: true });
   }
-  res.status(401).json({ valid: false, error: "Token inválido" });
+  res.status(401).json({ valid: false, error: 'Token inválido' });
 });
 
-/** Refino de madeira — resultado principal */
-app.post("/api/wood/calculate", async (req, res) => {
-  try {
-    const data = await processarWood(req.body || {});
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
+// ─── Rotas de refino (calculate + strategy) ───
 
-/** Top 7 estratégia completa (global / FS local) */
-app.post("/api/wood/strategy", async (req, res) => {
-  try {
-    const data = await estrategiaCompleta(req.body || {});
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
+const refiningRoutes = [
+  { path: 'wood', calcFn: processarWood, stratFn: estrategiaCompleta },
+  { path: 'fiber', calcFn: processarFiber, stratFn: estrategiaCompletaFiber },
+  { path: 'leather', calcFn: processarLeather, stratFn: estrategiaCompletaLeather },
+  { path: 'metal', calcFn: processarMetal, stratFn: estrategiaCompletaMetal },
+  { path: 'stone', calcFn: processarStone, stratFn: estrategiaCompleteStone },
+];
 
-/** Últimas atualizações UTC por item (tier selecionado) */
-app.get("/api/wood/schedule/:tier", async (req, res) => {
-  try {
-    const data = await horariosUtc(req.params.tier);
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
+for (const { path, calcFn, stratFn } of refiningRoutes) {
+  app.post(
+    `/api/${path}/calculate`,
+    wrap((req) => calcFn(req.body || {})),
+  );
+  app.post(
+    `/api/${path}/strategy`,
+    wrap((req) => stratFn(req.body || {})),
+  );
+}
 
-/** Refino de fibra → tecido */
-app.post("/api/fiber/calculate", async (req, res) => {
-  try {
-    const data = await processarFiber(req.body || {});
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
-app.post("/api/fiber/strategy", async (req, res) => {
-  try {
-    const data = await estrategiaCompletaFiber(req.body || {});
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
-/** Refino de couro → leather */
-app.post("/api/leather/calculate", async (req, res) => {
-  try {
-    const data = await processarLeather(req.body || {});
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
-app.post("/api/leather/strategy", async (req, res) => {
-  try {
-    const data = await estrategiaCompletaLeather(req.body || {});
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
-/** Refino de minério → metal */
-app.post("/api/metal/calculate", async (req, res) => {
-  try {
-    const data = await processarMetal(req.body || {});
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
-app.post("/api/metal/strategy", async (req, res) => {
-  try {
-    const data = await estrategiaCompletaMetal(req.body || {});
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
-app.post("/api/stone/calculate", async (req, res) => {
-  try {
-    const data = await processarStone(req.body || {});
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
-app.post("/api/stone/strategy", async (req, res) => {
-  try {
-    const data = await estrategiaCompleteStone(req.body || {});
-    res.json(data);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
-  }
-});
+/** Últimas atualizações UTC por item (tier selecionado) — só wood por enquanto */
+app.get(
+  '/api/wood/schedule/:tier',
+  wrap((req) => horariosUtc(req.params.tier)),
+);
 
 /** Categorias disponíveis para o analisador de mercado */
-app.get("/api/market/categories", async (_req, res) => {
+app.get('/api/market/categories', async (_req, res) => {
   try {
     const categories = await obterCategoriasDinamicas();
-    console.log(`[/api/market/categories] Retornando ${categories.length} categorias: ${categories.slice(0, 5).join(", ")}...`);
+    console.log(
+      `[/api/market/categories] Retornando ${categories.length} categorias: ${categories.slice(0, 5).join(', ')}...`,
+    );
     res.json({ categories });
   } catch (e) {
-    console.error("[/api/market/categories] Erro ao obter categorias:", e);
-    // Fallback para categorias estáticas
+    console.error('[/api/market/categories] Erro ao obter categorias:', e);
     const staticCats = Object.keys(CATEGORIAS);
     console.log(`[/api/market/categories] Fallback para ${staticCats.length} categorias estáticas`);
     res.json({ categories: staticCats });
@@ -160,8 +97,9 @@ app.get("/api/market/categories", async (_req, res) => {
 });
 
 /** Arbitragem entre cidades seguras */
-app.post("/api/market/opportunities", async (req, res) => {
-  try {
+app.post(
+  '/api/market/opportunities',
+  wrap(async (req) => {
     const {
       categoria = 'Consumível',
       offset = 0,
@@ -170,11 +108,13 @@ app.post("/api/market/opportunities", async (req, res) => {
       quality = 0,
       usarBuyOrder = false,
       taxaVenda = 6.5,
-      tier = "Todos",
-      enchantment = "Todos",
+      tier = 'Todos',
+      enchantment = 'Todos',
     } = req.body;
 
-    console.log(`[/api/market/opportunities] Solicitado: categoria="${categoria}", tier="${tier}", enchantment="${enchantment}", offset=${offset}, step=${step}`);
+    console.log(
+      `[/api/market/opportunities] Solicitado: categoria="${categoria}", tier="${tier}", enchantment="${enchantment}", offset=${offset}, step=${step}`,
+    );
 
     const resultados = await buscarOportunidades({
       categoria,
@@ -190,37 +130,36 @@ app.post("/api/market/opportunities", async (req, res) => {
     });
 
     console.log(`[/api/market/opportunities] Retornando ${resultados.length} oportunidades`);
-    res.json({ oportunidades: resultados });
-  } catch (erro) {
-    console.error('[/api/market/opportunities] Erro:', erro);
-    res.status(500).json({ 
-      erro: erro.message || 'Erro ao buscar oportunidades' 
-    });
-  }
-});
+    return { oportunidades: resultados };
+  }),
+);
 
 /** SSE Streaming de oportunidades de arbitragem */
-app.get("/api/market/opportunities/stream", async (req, res) => {
+app.get('/api/market/opportunities/stream', async (req, res) => {
   res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
-    "X-Accel-Buffering": "no",
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
   });
 
   const {
-    categoria = "Consumível",
-    tier = "Todos",
-    enchantment = "Todos",
-    quality = "0",
-    maxIdadeHoras = "168",
-    taxaVenda = "6.5",
+    categoria = 'Consumível',
+    tier = 'Todos',
+    enchantment = 'Todos',
+    quality = '0',
+    maxIdadeHoras = '168',
+    taxaVenda = '6.5',
   } = req.query;
 
-  console.log(`[SSE] Stream iniciado: categoria="${categoria}", tier="${tier}", enchantment="${enchantment}"`);
+  console.log(
+    `[SSE] Stream iniciado: categoria="${categoria}", tier="${tier}", enchantment="${enchantment}"`,
+  );
 
   let closed = false;
-  req.on("close", () => { closed = true; });
+  req.on('close', () => {
+    closed = true;
+  });
 
   try {
     await buscarOportunidadesStream(
@@ -235,34 +174,31 @@ app.get("/api/market/opportunities/stream", async (req, res) => {
       (event) => {
         if (closed) return;
         res.write(`data: ${JSON.stringify(event)}\n\n`);
-      }
+      },
     );
   } catch (err) {
     if (!closed) {
-      res.write(`data: ${JSON.stringify({ type: "error", message: err.message })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
     }
-    console.error("[SSE] Erro:", err);
+    console.error('[SSE] Erro:', err);
   }
 
   if (!closed) res.end();
 });
 
 /** Busca volume diário para uma lista de itens (lazy) */
-app.post("/api/market/volume", async (req, res) => {
-  try {
+app.post(
+  '/api/market/volume',
+  wrap(async (req) => {
     const { itemIds } = req.body || {};
     if (!Array.isArray(itemIds) || itemIds.length === 0) {
-      return res.json({ volumes: {} });
+      return { volumes: {} };
     }
-    // Limitar a 500 itens por request
     const ids = itemIds.slice(0, 500);
     const volumes = await buscarVolumeParaItens(ids);
-    res.json({ volumes });
-  } catch (e) {
-    console.error("[/api/market/volume] Erro:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
+    return { volumes };
+  }),
+);
 
 app.listen(PORT, () => {
   console.log(`API REST em http://localhost:${PORT}`);

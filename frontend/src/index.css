@@ -1,9 +1,9 @@
 :root {
   /* Base — tons azul-cinza escuros */
   --bg: #0b0e14;
-  --bg-gradient: radial-gradient(1200px 800px at 15% -10%, rgba(56, 189, 248, 0.08), transparent 50%),
-    radial-gradient(900px 600px at 100% 0%, rgba(139, 92, 246, 0.06), transparent 45%),
-    #0b0e14;
+  --bg-gradient:
+    radial-gradient(1200px 800px at 15% -10%, rgba(56, 189, 248, 0.08), transparent 50%),
+    radial-gradient(900px 600px at 100% 0%, rgba(139, 92, 246, 0.06), transparent 45%), #0b0e14;
   --surface: #12161f;
   --surface-2: #181d28;
   --surface-hover: #1e2431;
@@ -32,8 +32,8 @@
   --foco: #c084fc;
   --danger: #f87171;
 
-  --font: "Plus Jakarta Sans", system-ui, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --radius-sm: 8px;
   --radius: 12px;
