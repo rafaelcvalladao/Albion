@@ -170,9 +170,11 @@ app.post("/api/market/opportunities", async (req, res) => {
       quality = 0,
       usarBuyOrder = false,
       taxaVenda = 6.5,
+      tier = "Todos",
+      enchantment = "Todos",
     } = req.body;
 
-    console.log(`[/api/market/opportunities] Solicitado: categoria="${categoria}", offset=${offset}, step=${step}`);
+    console.log(`[/api/market/opportunities] Solicitado: categoria="${categoria}", tier="${tier}", enchantment="${enchantment}", offset=${offset}, step=${step}`);
 
     const resultados = await buscarOportunidades({
       categoria,
@@ -183,6 +185,8 @@ app.post("/api/market/opportunities", async (req, res) => {
       usarBuyOrder,
       taxaVenda,
       maxItensProcessar: 999999,
+      tier,
+      enchantment,
     });
 
     console.log(`[/api/market/opportunities] Retornando ${resultados.length} oportunidades`);

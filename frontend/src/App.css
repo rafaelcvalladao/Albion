@@ -732,6 +732,48 @@ table.result-table {
   min-width: 180px;
 }
 
+.filter-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 110px;
+}
+
+.filter-select {
+  padding: 0.6rem 0.8rem;
+  background: linear-gradient(135deg, #1a3a52 0%, #0f2235 100%);
+  border: 2px solid #3a5f7a;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='%236aa'%3E%3Cpath d='M0 0l6 8 6-8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 10px;
+  padding-right: 2rem;
+}
+
+.filter-select:hover {
+  border-color: #00a3e0;
+  background-color: rgba(31, 74, 98, 0.6);
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #00a3e0;
+  box-shadow: 0 0 0 3px rgba(0, 163, 224, 0.1);
+}
+
+.filter-select option {
+  background: #0f2235;
+  color: #fff;
+}
+
 .max-prata-input {
   padding: 0.6rem 0.8rem;
   background: linear-gradient(135deg, #1a3a52 0%, #0f2235 100%);

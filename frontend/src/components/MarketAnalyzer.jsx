@@ -35,6 +35,9 @@ function timeAgo(label) {
 export default function MarketAnalyzer() {
   const [categories, setCategories] = useState([]);
   const [categoria, setCategoria] = useState("Todos");
+  const [tier, setTier] = useState("Todos");
+  const [enchantment, setEnchantment] = useState("Todos");
+  const [quality, setQuality] = useState("Todos");
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [err, setErr] = useState(null);
@@ -107,6 +110,9 @@ export default function MarketAnalyzer() {
           categoria,
           offset,
           step,
+          tier: tier !== "Todos" ? tier : undefined,
+          enchantment: enchantment !== "Todos" ? enchantment : undefined,
+          quality: quality !== "Todos" ? parseInt(quality) : 0,
         });
 
         const slice = Array.isArray(data) ? data : data.oportunidades || [];
@@ -172,6 +178,45 @@ export default function MarketAnalyzer() {
             selectedCategory={categoria}
             onCategoryChange={setCategoria}
           />
+        </div>
+
+        <div className="filter-wrapper">
+          <label className="category-label-text">Grau</label>
+          <select value={tier} onChange={(e) => setTier(e.target.value)} className="filter-select">
+            <option value="Todos">Todos</option>
+            <option value="T1">T1</option>
+            <option value="T2">T2</option>
+            <option value="T3">T3</option>
+            <option value="T4">T4</option>
+            <option value="T5">T5</option>
+            <option value="T6">T6</option>
+            <option value="T7">T7</option>
+            <option value="T8">T8</option>
+          </select>
+        </div>
+
+        <div className="filter-wrapper">
+          <label className="category-label-text">Encantamento</label>
+          <select value={enchantment} onChange={(e) => setEnchantment(e.target.value)} className="filter-select">
+            <option value="Todos">Todos</option>
+            <option value="0">.0</option>
+            <option value="1">.1</option>
+            <option value="2">.2</option>
+            <option value="3">.3</option>
+            <option value="4">.4</option>
+          </select>
+        </div>
+
+        <div className="filter-wrapper">
+          <label className="category-label-text">Qualidade</label>
+          <select value={quality} onChange={(e) => setQuality(e.target.value)} className="filter-select">
+            <option value="Todos">Todos</option>
+            <option value="1">Normal</option>
+            <option value="2">Bom</option>
+            <option value="3">Excepcional</option>
+            <option value="4">Excelente</option>
+            <option value="5">Obra-prima</option>
+          </select>
         </div>
 
         <div className="max-prata-wrapper">

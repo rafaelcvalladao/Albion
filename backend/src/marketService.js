@@ -165,6 +165,45 @@ async function carregarItensDoJogo() {
   }
 }
 
+// ─── Regras de classificação por família de arma ───
+// Primeira correspondência vence — mais específico primeiro
+const WEAPON_FAMILY_RULES = [
+  // Cajados mágicos
+  [/ARCANESTAFF/, "Cajado Arcano"],
+  [/CURSEDSTAFF/, "Cajado Amaldiçoado"],
+  [/FIRESTAFF/, "Cajado de Fogo"],
+  [/FROSTSTAFF/, "Cajado de Gelo"],
+  [/HOLYSTAFF/, "Cajado Sagrado"],
+  [/NATURESTAFF/, "Cajado da Natureza"],
+  [/SHAPESHIFTERSTAFF/, "Cajado Metamorfo"],
+  // Armas físicas — ordem importa (CROSSBOW antes de BOW, etc.)
+  [/CROSSBOW/, "Besta"],
+  [/BOW/, "Arco"],
+  [/CLAYMORE|DUALSWORD|BROADSWORD|CARVING|SCIMITAR|SWORD/, "Espada"],
+  [/HATCHET|DUALAXE|GREATAXE|AXE/, "Machado"],
+  [/DAGGERPAIR|CLAWPAIR|DAGGER/, "Adaga"],
+  [/POLEHAMMER|HAMMER|MAUL/, "Martelo"],
+  [/KNUCKLES/, "Luvas de Guerra"],
+  [/FLAIL|MORNING|MACE/, "Maça"],
+  [/QUARTERSTAFF|IRONCLADSTAFF|DOUBLEBLADEDSTAFF|TWINSCYTHE|SOULSCYTHE|BLACKMONK/, "Bordão"],
+  [/HALBERD|GLAIVE|TRIDENT|PIKE|SPEAR/, "Lança"],
+];
+
+function classificarArmaFamilia(restName) {
+  const upper = restName.toUpperCase();
+  for (const [regex, familia] of WEAPON_FAMILY_RULES) {
+    if (regex.test(upper)) return familia;
+  }
+  // Fallback: se contém STAFF e não foi capturado → Bordão
+  if (upper.includes("STAFF")) return "Bordão";
+  return null;
+}
+
+function addToCat(cats, name, itemId) {
+  if (!cats[name]) cats[name] = [];
+  cats[name].push(itemId);
+}
+
 function construirMapaCategorias(allItems) {
   const cats = { Todos: [] };
 
@@ -184,47 +223,132 @@ function construirMapaCategorias(allItems) {
     itemsComUniqueName++;
     cats.Todos.push(uniqueName);
 
-    // Parse: T#_CATEGORIA_SUBCATEGORIA_...@QUALIDADE
-    // Remover qualidade (@#)
-    const baseId = uniqueName.split("@")[0];
-    const parts = baseId.split("_");
-
+    const base = uniqueName.split("@")[0];
+    const parts = base.split("_");
     if (parts.length < 2) continue;
 
     itemsComCategoria++;
 
-    // Extrair categoria base (segundo elemento após tier)
-    const categoria = parts[1]; // 2H, MAIN, HEAD, ARMOR, SHOES, ARTEFACT, etc
+    // ── Itens sem tier (UNIQUE_, QUESTITEM_, SKIN_, etc.) ──
+    if (!/^T\d$/.test(parts[0])) {
+      if (uniqueName.startsWith("UNIQUE_MOUNT")) { addToCat(cats, "Montaria", uniqueName); continue; }
+      if (uniqueName.startsWith("UNIQUE_FURNITUREITEM")) { addToCat(cats, "Mobília", uniqueName); continue; }
+      if (uniqueName.startsWith("UNIQUE_")) { addToCat(cats, "Itens Únicos", uniqueName); continue; }
+      if (uniqueName.startsWith("SKIN_") || uniqueName.startsWith("VANITY_")) { addToCat(cats, "Vaidade", uniqueName); continue; }
+      addToCat(cats, "Outros", uniqueName);
+      continue;
+    }
 
-    // Mapear para categoria amigável ou usar o próprio
-    let mainCat = categoria; // Usar categoria do UniqueName como padrão
+    // ── Itens com tier: T#_SLOT_REST ──
+    const isArtefact = parts[1] === "ARTEFACT";
+    let slot, rest;
 
-    // Agrupamentos lógicos (opcional, mas melhora UX)
-    const armasCategorias = ["2H", "MAIN", "RANGED"];
-    const armaduracategorias = ["HEAD", "ARMOR", "SHOES", "GLOVES", "CAPE"];
-    const escudoCategorias = ["OFF", "SHIELD"];
-    const consumívelCategorias = ["POTION", "MEAL", "DRINK", "SPICE"];
-    const materialCategorias = ["ORE", "WOOD", "LEATHER", "CLOTH", "METALBAR", "HIDE", "FABRIC"];
-    const artefatoCategorias = ["RUNE", "SOUL", "RELIC", "ARTEFACT", "ARTIFACT"];
+    if (isArtefact && parts.length >= 3) {
+      slot = parts[2];
+      rest = parts.slice(3).join("_");
+    } else {
+      slot = parts[1];
+      rest = parts.slice(2).join("_");
+    }
 
-    // Usar categoria específica OU criar agrupamento
-    if (armasCategorias.includes(categoria)) mainCat = "Armas - " + categoria;
-    else if (armaduracategorias.includes(categoria)) mainCat = "Armaduras - " + categoria;
-    else if (escudoCategorias.includes(categoria)) mainCat = "Escudos - " + categoria;
-    else if (consumívelCategorias.includes(categoria)) mainCat = "Consumível - " + categoria;
-    else if (materialCategorias.includes(categoria)) mainCat = "Materiais - " + categoria;
-    else if (artefatoCategorias.includes(categoria)) mainCat = "Artefatos - " + categoria;
-    else if (categoria === "MOUNT") mainCat = "Montarias";
-    else if (categoria === "BAG") mainCat = "Bolsas";
-    else if (["BOOK", "SCROLL"].includes(categoria)) mainCat = "Documentos";
-    else if (uniqueName.includes("UNIQUE")) mainCat = "Itens Únicos";
-    else mainCat = "Outros - " + categoria; // Fallback
+    // ── Artefatos (componentes de craft) ──
+    if (isArtefact) {
+      if (["MAIN", "2H"].includes(slot)) addToCat(cats, "Artefato - Armas", uniqueName);
+      else if (["HEAD", "ARMOR", "SHOES"].includes(slot)) addToCat(cats, "Artefato - Armaduras", uniqueName);
+      else if (slot === "OFF") addToCat(cats, "Artefato - Mão Secundária", uniqueName);
+      else if (slot === "CAPEITEM" || slot === "CAPE") addToCat(cats, "Artefato - Capas", uniqueName);
+      else addToCat(cats, "Artefato - Outros", uniqueName);
+      continue;
+    }
 
-    if (!cats[mainCat]) cats[mainCat] = [];
-    cats[mainCat].push(uniqueName);
+    // ── Equipamento de Coleta (checar antes de armadura) ──
+    if (rest.includes("GATHERER")) {
+      if (slot === "HEAD") addToCat(cats, "Equipamento de Coleta - Elmos", uniqueName);
+      else if (slot === "ARMOR") addToCat(cats, "Equipamento de Coleta - Armaduras", uniqueName);
+      else if (slot === "SHOES") addToCat(cats, "Equipamento de Coleta - Calçados", uniqueName);
+      else if (slot === "BACKPACK") addToCat(cats, "Equipamento de Coleta - Mochilas", uniqueName);
+      else addToCat(cats, "Equipamento de Coleta - Outros", uniqueName);
+      continue;
+    }
+    if ((slot === "MAIN" || slot === "2H") && (rest.includes("TOOL") || rest.includes("TRACKING"))) {
+      addToCat(cats, "Equipamento de Coleta - Ferramentas", uniqueName);
+      continue;
+    }
+
+    // ── Armas ──
+    if (slot === "MAIN" || slot === "2H") {
+      const familia = classificarArmaFamilia(rest);
+      addToCat(cats, `Armas - ${familia || "Outras"}`, uniqueName);
+      continue;
+    }
+
+    // ── Armadura de Peitoral ──
+    if (slot === "ARMOR") {
+      if (rest.includes("CLOTH")) addToCat(cats, "Armadura de Peitoral - Pano", uniqueName);
+      else if (rest.includes("LEATHER")) addToCat(cats, "Armadura de Peitoral - Couro", uniqueName);
+      else if (rest.includes("PLATE")) addToCat(cats, "Armadura de Peitoral - Placa", uniqueName);
+      else addToCat(cats, "Armadura de Peitoral - Outros", uniqueName);
+      continue;
+    }
+
+    // ── Armadura de Capacete ──
+    if (slot === "HEAD") {
+      if (rest.includes("CLOTH")) addToCat(cats, "Armadura de Capacete - Pano", uniqueName);
+      else if (rest.includes("LEATHER")) addToCat(cats, "Armadura de Capacete - Couro", uniqueName);
+      else if (rest.includes("PLATE")) addToCat(cats, "Armadura de Capacete - Placa", uniqueName);
+      else addToCat(cats, "Armadura de Capacete - Outros", uniqueName);
+      continue;
+    }
+
+    // ── Armadura de Calçado ──
+    if (slot === "SHOES") {
+      if (rest.includes("CLOTH")) addToCat(cats, "Armadura de Calçado - Pano", uniqueName);
+      else if (rest.includes("LEATHER")) addToCat(cats, "Armadura de Calçado - Couro", uniqueName);
+      else if (rest.includes("PLATE")) addToCat(cats, "Armadura de Calçado - Placa", uniqueName);
+      else addToCat(cats, "Armadura de Calçado - Outros", uniqueName);
+      continue;
+    }
+
+    // ── Mão Secundária ──
+    if (slot === "OFF") { addToCat(cats, "Mão Secundária", uniqueName); continue; }
+
+    // ── Capas ──
+    if (slot === "CAPEITEM" || slot === "CAPE") { addToCat(cats, "Capas", uniqueName); continue; }
+
+    // ── Bolsas ──
+    if (slot === "BAG") { addToCat(cats, "Bolsas", uniqueName); continue; }
+    if (slot === "BACKPACK") { addToCat(cats, "Bolsas - Mochilas", uniqueName); continue; }
+
+    // ── Montaria ──
+    if (slot === "MOUNT") { addToCat(cats, "Montaria", uniqueName); continue; }
+
+    // ── Consumível ──
+    if (slot === "POTION") { addToCat(cats, "Consumível - Poções", uniqueName); continue; }
+    if (slot === "MEAL") { addToCat(cats, "Consumível - Refeições", uniqueName); continue; }
+    if (slot === "FISH") { addToCat(cats, "Consumível - Peixes", uniqueName); continue; }
+    if (slot === "ALCOHOL") { addToCat(cats, "Consumível - Bebidas", uniqueName); continue; }
+
+    // ── Fabricação (recursos) ──
+    const fabricacao = ["ORE", "WOOD", "HIDE", "FIBER", "CLOTH", "LEATHER", "METALBAR", "PLANKS", "STONEBLOCK", "ROCK", "STONE"];
+    if (fabricacao.includes(slot)) { addToCat(cats, `Fabricação - ${slot}`, uniqueName); continue; }
+
+    // ── Cultivo ──
+    const cultivo = ["FARM", "SEED", "BEAN", "HERB", "AGARIC", "COMFREY", "FOXGLOVE", "MULLEIN", "TEASEL", "BURDOCK", "YARROW", "CARROT", "POTATO", "CABBAGE", "WHEAT", "TURNIP", "PUMPKIN", "CORN"];
+    if (cultivo.includes(slot)) { addToCat(cats, "Cultivo", uniqueName); continue; }
+
+    // ── Mobília ──
+    if (slot === "FURNITUREITEM") { addToCat(cats, "Mobília", uniqueName); continue; }
+
+    // ── Vaidade ──
+    if (slot === "SKIN" || slot === "VANITY" || slot === "CLOTHING") { addToCat(cats, "Vaidade", uniqueName); continue; }
+
+    // ── Outros ──
+    if (slot === "JOURNAL") { addToCat(cats, "Outros - Diários", uniqueName); continue; }
+    if (slot === "LABOURER") { addToCat(cats, "Outros - Trabalhadores", uniqueName); continue; }
+    addToCat(cats, `Outros - ${slot}`, uniqueName);
   }
 
-  // Deduplicar todos
+  // Deduplicar
   for (const cat in cats) {
     cats[cat] = [...new Set(cats[cat])];
   }
@@ -233,25 +357,42 @@ function construirMapaCategorias(allItems) {
   const groupAgg = {};
   for (const cat of Object.keys(cats)) {
     if (cat === "Todos") continue;
-    const parts = cat.split(" - ");
-    if (parts.length === 2) {
-      const group = parts[0];
+    const dashParts = cat.split(" - ");
+    if (dashParts.length === 2) {
+      const group = dashParts[0];
       if (!groupAgg[group]) groupAgg[group] = [];
       groupAgg[group].push(...cats[cat]);
     }
   }
   for (const [group, items] of Object.entries(groupAgg)) {
-    // Só criar grupo se tiver mais de 1 subcategoria
     if (!cats[group]) {
       cats[group] = [...new Set(items)];
     }
   }
 
-  // Ordenar categorias alfabeticamente
+  // Ordenar categorias
+  const CATEGORY_ORDER = [
+    "Todos", "Armas", "Armadura de Peitoral", "Armadura de Capacete", "Armadura de Calçado",
+    "Mão Secundária", "Capas", "Bolsas", "Montaria", "Consumível",
+    "Equipamento de Coleta", "Fabricação", "Artefato", "Cultivo", "Mobília",
+    "Vaidade", "Itens Únicos", "Outros",
+  ];
+
+  const orderIndex = (key) => {
+    const mainPart = key.split(" - ")[0];
+    const idx = CATEGORY_ORDER.indexOf(mainPart);
+    return idx >= 0 ? idx : 999;
+  };
+
   const sortedCats = {};
-  Object.keys(cats).sort().forEach(key => {
-    sortedCats[key] = cats[key];
-  });
+  Object.keys(cats)
+    .sort((a, b) => {
+      const oa = orderIndex(a);
+      const ob = orderIndex(b);
+      if (oa !== ob) return oa - ob;
+      return a.localeCompare(b);
+    })
+    .forEach(key => { sortedCats[key] = cats[key]; });
 
   console.log(`[Categories] ✓ Parse completo: ${itemsComUniqueName} com UniqueName, ${itemsComCategoria} com categoria`);
   console.log(`[Categories] ✓ Total de categorias criadas: ${Object.keys(sortedCats).length}`);
@@ -451,10 +592,29 @@ export async function buscarOportunidades({
   maxItensProcessar = 999999, // Sem limite efetivo
   offset = 0,
   step = 500,
+  tier = "Todos",
+  enchantment = "Todos",
 }) {
   let itens = await gerarListaItens(categoria);
 
   console.log(`[Market] Categoria: ${categoria}, Total itens carregados: ${itens?.length || 0}`);
+
+  // Filtrar por grau (tier)
+  if (tier && tier !== "Todos") {
+    itens = itens.filter(id => id.startsWith(tier + "_"));
+    console.log(`[Market] Filtro tier=${tier}: ${itens.length} itens restantes`);
+  }
+
+  // Filtrar por encantamento
+  if (enchantment !== undefined && enchantment !== null && enchantment !== "Todos") {
+    const enc = parseInt(enchantment);
+    if (enc === 0) {
+      itens = itens.filter(id => !id.includes("@"));
+    } else if (!isNaN(enc)) {
+      itens = itens.filter(id => id.includes(`@${enc}`));
+    }
+    console.log(`[Market] Filtro enchantment=${enchantment}: ${itens.length} itens restantes`);
+  }
 
   if (!Array.isArray(itens) || itens.length === 0) {
     console.log(`[Market] Erro: itens inválido ou vazio. Retornando []`);
