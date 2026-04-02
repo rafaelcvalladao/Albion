@@ -69,11 +69,26 @@ function extrairOportunidadesDePrecos(respostaPrecos, maxIdade, agora, qualityNu
     const cidadesArray = Object.entries(groupData).filter(([k]) => k !== 'quality');
     if (cidadesArray.length < 2) continue;
 
-    for (let i = 0; i < cidadesArray.length; i++) {
-      for (let j = 0; j < cidadesArray.length; j++) {
+    // Filtrar outliers: descartar cidades cujo sell price > 3× a mediana
+    const sellPrices = cidadesArray
+      .map(([, info]) => info.compra)
+      .filter((v) => v > 0)
+      .sort((a, b) => a - b);
+    if (sellPrices.length < 2) continue;
+    const mid = Math.floor(sellPrices.length / 2);
+    const mediana =
+      sellPrices.length % 2 === 0
+        ? (sellPrices[mid - 1] + sellPrices[mid]) / 2
+        : sellPrices[mid];
+    const limiteOutlier = mediana * 3;
+    const cidadesFiltradas = cidadesArray.filter(([, info]) => info.compra <= limiteOutlier);
+    if (cidadesFiltradas.length < 2) continue;
+
+    for (let i = 0; i < cidadesFiltradas.length; i++) {
+      for (let j = 0; j < cidadesFiltradas.length; j++) {
         if (i === j) continue;
-        const [cidadeOri, infoOri] = cidadesArray[i];
-        const [cidadeDest, infoDest] = cidadesArray[j];
+        const [cidadeOri, infoOri] = cidadesFiltradas[i];
+        const [cidadeDest, infoDest] = cidadesFiltradas[j];
         if (!infoOri || !infoDest) continue;
         if (!infoOri.compra || !infoOri.venda || !infoDest.compra || !infoDest.venda) continue;
 
