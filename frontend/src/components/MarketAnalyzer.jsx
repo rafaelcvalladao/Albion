@@ -160,7 +160,7 @@ export default function MarketAnalyzer() {
             }
           }
           // Ordenar e atualizar a UI imediatamente
-          acumulador.sort((a, b) => b.lucro - a.lucro);
+          acumulador.sort((a, b) => (Number(b.lucro) || 0) - (Number(a.lucro) || 0));
           setRows([...acumulador]);
         },
         onProgress: ({ processados, totalItens: total }) => {
@@ -397,22 +397,21 @@ export default function MarketAnalyzer() {
         const sortedRows = [...filteredRows].sort((a, b) => {
           let va, vb;
           if (sortCol === 'instant') {
-            va = a.buyOrderDestino - (a.compra + a.custoTeleporte);
-            vb = b.buyOrderDestino - (b.compra + b.custoTeleporte);
+            va = (Number(a.buyOrderDestino) || 0) - ((Number(a.compra) || 0) + (Number(a.custoTeleporte) || 0));
+            vb = (Number(b.buyOrderDestino) || 0) - ((Number(b.compra) || 0) + (Number(b.custoTeleporte) || 0));
           } else if (sortCol === 'lucro') {
-            va = a.lucro;
-            vb = b.lucro;
+            va = Number(a.lucro) || 0;
+            vb = Number(b.lucro) || 0;
           } else if (sortCol === 'volume') {
-            va = a.volumeDiario || 0;
-            vb = b.volumeDiario || 0;
+            va = Number(a.volumeDiario) || 0;
+            vb = Number(b.volumeDiario) || 0;
           } else {
             va = a.compra > 0 ? a.venda / a.compra : 0;
             vb = b.compra > 0 ? b.venda / b.compra : 0;
           }
           const diff = sortAsc ? va - vb : vb - va;
           if (diff !== 0) return diff;
-          // Desempate por lucro decrescente
-          return b.lucro - a.lucro;
+          return (Number(b.lucro) || 0) - (Number(a.lucro) || 0);
         });
 
         const totalPages = Math.ceil(sortedRows.length / itemsPerPage);
