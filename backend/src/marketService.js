@@ -88,12 +88,7 @@ function extrairOportunidadesDePrecos(respostaPrecos, maxIdade, agora, qualityNu
         const lucroLiquido = receita - custos;
 
         if (lucroLiquido > 0) {
-          const agoraMs = Date.now();
-          const destinoDate = new Date(String(infoDest.dataStrSell).replace(' ', 'T')).getTime();
-          const origemDate = new Date(String(infoOri.dataStrSell).replace(' ', 'T')).getTime();
-          const desatualizado =
-            (!isNaN(destinoDate) && agoraMs - destinoDate > 12 * 3600000) ||
-            (!isNaN(origemDate) && agoraMs - origemDate > 12 * 3600000);
+          const vendaInstantanea = buyOrderDestino > 0 && buyOrderDestino > precoCompra;
 
           oportunidades.push({
             id: itemId,
@@ -112,7 +107,7 @@ function extrairOportunidadesDePrecos(respostaPrecos, maxIdade, agora, qualityNu
             atualizacaoOrig: infoOri.dataStrSell,
             atualizacaoDest: infoDest.dataStrSell,
             atualizacaoBuyOrderDest: infoDest.dataStrBuy,
-            desatualizado,
+            vendaInstantanea,
           });
         }
       }

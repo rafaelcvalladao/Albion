@@ -429,7 +429,7 @@ export default function MarketAnalyzer() {
                     >
                       Vol/dia{sortIndicator('volume')}
                     </th>
-                    <th>Stale</th>
+                    <th title="Buy order no destino > sell order na origem">Instant</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -516,7 +516,7 @@ export default function MarketAnalyzer() {
                             ? op.volumeDiario.toLocaleString('pt-PT')
                             : '-'}
                         </td>
-                        <td style={{ textAlign: 'center' }}>{op.desatualizado ? '⚠️' : '✅'}</td>
+                        <td style={{ textAlign: 'center' }}>{op.vendaInstantanea ? '✅' : ''}</td>
                       </tr>
                     );
                   })}
