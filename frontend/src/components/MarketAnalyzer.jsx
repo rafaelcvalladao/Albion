@@ -113,9 +113,7 @@ export default function MarketAnalyzer() {
 
         setRows((prev) =>
           prev.map((op) => {
-            const volOrig = volumes[`${op.id}|${op.origem}`] || 0;
-            const volDest = volumes[`${op.id}|${op.destino}`] || 0;
-            const vol = Math.max(volOrig, volDest);
+            const vol = volumes[`${op.id}|${op.destino}`] || 0;
             return vol > 0 ? { ...op, volumeDiario: vol } : op;
           }),
         );
