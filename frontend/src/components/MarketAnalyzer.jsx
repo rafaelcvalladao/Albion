@@ -136,6 +136,11 @@ export default function MarketAnalyzer() {
     setItemsProcessados(0);
     setTotalItens(0);
     setCurrentPage(1);
+    setSortCol('lucro');
+    setSortAsc(false);
+    setFilterInstant(false);
+    setSearchItem('');
+    setMaxPrata('');
 
     // Acumulador de oportunidades (dedup incremental)
     const dedupSet = new Set();
@@ -288,6 +293,23 @@ export default function MarketAnalyzer() {
         >
           {scanning ? 'Escaneando…' : 'Buscar oportunidades'}
         </button>
+        {!scanning && (searchItem || maxPrata || filterInstant || sortCol !== 'lucro') && (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setSearchItem('');
+              setMaxPrata('');
+              setFilterInstant(false);
+              setSortCol('lucro');
+              setSortAsc(false);
+              setCurrentPage(1);
+            }}
+            style={{ marginLeft: '0.5rem', backgroundColor: '#555' }}
+          >
+            Resetar filtros
+          </button>
+        )}
         {scanning && (
           <button
             type="button"
