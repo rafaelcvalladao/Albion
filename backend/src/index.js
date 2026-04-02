@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { buscarOportunidades, CATEGORIAS, obterCategoriasDinamicas } from "./marketService.js";
+import { buscarOportunidades, buscarOportunidadesStream, buscarVolumeParaItens, CATEGORIAS, obterCategoriasDinamicas } from "./marketService.js";
 import { estrategiaCompleta, horariosUtc, processarWood } from "./woodService.js";
 import { processarFiber, estrategiaCompletaFiber } from "./fiberService.js";
 import { processarLeather, estrategiaCompletaLeather } from "./leatherService.js";
@@ -196,6 +196,71 @@ app.post("/api/market/opportunities", async (req, res) => {
     res.status(500).json({ 
       erro: erro.message || 'Erro ao buscar oportunidades' 
     });
+  }
+});
+
+/** SSE Streaming de oportunidades de arbitragem */
+app.get("/api/market/opportunities/stream", async (req, res) => {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+
+  const {
+    categoria = "Consumível",
+    tier = "Todos",
+    enchantment = "Todos",
+    quality = "0",
+    maxIdadeHoras = "168",
+    taxaVenda = "6.5",
+  } = req.query;
+
+  console.log(`[SSE] Stream iniciado: categoria="${categoria}", tier="${tier}", enchantment="${enchantment}"`);
+
+  let closed = false;
+  req.on("close", () => { closed = true; });
+
+  try {
+    await buscarOportunidadesStream(
+      {
+        categoria,
+        tier,
+        enchantment,
+        quality: parseInt(quality) || 0,
+        maxIdadeHoras: parseInt(maxIdadeHoras) || 168,
+        taxaVenda: parseFloat(taxaVenda) || 6.5,
+      },
+      (event) => {
+        if (closed) return;
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      }
+    );
+  } catch (err) {
+    if (!closed) {
+      res.write(`data: ${JSON.stringify({ type: "error", message: err.message })}\n\n`);
+    }
+    console.error("[SSE] Erro:", err);
+  }
+
+  if (!closed) res.end();
+});
+
+/** Busca volume diário para uma lista de itens (lazy) */
+app.post("/api/market/volume", async (req, res) => {
+  try {
+    const { itemIds } = req.body || {};
+    if (!Array.isArray(itemIds) || itemIds.length === 0) {
+      return res.json({ volumes: {} });
+    }
+    // Limitar a 500 itens por request
+    const ids = itemIds.slice(0, 500);
+    const volumes = await buscarVolumeParaItens(ids);
+    res.json({ volumes });
+  } catch (e) {
+    console.error("[/api/market/volume] Erro:", e);
+    res.status(500).json({ error: e.message });
   }
 });
 

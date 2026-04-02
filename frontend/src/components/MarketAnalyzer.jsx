@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { marketCategories, marketOpportunities } from "../api.js";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { marketCategories, marketOpportunitiesStream, marketVolume } from "../api.js";
 import { profitClass } from "../utils/profit.js";
 import NestedCategorySelector from "./NestedCategorySelector.jsx";
 
@@ -43,12 +43,15 @@ export default function MarketAnalyzer() {
   const [err, setErr] = useState(null);
   const [rows, setRows] = useState([]);
   const [itemsProcessados, setItemsProcessados] = useState(0);
+  const [totalItens, setTotalItens] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [maxPrata, setMaxPrata] = useState("");
   const [sortCol, setSortCol] = useState("lucro");
   const [sortAsc, setSortAsc] = useState(false);
   const [searchItem, setSearchItem] = useState("");
+  const [loadingVolume, setLoadingVolume] = useState(false);
   const itemsPerPage = 20;
+  const streamRef = useRef(null);
 
   useEffect(() => {
     console.log("[MarketAnalyzer] 🚀 Iniciando carregamento de categorias...");
@@ -86,80 +89,104 @@ export default function MarketAnalyzer() {
       });
   }, []);
 
-  const buscar = async () => {
+  // Cleanup: abortar stream ao desmontar
+  useEffect(() => {
+    return () => { streamRef.current?.abort(); };
+  }, []);
+
+  // Lazy volume loading: buscar volume depois que o scan termina
+  const carregarVolume = useCallback(async (currentRows) => {
+    const uniqueIds = [...new Set(currentRows.map((r) => r.id))];
+    if (uniqueIds.length === 0) return;
+
+    setLoadingVolume(true);
+    try {
+      // Buscar em batches de 200 para não sobrecarregar
+      const batchSize = 200;
+      for (let i = 0; i < uniqueIds.length; i += batchSize) {
+        const batch = uniqueIds.slice(i, i + batchSize);
+        const data = await marketVolume(batch);
+        const volumes = data.volumes || {};
+
+        setRows((prev) =>
+          prev.map((op) => {
+            const volOrig = volumes[`${op.id}|${op.origem}`] || 0;
+            const volDest = volumes[`${op.id}|${op.destino}`] || 0;
+            const vol = Math.max(volOrig, volDest);
+            return vol > 0 ? { ...op, volumeDiario: vol } : op;
+          })
+        );
+      }
+    } catch (e) {
+      console.warn("[Volume] Erro ao buscar volume:", e);
+    } finally {
+      setLoadingVolume(false);
+    }
+  }, []);
+
+  const buscar = () => {
+    // Abortar scan anterior se existir
+    streamRef.current?.abort();
+
     setScanning(true);
     setLoading(true);
     setErr(null);
     setRows([]);
     setItemsProcessados(0);
+    setTotalItens(0);
     setCurrentPage(1);
 
-    const step = categoria === "Todos" ? 25000 : 1500; // "Todos" processa tudo de uma vez
+    // Acumulador de oportunidades (dedup incremental)
+    const dedupSet = new Set();
+    const acumulador = [];
 
-    try {
-      let todas = [];
-      let offset = 0;
-      let hasMore = true;
-      let roundCount = 0;
-
-      while (hasMore) {
-        roundCount++;
-        console.log(`[Market] Buscando lote ${roundCount} (categoria: ${categoria}, offset: ${offset}, step: ${step})`);
-        
-        const data = await marketOpportunities({
-          categoria,
-          offset,
-          step,
-          tier: tier !== "Todos" ? tier : undefined,
-          enchantment: enchantment !== "Todos" ? enchantment : undefined,
-          quality: quality !== "Todos" ? parseInt(quality) : 0,
-        });
-
-        const slice = Array.isArray(data) ? data : data.oportunidades || [];
-        console.log(`[Market] Lote ${roundCount} retornou ${slice.length} itens`);
-        
-        todas = [...todas, ...slice];
-        setItemsProcessados(offset + slice.length);
-
-        // Se retornou menos itens que o esperado, chegou ao final
-        if (slice.length < step) {
-          hasMore = false;
-        }
-
-        // Deduplicar por (tier + encanto + qualidade + origem + destino)
-        const dedupSet = new Set();
-        const todasUnicas = [];
-        for (const op of todas) {
-          const chave = `${op.id}|${op.estado}|${op.origem}|${op.destino}`;
-          if (!dedupSet.has(chave)) {
-            dedupSet.add(chave);
-            todasUnicas.push(op);
+    const stream = marketOpportunitiesStream(
+      {
+        categoria,
+        tier: tier !== "Todos" ? tier : undefined,
+        enchantment: enchantment !== "Todos" ? enchantment : undefined,
+        quality: quality !== "Todos" ? quality : "0",
+      },
+      {
+        onChunk: (oportunidades) => {
+          for (const op of oportunidades) {
+            const chave = `${op.id}|${op.estado}|${op.origem}|${op.destino}`;
+            if (!dedupSet.has(chave)) {
+              dedupSet.add(chave);
+              acumulador.push(op);
+            }
           }
-        }
-
-        // Ordenar por lucro descente e mostrar na tela
-        todasUnicas.sort((a, b) => b.lucro - a.lucro);
-        setRows(todasUnicas);
-
-        console.log(`[Market] Total acumulado: ${todasUnicas.length} itens únicos`);
-
-        if (!hasMore) break;
-
-        offset += step;
-        // Dar mais tempo entre requisições grandes
-        const delay = categoria === "Todos" ? 500 : 150;
-        await new Promise((resolve) => setTimeout(resolve, delay));
+          // Ordenar e atualizar a UI imediatamente
+          acumulador.sort((a, b) => b.lucro - a.lucro);
+          setRows([...acumulador]);
+        },
+        onProgress: ({ processados, totalItens: total }) => {
+          setItemsProcessados(processados);
+          setTotalItens(total);
+        },
+        onDone: () => {
+          setScanning(false);
+          setLoading(false);
+          console.log(`[Market] Stream concluído: ${acumulador.length} oportunidades`);
+          // Lazy: buscar volume em background
+          carregarVolume(acumulador);
+        },
+        onError: (msg) => {
+          setErr(msg);
+          setScanning(false);
+          setLoading(false);
+        },
       }
+    );
 
-      console.log(`[Market] Busca concluída! Total: ${todas.length} brutos, ${rows.length} únicos`);
-    } catch (e) {
-      console.error(`[Market] Erro na busca:`, e);
-      setErr(e.message || String(e));
-      setRows([]);
-    } finally {
-      setScanning(false);
-      setLoading(false);
-    }
+    streamRef.current = stream;
+  };
+
+  const cancelar = () => {
+    streamRef.current?.abort();
+    streamRef.current = null;
+    setScanning(false);
+    setLoading(false);
   };
 
   return (
@@ -244,13 +271,28 @@ export default function MarketAnalyzer() {
         <button type="button" className="btn btn-primary" onClick={buscar} disabled={loading || scanning}>
           {scanning ? "Escaneando…" : "Buscar oportunidades"}
         </button>
+        {scanning && (
+          <button type="button" className="btn" onClick={cancelar} style={{ marginLeft: "0.5rem", backgroundColor: "#c0392b" }}>
+            Cancelar
+          </button>
+        )}
       </div>
 
       <div className="market-progress" style={{ marginBottom: "0.75rem" }}>
         {scanning ? (
-          <span>Escaneando... ({itemsProcessados} itens processados, {rows.length} oportunidades encontradas)</span>
+          <span>
+            Escaneando... ({itemsProcessados}{totalItens > 0 ? `/${totalItens}` : ""} itens processados, {rows.length} oportunidades encontradas)
+            {totalItens > 0 && (
+              <span style={{ marginLeft: "0.5rem", color: "#4caf50" }}>
+                [{Math.round((itemsProcessados / totalItens) * 100)}%]
+              </span>
+            )}
+          </span>
         ) : (
-          <span>Último escaneamento: {rows.length > 0 ? `Concluído (${rows.length} oportunidades)` : "Aguardando"}</span>
+          <span>
+            Último escaneamento: {rows.length > 0 ? `Concluído (${rows.length} oportunidades)` : "Aguardando"}
+            {loadingVolume && <span style={{ marginLeft: "0.5rem", color: "#ff9800" }}> — carregando volumes...</span>}
+          </span>
         )}
       </div>
 

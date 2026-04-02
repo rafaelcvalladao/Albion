@@ -88,6 +88,84 @@ export function marketOpportunities(body) {
   return request("/api/market/opportunities", { method: "POST", body: JSON.stringify(body) });
 }
 
+/**
+ * Streaming de oportunidades via SSE.
+ * Retorna { abort } para cancelar o stream.
+ * Callbacks: onChunk(oportunidades[]), onProgress({processados, totalItens}), onDone(), onError(msg)
+ */
+export function marketOpportunitiesStream(params, { onChunk, onProgress, onDone, onError }) {
+  const qs = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ""))
+  ).toString();
+
+  const controller = new AbortController();
+
+  (async () => {
+    try {
+      const res = await fetch(`${base}/api/market/opportunities/stream?${qs}`, {
+        signal: controller.signal,
+        headers: { Accept: "text/event-stream" },
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        onError?.(text || `HTTP ${res.status}`);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith("data: ")) continue;
+          let event;
+          try {
+            event = JSON.parse(line.slice(6));
+          } catch { continue; }
+
+          if (event.type === "chunk") {
+            onChunk?.(event.oportunidades || []);
+            onProgress?.({ processados: event.processados, totalItens: event.totalItens });
+          } else if (event.type === "start") {
+            onProgress?.({ processados: 0, totalItens: event.totalItens });
+          } else if (event.type === "done") {
+            onDone?.();
+          } else if (event.type === "error") {
+            onError?.(event.message);
+          }
+        }
+      }
+      // Se o buffer ainda tiver dados restantes
+      if (buffer.trim().startsWith("data: ")) {
+        try {
+          const event = JSON.parse(buffer.trim().slice(6));
+          if (event.type === "done") onDone?.();
+        } catch { /* ignorar */ }
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        onError?.(err.message || String(err));
+      }
+    }
+  })();
+
+  return { abort: () => controller.abort() };
+}
+
+export function marketVolume(itemIds) {
+  return request("/api/market/volume", { method: "POST", body: JSON.stringify({ itemIds }) });
+}
+
 export function validateToken(token) {
   return request("/api/auth/validate", { method: "POST", body: JSON.stringify({ token }) });
 }

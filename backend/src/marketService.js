@@ -96,6 +96,32 @@ let ALL_ITEM_IDS_CACHE = null;
 let ITEM_NAME_PT_BR_CACHE = null;
 let CATEGORIES_CACHE = null;
 
+// ─── Cache de preços com TTL ───
+const PRICE_CACHE = new Map();
+const PRICE_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+function getPriceCacheKey(itemIds, locations, quality) {
+  return `${itemIds.sort().join(",")}|${locations}|${quality}`;
+}
+
+function getCachedPrices(key) {
+  const cached = PRICE_CACHE.get(key);
+  if (cached && Date.now() - cached.ts < PRICE_CACHE_TTL) return cached.data;
+  PRICE_CACHE.delete(key);
+  return null;
+}
+
+function setCachedPrices(key, data) {
+  PRICE_CACHE.set(key, { data, ts: Date.now() });
+  // Limpar entradas antigas periodicamente (max 500 entradas)
+  if (PRICE_CACHE.size > 500) {
+    const now = Date.now();
+    for (const [k, v] of PRICE_CACHE) {
+      if (now - v.ts > PRICE_CACHE_TTL) PRICE_CACHE.delete(k);
+    }
+  }
+}
+
 const CIDADES_SEGURAS = [
   "Bridgewatch",
   "FortSterling",
@@ -510,12 +536,18 @@ async function fetchPricesMarket(itemIds, locations, quality = 0) {
   for (let i = 0; i < allChunks.length; i += concurrency) {
     const batch = allChunks.slice(i, i + concurrency);
     const calls = batch.map(async (part) => {
+      const cacheKey = getPriceCacheKey(part, loc, quality);
+      const cached = getCachedPrices(cacheKey);
+      if (cached) return cached;
+
       const url = `https://www.albion-online-data.com/api/v2/stats/prices/${part.join(",")}?locations=${encodeURIComponent(loc)}${qualitiesParam}`;
       const res = await fetch(url, { headers: { Accept: "application/json" } });
       if (!res.ok) {
         throw new Error(`Albion prices HTTP ${res.status}`);
       }
-      return res.json();
+      const data = await res.json();
+      setCachedPrices(cacheKey, data);
+      return data;
     });
 
     const results = await Promise.allSettled(calls);
@@ -821,6 +853,195 @@ export async function buscarOportunidades({
   // O frontend deduplica e ordena por lucro
   console.log(`[Market] Retornando ${oportunidadesUnicas.length} oportunidades deste batch`);
   return oportunidadesUnicas;
+}
+
+// ─── Extrai oportunidades de um chunk de preços (lógica reutilizável) ───
+function extrairOportunidadesDePrecos(respostaPrecos, maxIdade, agora, qualityNum, taxaVendaNota) {
+  const mapaPrecos = new Map();
+  for (const p of respostaPrecos) {
+    const dataStr = p.sell_price_min_date;
+    if (!dataStr || String(dataStr).startsWith("0001")) continue;
+
+    const dataApi = new Date(String(dataStr).replace(" ", "T")).getTime();
+    const idadeHoras = (agora - dataApi) / 3600000;
+
+    if (idadeHoras <= maxIdade && p.sell_price_min > 0) {
+      const it = p.item_id;
+      const cidade = p.city;
+      const qual = p.quality || 1;
+      const chave = `${it}|${cidade}|${qual}`;
+
+      if (!mapaPrecos.has(chave)) {
+        mapaPrecos.set(chave, {
+          item: it, city: cidade, quality: qual,
+          sellMin: p.sell_price_min, buyMax: p.buy_price_max || 0,
+          dataStr: String(dataStr).replace("T", " ").slice(0, 16),
+        });
+      } else {
+        const existente = mapaPrecos.get(chave);
+        if (p.sell_price_min < existente.sellMin) existente.sellMin = p.sell_price_min;
+        if (p.buy_price_max > existente.buyMax) existente.buyMax = p.buy_price_max;
+      }
+    }
+  }
+
+  const mapaOrganizado = new Map();
+  for (const [, dados] of mapaPrecos) {
+    const groupKey = `${dados.item}|${dados.quality}`;
+    if (!mapaOrganizado.has(groupKey)) mapaOrganizado.set(groupKey, { quality: dados.quality });
+    mapaOrganizado.get(groupKey)[dados.city] = {
+      compra: dados.sellMin, venda: dados.sellMin,
+      buyMax: dados.buyMax, dataStrSell: dados.dataStr, dataStrBuy: dados.dataStr,
+    };
+  }
+
+  const oportunidades = [];
+  for (const [groupKey, groupData] of mapaOrganizado) {
+    const itemId = groupKey.split("|")[0];
+    const qualItem = groupData.quality;
+    const peso = obterPesoItem(itemId);
+    const tcm = obterTCMItem(itemId);
+    const { tier, encanto } = extrairInfoItem(itemId);
+    const nomeBase = nomeItemEmPortugues(itemId);
+    const estado = QUALITY_NAMES[qualItem] || "Normal";
+
+    const cidadesArray = Object.entries(groupData).filter(([k]) => k !== "quality");
+    if (cidadesArray.length < 2) continue;
+
+    for (let i = 0; i < cidadesArray.length; i++) {
+      for (let j = 0; j < cidadesArray.length; j++) {
+        if (i === j) continue;
+        const [cidadeOri, infoOri] = cidadesArray[i];
+        const [cidadeDest, infoDest] = cidadesArray[j];
+        if (!infoOri || !infoDest) continue;
+        if (!infoOri.compra || !infoOri.venda || !infoDest.compra || !infoDest.venda) continue;
+
+        const precoCompra = infoOri.compra;
+        const precoVenda = infoDest.venda;
+        const buyOrderDestino = infoDest.buyMax || 0;
+        if (!precoCompra || !precoVenda || precoCompra <= 0 || precoVenda <= 0) continue;
+
+        const custoTeleporte = calcularCustoTeleporteComTCM(peso, tcm, cidadeOri, cidadeDest);
+        const receita = precoVenda * taxaVendaNota;
+        const custos = precoCompra + custoTeleporte;
+        const lucroLiquido = receita - custos;
+
+        if (lucroLiquido > 0) {
+          const agoraMs = Date.now();
+          const destinoDate = new Date(String(infoDest.dataStrSell).replace(" ", "T")).getTime();
+          const origemDate = new Date(String(infoOri.dataStrSell).replace(" ", "T")).getTime();
+          const desatualizado =
+            (!isNaN(destinoDate) && agoraMs - destinoDate > 12 * 3600000) ||
+            (!isNaN(origemDate) && agoraMs - origemDate > 12 * 3600000);
+
+          oportunidades.push({
+            id: itemId, nomeBase, tier, encanto, estado,
+            origem: cidadeOri, destino: cidadeDest,
+            compra: precoCompra, venda: precoVenda, buyOrderDestino,
+            custoTeleporte, lucro: lucroLiquido,
+            margem: precoCompra > 0 ? ((precoVenda / precoCompra - 1) * 100) : 0,
+            atualizacaoOrig: infoOri.dataStrSell, atualizacaoDest: infoDest.dataStrSell,
+            atualizacaoBuyOrderDest: infoDest.dataStrBuy, desatualizado,
+          });
+        }
+      }
+    }
+  }
+  return oportunidades;
+}
+
+// ─── Streaming: envia oportunidades por chunk via callback ───
+export async function buscarOportunidadesStream({
+  categoria, maxIdadeHoras = 168, quality = 0,
+  taxaVenda = 6.5, tier = "Todos", enchantment = "Todos",
+}, onChunk) {
+  let itens = await gerarListaItens(categoria);
+
+  if (tier && tier !== "Todos") {
+    itens = itens.filter(id => id.startsWith(tier + "_"));
+  }
+  if (enchantment !== undefined && enchantment !== null && enchantment !== "Todos") {
+    const enc = parseInt(enchantment);
+    if (enc === 0) itens = itens.filter(id => !id.includes("@"));
+    else if (!isNaN(enc)) itens = itens.filter(id => id.includes(`@${enc}`));
+  }
+
+  if (!Array.isArray(itens) || itens.length === 0) {
+    onChunk({ type: "done", total: 0, processados: 0 });
+    return;
+  }
+
+  const cidadesStr = CIDADES_SEGURAS.join(",");
+  const maxIdade = Number(maxIdadeHoras) || 168;
+  const agora = Date.now();
+  const qualityNum = Number(quality) || 0;
+  const taxaVendaNota = 1 - (taxaVenda / 100);
+
+  const chunks = chunk(itens, 100);
+  const totalItens = itens.length;
+  let processados = 0;
+  let totalOportunidades = 0;
+  const concurrency = 5;
+
+  console.log(`[Stream] Iniciando scan: ${totalItens} itens em ${chunks.length} chunks`);
+  onChunk({ type: "start", totalItens, totalChunks: chunks.length });
+
+  // Processar chunks em paralelo (batches de 5)
+  for (let i = 0; i < chunks.length; i += concurrency) {
+    const batch = chunks.slice(i, i + concurrency);
+
+    const batchResults = await Promise.allSettled(
+      batch.map(async (chunkItems) => {
+        const respostaPrecos = await fetchPricesMarket(chunkItems, cidadesStr, qualityNum);
+        return extrairOportunidadesDePrecos(respostaPrecos, maxIdade, agora, qualityNum, taxaVendaNota);
+      })
+    );
+
+    for (const result of batchResults) {
+      processados += 100; // aproximado por chunk
+      if (result.status === "fulfilled" && result.value.length > 0) {
+        totalOportunidades += result.value.length;
+        onChunk({
+          type: "chunk",
+          oportunidades: result.value,
+          processados: Math.min(processados, totalItens),
+          totalItens,
+        });
+      }
+    }
+
+    // Breve pausa entre batches paralelos
+    if (i + concurrency < chunks.length) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+
+  console.log(`[Stream] Scan completo: ${totalOportunidades} oportunidades`);
+  onChunk({ type: "done", total: totalOportunidades, processados: totalItens });
+}
+
+// ─── Busca volume separadamente (lazy) ───
+export async function buscarVolumeParaItens(itemIds) {
+  const cidadesStr = CIDADES_SEGURAS.join(",");
+  const uniqueIds = [...new Set(itemIds.filter(Boolean))];
+
+  if (uniqueIds.length === 0) return {};
+
+  console.log(`[Volume] Buscando volume para ${uniqueIds.length} itens...`);
+  let volumeMap = new Map();
+  try {
+    volumeMap = await fetchHistoryMarket(uniqueIds, cidadesStr);
+    console.log(`[Volume] ✓ Volume obtido para ${volumeMap.size} combinações`);
+  } catch (e) {
+    console.log(`[Volume] ⚠️ Erro: ${e.message}`);
+  }
+
+  // Converter Map para objeto serializável
+  const result = {};
+  for (const [key, val] of volumeMap) {
+    result[key] = val;
+  }
+  return result;
 }
 
 export async function obterCategoriasDinamicas() {
