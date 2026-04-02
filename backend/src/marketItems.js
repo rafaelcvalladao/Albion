@@ -1,7 +1,9 @@
-import { CATEGORIAS, TIERS, setItemNameCache } from './marketConstants.js';
+import { CATEGORIAS, TIERS, setItemNameCache, setItemWeightCache } from './marketConstants.js';
 
 const ITEM_ID_SOURCE_URL =
   'https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/formatted/items.json';
+const ITEM_RAW_SOURCE_URL =
+  'https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/items.json';
 let ALL_ITEM_IDS_CACHE = null;
 let CATEGORIES_CACHE = null;
 
@@ -318,6 +320,32 @@ function construirMapaCategorias(allItems) {
   return sortedCats;
 }
 
+async function carregarPesosDoJogo() {
+  try {
+    console.log('[Weights] Carregando pesos reais dos itens...');
+    const res = await fetch(ITEM_RAW_SOURCE_URL, { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`Falha ao buscar raw items (${res.status})`);
+    const data = await res.json();
+    const items = data?.items;
+    if (!items || typeof items !== 'object') throw new Error('Formato inesperado de items.json');
+
+    const weightMap = {};
+    for (const [, val] of Object.entries(items)) {
+      if (!val || typeof val !== 'object') continue;
+      const arr = Array.isArray(val) ? val : [val];
+      for (const it of arr) {
+        const name = it['@uniquename'];
+        const w = it['@weight'];
+        if (name && w != null) weightMap[name] = parseFloat(w);
+      }
+    }
+    setItemWeightCache(weightMap);
+    console.log(`[Weights] ✓ ${Object.keys(weightMap).length} pesos carregados`);
+  } catch (err) {
+    console.error('[Weights] ❌ Erro ao carregar pesos:', err.message || err);
+  }
+}
+
 export async function carregarItensDoJogo() {
   if (ALL_ITEM_IDS_CACHE && ALL_ITEM_IDS_CACHE.length > 0) return ALL_ITEM_IDS_CACHE;
   try {
@@ -360,6 +388,9 @@ export async function carregarItensDoJogo() {
     }
 
     console.log(`[Items] Carregados ${ids.length} itens do jogo com sucesso`);
+
+    // Carregar pesos reais em paralelo (não bloqueia se falhar)
+    await carregarPesosDoJogo();
 
     if (CATEGORIES_CACHE) {
       const dist = Object.entries(CATEGORIES_CACHE)

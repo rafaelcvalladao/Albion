@@ -1,83 +1,36 @@
-// Mapa de distâncias entre cidades (em relação à "vizinhança")
-export const CITY_DISTANCES = {
-  Bridgewatch: { FortSterling: 200, Lymhurst: 200, Martlock: 200, Thetford: 200, Brecilien: 100 },
-  FortSterling: { Bridgewatch: 200, Lymhurst: 100, Martlock: 200, Thetford: 200, Brecilien: 200 },
-  Lymhurst: { Bridgewatch: 200, FortSterling: 100, Martlock: 200, Thetford: 100, Brecilien: 200 },
-  Martlock: { Bridgewatch: 200, FortSterling: 200, Lymhurst: 200, Thetford: 200, Brecilien: 200 },
-  Thetford: { Bridgewatch: 200, FortSterling: 200, Lymhurst: 100, Martlock: 200, Brecilien: 200 },
-  Brecilien: { Bridgewatch: 100, FortSterling: 200, Lymhurst: 200, Martlock: 200, Thetford: 200 },
+// Mapa de vizinhança entre cidades (true = vizinhas, custo simples)
+// Anel: FS ↔ Lymhurst ↔ BW ↔ Martlock ↔ Thetford ↔ FS
+// Brecilien nunca é vizinha de ninguém.
+export const CITY_NEIGHBORS = {
+  Bridgewatch: new Set(['Lymhurst', 'Martlock']),
+  FortSterling: new Set(['Thetford', 'Lymhurst']),
+  Lymhurst: new Set(['FortSterling', 'Bridgewatch']),
+  Martlock: new Set(['Bridgewatch', 'Thetford']),
+  Thetford: new Set(['Martlock', 'FortSterling']),
+  Brecilien: new Set(),
 };
 
-// Mapa de pesos dos itens (em kg)
-export const ITEM_WEIGHTS = {
-  _MAIN_: 1.5,
-  _2H_: 2.0,
-  _RANGED_: 1.5,
-  _BODY_: 2.5,
-  _HEAD_: 1.0,
-  _SHOES_: 0.5,
-  _CAPE: 0.3,
-  _GLOVES_: 0.5,
-  _OFF_: 1.5,
-  _SHIELD_: 2.0,
-  _MOUNT_: 7.0,
-  _POTION_: 0.1,
-  _MEAL_: 0.2,
-  _DRINK_: 0.1,
-  _SPICE_: 0.05,
-  _HERB_: 0.05,
-  _RUNE: 0.3,
-  _SOUL: 0.3,
-  _RELIC: 0.3,
-  _BAG: 1.0,
-  _AMULET_: 0.2,
-  _RING_: 0.1,
-  _ORE_: 0.05,
-  _WOOD_: 0.05,
-  _LEATHER_: 0.05,
-  _CLOTH_: 0.02,
-  _PLANKS: 0.1,
-};
+// Taxa por kg de peso do item (prata por kg, para cidades vizinhas).
+// Cidades não-vizinhas pagam 2× essa taxa.
+const TELEPORT_RATE_PER_KG = 173.4;
+const TELEPORT_MIN_NEIGHBOR = 92;
+const TELEPORT_MIN_FAR = 184;
 
-// Multiplicador crítico (TCM) por tipo de item
-export const ITEM_TCM = {
-  _MAIN_: 1,
-  _2H_: 1,
-  _RANGED_: 1,
-  _BODY_: 1,
-  _HEAD_: 1,
-  _SHOES_: 1,
-  _CAPE: 1,
-  _GLOVES_: 1,
-  _OFF_: 1,
-  _SHIELD_: 1,
-  _MOUNT_: 1,
-  _POTION_: 1,
-  _MEAL_: 1,
-  _DRINK_: 1,
-  _SPICE_: 1,
-  _HERB_: 1,
-  _RUNE: 1,
-  _SOUL: 1,
-  _RELIC: 1,
-  _AMULET_: 1,
-  _RING_: 1,
-  _BAG: 1,
-  _ORE_: 75,
-  _WOOD_: 75,
-  _LEATHER_: 75,
-  _CLOTH_: 75,
-  _PLANKS: 75,
-  _METAL: 75,
-  _HIDE: 75,
-  _FABRIC: 75,
-  _NAILS: 75,
-  _SCREWS: 75,
-  _BOLTS: 75,
-  _HINGES: 75,
-};
+// ─── Cache de pesos reais (preenchido via setItemWeightCache) ───
+let ITEM_WEIGHT_CACHE = {};
 
-export const GLOBAL_DISCOUNT = 0.15;
+export function setItemWeightCache(map) {
+  ITEM_WEIGHT_CACHE = map;
+}
+
+export function obterPesoReal(itemId) {
+  // Tenta com o ID exato (inclui @enchant)
+  if (ITEM_WEIGHT_CACHE[itemId] != null) return ITEM_WEIGHT_CACHE[itemId];
+  // Tenta sem enchant (base weight)
+  const base = itemId.split('@')[0];
+  if (ITEM_WEIGHT_CACHE[base] != null) return ITEM_WEIGHT_CACHE[base];
+  return 1.0; // fallback conservador
+}
 
 export const QUALITY_NAMES = {
   1: 'Normal',
@@ -256,22 +209,11 @@ export function extrairInfoItem(itemId) {
   return { tier, encanto };
 }
 
-export function obterPesoItem(itemId) {
-  for (const [prefixo, peso] of Object.entries(ITEM_WEIGHTS)) {
-    if (itemId.toUpperCase().includes(prefixo)) return peso;
+export function calcularCustoTeleporte(itemId, cidadeOrigem, cidadeDestino) {
+  const peso = obterPesoReal(itemId);
+  const vizinha = CITY_NEIGHBORS[cidadeOrigem]?.has(cidadeDestino) ?? false;
+  if (vizinha) {
+    return Math.max(TELEPORT_MIN_NEIGHBOR, Math.floor(peso * TELEPORT_RATE_PER_KG));
   }
-  return 1.0;
-}
-
-export function obterTCMItem(itemId) {
-  for (const [prefixo, tcm] of Object.entries(ITEM_TCM)) {
-    if (itemId.toUpperCase().includes(prefixo)) return tcm;
-  }
-  return 1;
-}
-
-export function calcularCustoTeleporteComTCM(peso, tcm, cidadeOrigem, cidadeDestino) {
-  const prataBase = CITY_DISTANCES[cidadeOrigem]?.[cidadeDestino] || 200;
-  const custoBruto = peso * prataBase * tcm;
-  return Math.round(custoBruto * (1 - GLOBAL_DISCOUNT));
+  return Math.max(TELEPORT_MIN_FAR, Math.floor(peso * TELEPORT_RATE_PER_KG * 2));
 }

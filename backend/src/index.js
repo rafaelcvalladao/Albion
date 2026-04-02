@@ -24,7 +24,15 @@ import {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: true }));
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+  : null;
+
+app.use(
+  cors({
+    origin: ALLOWED_ORIGINS || true,
+  }),
+);
 app.use(express.json());
 
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN || 'xabufael';

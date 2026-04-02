@@ -4,9 +4,7 @@ import {
   QUALITY_NAMES,
   nomeItemEmPortugues,
   extrairInfoItem,
-  obterPesoItem,
-  obterTCMItem,
-  calcularCustoTeleporteComTCM,
+  calcularCustoTeleporte,
 } from './marketConstants.js';
 import { gerarListaItens, obterCategoriasDinamicas } from './marketItems.js';
 import { chunk, fetchPricesMarket, fetchHistoryMarket } from './marketPrices.js';
@@ -64,8 +62,6 @@ function extrairOportunidadesDePrecos(respostaPrecos, maxIdade, agora, qualityNu
   for (const [groupKey, groupData] of mapaOrganizado) {
     const itemId = groupKey.split('|')[0];
     const qualItem = groupData.quality;
-    const peso = obterPesoItem(itemId);
-    const tcm = obterTCMItem(itemId);
     const { tier, encanto } = extrairInfoItem(itemId);
     const nomeBase = nomeItemEmPortugues(itemId);
     const estado = QUALITY_NAMES[qualItem] || 'Normal';
@@ -86,7 +82,7 @@ function extrairOportunidadesDePrecos(respostaPrecos, maxIdade, agora, qualityNu
         const buyOrderDestino = infoDest.buyMax || 0;
         if (precoCompra <= 0 || precoVenda <= 0) continue;
 
-        const custoTeleporte = calcularCustoTeleporteComTCM(peso, tcm, cidadeOri, cidadeDest);
+        const custoTeleporte = calcularCustoTeleporte(itemId, cidadeOri, cidadeDest);
         const receita = precoVenda * taxaVendaNota;
         const custos = precoCompra + custoTeleporte;
         const lucroLiquido = receita - custos;
