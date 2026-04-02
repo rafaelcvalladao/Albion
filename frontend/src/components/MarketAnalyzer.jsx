@@ -47,6 +47,7 @@ export default function MarketAnalyzer() {
   const [currentPage, setCurrentPage] = useState(1);
   const [maxPrata, setMaxPrata] = useState('');
   const [sortCol, setSortCol] = useState('lucro');
+  const [filterInstant, setFilterInstant] = useState(false);
   const [sortAsc, setSortAsc] = useState(false);
   const [searchItem, setSearchItem] = useState('');
   const [loadingVolume, setLoadingVolume] = useState(false);
@@ -381,7 +382,18 @@ export default function MarketAnalyzer() {
         };
         const sortIndicator = (col) => (sortCol === col ? (sortAsc ? ' \u2191' : ' \u2193') : '');
 
-        const sortedRows = [...validRows].sort((a, b) => {
+        const handleInstantToggle = () => {
+          setFilterInstant((prev) => !prev);
+          setSortCol('lucro');
+          setSortAsc(false);
+          setCurrentPage(1);
+        };
+
+        const filteredRows = filterInstant
+          ? validRows.filter((op) => op.vendaInstantanea)
+          : validRows;
+
+        const sortedRows = [...filteredRows].sort((a, b) => {
           let va, vb;
           if (sortCol === 'lucro') {
             va = a.lucro;
@@ -429,7 +441,13 @@ export default function MarketAnalyzer() {
                     >
                       Vol/dia{sortIndicator('volume')}
                     </th>
-                    <th title="Buy order no destino > sell order na origem">Instant</th>
+                    <th
+                      style={{ cursor: 'pointer', userSelect: 'none' }}
+                      title="Buy order no destino > sell order na origem"
+                      onClick={handleInstantToggle}
+                    >
+                      Instant {filterInstant ? '✅' : ''}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
