@@ -139,8 +139,6 @@ export default function MarketAnalyzer() {
     setSortCol('lucro');
     setSortAsc(false);
     setFilterInstant(false);
-    setSearchItem('');
-    setMaxPrata('');
 
     // Acumulador de oportunidades (dedup incremental)
     const dedupSet = new Set();
