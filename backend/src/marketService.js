@@ -88,7 +88,8 @@ function extrairOportunidadesDePrecos(respostaPrecos, maxIdade, agora, qualityNu
         const lucroLiquido = receita - custos;
 
         if (lucroLiquido > 0) {
-          const vendaInstantanea = buyOrderDestino > 0 && buyOrderDestino > precoCompra;
+          const vendaInstantanea =
+            buyOrderDestino > 0 && buyOrderDestino > precoCompra + custoTeleporte;
 
           oportunidades.push({
             id: itemId,
