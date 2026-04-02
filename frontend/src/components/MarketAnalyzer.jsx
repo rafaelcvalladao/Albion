@@ -409,7 +409,10 @@ export default function MarketAnalyzer() {
             va = a.compra > 0 ? a.venda / a.compra : 0;
             vb = b.compra > 0 ? b.venda / b.compra : 0;
           }
-          return sortAsc ? va - vb : vb - va;
+          const diff = sortAsc ? va - vb : vb - va;
+          if (diff !== 0) return diff;
+          // Desempate por lucro decrescente
+          return b.lucro - a.lucro;
         });
 
         const totalPages = Math.ceil(sortedRows.length / itemsPerPage);
