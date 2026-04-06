@@ -12,11 +12,15 @@ const MULT_ENCHANT = [1, 1.5, 2.5, 5, 10];
 
 const RESOURCE_CONFIGS = {
   wood: {
-    locations: ['FortSterling'],
+    locations: ['FortSterling', 'Lymhurst'],
     rawSuffix: '_WOOD',
     refinedSuffix: '_PLANKS',
     cityKey: 'fortSterling',
     cityName: 'Fort Sterling',
+    cities: [
+      { key: 'fortSterling', name: 'Fort Sterling' },
+      { key: 'lymhurst', name: 'Lymhurst' },
+    ],
     scheduleLabel: 'MADEIRA',
   },
   fiber: {
@@ -198,44 +202,61 @@ async function processarRecurso(resource, body) {
     const iP = ids[idxN * 3 + 1];
     const iA = ids[idxN * 3 + 2];
 
-    const cityName = cfg.cityName;
-    const prices = [getDc(cityName, iT), getDc(cityName, iA), getDv(cityName, iP)];
-
-    function getV(t, a, v) {
-      if (t && a && v) return v - ((t * qt + a) * (1 - rrr) + txF);
-      return -9e8;
-    }
-
-    const lucro = getV(...prices);
-
     const fBase = FOCO_BASE[tSel] ?? 250;
     const multNivel = MULT_ENCHANT[idxN];
     const fReal = fBase * multNivel * 0.5 ** (spTotal / 10000);
     const famaRefino = famaRefinoPorCraft(tSel, idxN);
+
+    const cities = cfg.cities || [{ key: cfg.cityKey, name: cfg.cityName }];
 
     const row = {
       nivel: `${tSel}${enc}`,
       enc,
       qtTronco: qt,
       famaRefino,
-      volumeFs24h: getVol(volMap, cityName, iP),
-      [cfg.cityKey]: {
-        tronco: prices[0],
-        troncoDate: getDt(cityName, iT),
-        tabuaAnt: prices[1],
-        tabuaAntDate: getDt(cityName, iA),
-        tabua: prices[2],
-        tauaDate: getDvt(cityName, iP),
-        lucro,
-      },
-      otimizado: lucro,
-      melhorLucro: lucro,
+      volumeFs24h: getVol(volMap, cfg.cityName, iP),
     };
 
-    if (lucro > -8e8 && foco) {
+    function calcLucro(t, a, v) {
+      if (t && a && v) return v - ((t * qt + a) * (1 - rrr) + txF);
+      return -9e8;
+    }
+
+    // Per-city data
+    for (const city of cities) {
+      const cPrices = [getDc(city.name, iT), getDc(city.name, iA), getDv(city.name, iP)];
+      row[city.key] = {
+        tronco: cPrices[0],
+        troncoDate: getDt(city.name, iT),
+        tabuaAnt: cPrices[1],
+        tabuaAntDate: getDt(city.name, iA),
+        tabua: cPrices[2],
+        tauaDate: getDvt(city.name, iP),
+        lucro: calcLucro(...cPrices),
+        volume24h: getVol(volMap, city.name, iP),
+      };
+    }
+
+    // Otimizado: min cost across cities for materials, min sell order for product
+    const rawPrices = cities.map((c) => getDc(c.name, iT)).filter((v) => v > 0);
+    const prevPrices = cities.map((c) => getDc(c.name, iA)).filter((v) => v > 0);
+    const prodPrices = cities.map((c) => getDv(c.name, iP)).filter((v) => v > 0);
+
+    const minRaw = rawPrices.length ? Math.min(...rawPrices) : 0;
+    const minPrev = prevPrices.length ? Math.min(...prevPrices) : 0;
+    const minProd = prodPrices.length ? Math.min(...prodPrices) : 0;
+
+    const otimizado = minRaw && minPrev && minProd
+      ? minProd - ((minRaw * qt + minPrev) * (1 - rrr) + txF)
+      : -9e8;
+
+    row.otimizado = otimizado;
+    row.melhorLucro = otimizado;
+
+    if (otimizado > -8e8 && foco) {
       row.foco = {
         unidades: fReal,
-        prataPorFoco: lucro / fReal,
+        prataPorFoco: otimizado / fReal,
       };
     }
     rows.push(row);

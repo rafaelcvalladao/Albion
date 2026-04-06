@@ -51,6 +51,10 @@ const CONFIGS = {
     storageKey: 'albion-wood-config-v1',
     cityKey: 'fortSterling',
     cityDisplay: 'Fort Sterling',
+    cities: [
+      { key: 'fortSterling', display: 'Fort Sterling' },
+      { key: 'lymhurst', display: 'Lymhurst' },
+    ],
     rawAlt: 'tronco',
     refinedAlt: 'tábua',
     rawPlaceholder: 'wood',
@@ -538,7 +542,6 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                 const { tier, level } = parseTierItem(row.nivel);
                 const tierNum = parseInt(tier.slice(1), 10);
                 const antLevel = tierNum === 4 ? '0' : level;
-                const cityData = row[rc.cityKey];
 
                 return (
                   <article key={row.nivel} className="result-card">
@@ -599,39 +602,61 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                           </tr>
                         </thead>
                         <tbody>
-                          <tr>
-                            <td>{rc.cityDisplay}</td>
-                            <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                              <div>{cityData?.tronco?.toLocaleString('pt-PT') ?? '—'}</div>
-                              <div style={{ fontSize: '0.85em', color: '#999' }}>
-                                {formatTimeAgo(cityData?.troncoDate)}
-                              </div>
-                            </td>
-                            <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                              <div>{cityData?.tabuaAnt?.toLocaleString('pt-PT') ?? '—'}</div>
-                              <div style={{ fontSize: '0.85em', color: '#999' }}>
-                                {formatTimeAgo(cityData?.tabuaAntDate)}
-                              </div>
-                            </td>
-                            <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                              <div>{cityData?.tabua?.toLocaleString('pt-PT') ?? '—'}</div>
-                              <div style={{ fontSize: '0.85em', color: '#999' }}>
-                                {formatTimeAgo(cityData?.tauaDate)}
-                              </div>
-                            </td>
-                            <td className={profitClass(cityData?.lucro)}>
-                              {Number.isFinite(cityData?.lucro)
-                                ? cityData.lucro.toLocaleString('pt-PT', {
-                                    maximumFractionDigits: 0,
-                                  })
-                                : '—'}
-                            </td>
-                            <td className="tabular-nums result-table__fama">
-                              {row.famaRefino != null
-                                ? row.famaRefino.toLocaleString('pt-PT')
-                                : '—'}
-                            </td>
-                          </tr>
+                          {(rc.cities || [{ key: rc.cityKey, display: rc.cityDisplay }]).map(
+                            (city) => {
+                              const cd = row[city.key];
+                              return (
+                                <tr key={city.key}>
+                                  <td>{city.display}</td>
+                                  <td
+                                    className="tabular-nums"
+                                    style={{ textAlign: 'center' }}
+                                  >
+                                    <div>
+                                      {cd?.tronco?.toLocaleString('pt-PT') ?? '—'}
+                                    </div>
+                                    <div style={{ fontSize: '0.85em', color: '#999' }}>
+                                      {formatTimeAgo(cd?.troncoDate)}
+                                    </div>
+                                  </td>
+                                  <td
+                                    className="tabular-nums"
+                                    style={{ textAlign: 'center' }}
+                                  >
+                                    <div>
+                                      {cd?.tabuaAnt?.toLocaleString('pt-PT') ?? '—'}
+                                    </div>
+                                    <div style={{ fontSize: '0.85em', color: '#999' }}>
+                                      {formatTimeAgo(cd?.tabuaAntDate)}
+                                    </div>
+                                  </td>
+                                  <td
+                                    className="tabular-nums"
+                                    style={{ textAlign: 'center' }}
+                                  >
+                                    <div>
+                                      {cd?.tabua?.toLocaleString('pt-PT') ?? '—'}
+                                    </div>
+                                    <div style={{ fontSize: '0.85em', color: '#999' }}>
+                                      {formatTimeAgo(cd?.tauaDate)}
+                                    </div>
+                                  </td>
+                                  <td className={profitClass(cd?.lucro)}>
+                                    {Number.isFinite(cd?.lucro)
+                                      ? cd.lucro.toLocaleString('pt-PT', {
+                                          maximumFractionDigits: 0,
+                                        })
+                                      : '—'}
+                                  </td>
+                                  <td className="tabular-nums result-table__fama">
+                                    {row.famaRefino != null
+                                      ? row.famaRefino.toLocaleString('pt-PT')
+                                      : '—'}
+                                  </td>
+                                </tr>
+                              );
+                            },
+                          )}
                         </tbody>
                       </table>
                     </div>
