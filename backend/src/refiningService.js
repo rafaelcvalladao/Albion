@@ -109,8 +109,13 @@ function volumeMapFromHistory(hist) {
   for (const entry of hist) {
     const cid = entry.location;
     const it = entry.item_id;
-    const totalVol = entry.data ? entry.data.reduce((s, d) => s + (d.item_count || 0), 0) : 0;
-    volMap.set(`${cid}|${it}`, totalVol);
+    if (!entry.data || entry.data.length === 0) {
+      volMap.set(`${cid}|${it}`, 0);
+      continue;
+    }
+    const totalVol = entry.data.reduce((s, d) => s + (d.item_count || 0), 0);
+    const days = entry.data.length || 1;
+    volMap.set(`${cid}|${it}`, Math.round(totalVol / days));
   }
   return volMap;
 }
@@ -148,7 +153,7 @@ async function processarRecurso(resource, body) {
   const { ids, refinedIds } = buildIdsForTier(tSel, cfg.rawSuffix, cfg.refinedSuffix);
 
   const res = await fetchPrices(ids, cfg.locations);
-  const hist = await fetchHistory(refinedIds, cfg.locations, 24);
+  const hist = await fetchHistory(refinedIds, cfg.locations, 6);
   const volMap = volumeMapFromHistory(hist);
 
   let lastUpdated = null;
@@ -214,7 +219,6 @@ async function processarRecurso(resource, body) {
       enc,
       qtTronco: qt,
       famaRefino,
-      volumeFs24h: getVol(volMap, cfg.cityName, iP),
     };
 
     function calcLucro(t, a, v) {

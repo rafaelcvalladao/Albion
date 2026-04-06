@@ -547,12 +547,6 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                   <article key={row.nivel} className="result-card">
                     <h3 className="result-card__title">
                       <span className="result-card__tier">{row.nivel}</span>
-                      <span className="result-card__vol">
-                        Vol. FS 24h:{' '}
-                        <strong className="result-card__vol-num">
-                          {row.volumeFs24h?.toLocaleString('pt-PT')} un
-                        </strong>
-                      </span>
                     </h3>
                     <div className="table-wrap">
                       <table className="result-table">
@@ -598,6 +592,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                               </div>
                             </th>
                             <th>Lucro</th>
+                            <th>Vol. 24h</th>
                             <th>Fama</th>
                           </tr>
                         </thead>
@@ -646,6 +641,11 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                                       ? cd.lucro.toLocaleString('pt-PT', {
                                           maximumFractionDigits: 0,
                                         })
+                                      : '—'}
+                                  </td>
+                                  <td className="tabular-nums" style={{ textAlign: 'center' }}>
+                                    {cd?.volume24h != null
+                                      ? cd.volume24h.toLocaleString('pt-PT')
                                       : '—'}
                                   </td>
                                   <td className="tabular-nums result-table__fama">
