@@ -216,7 +216,7 @@ export async function buscarOportunidades({
   const dedupSet = new Set();
   const oportunidadesUnicas = [];
   for (const op of oportunidadesBrutas) {
-    const chave = `${op.id}|${op.estado}|${op.origem}|${op.destino}`;
+    const chave = `${op.id}|${op.origem}|${op.destino}`;
     if (!dedupSet.has(chave)) {
       dedupSet.add(chave);
       oportunidadesUnicas.push(op);

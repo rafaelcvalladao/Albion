@@ -157,7 +157,7 @@ export default function MarketAnalyzer() {
       {
         onChunk: (oportunidades) => {
           for (const op of oportunidades) {
-            const chave = `${op.id}|${op.estado}|${op.origem}|${op.destino}`;
+            const chave = `${op.id}|${op.origem}|${op.destino}`;
             if (!dedupSet.has(chave)) {
               dedupSet.add(chave);
               acumulador.push(op);
@@ -529,7 +529,7 @@ export default function MarketAnalyzer() {
                     const margem =
                       op.compra > 0 ? ((op.venda / op.compra - 1) * 100).toFixed(1) : '0.0';
                     return (
-                      <tr key={`${op.id}-${op.origem}-${op.destino}`}>
+                      <tr key={`${op.id}-${op.estado}-${op.origem}-${op.destino}`}>
                         <td style={{ textAlign: 'right' }}>{startIdx + idx + 1}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
