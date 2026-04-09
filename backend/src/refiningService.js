@@ -161,6 +161,24 @@ async function processarRecurso(resource, body) {
   const hist = await fetchHistory(refinedIds, cfg.locations, 6);
   const volMap = volumeMapFromHistory(hist);
 
+  // Preços e volume do refinado nas 5 cidades reais (para melhor venda)
+  const ROYAL_CITIES = ['Fort Sterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
+  const ROYAL_LOCS = ['FortSterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
+  const [royalPrices, royalHist] = await Promise.all([
+    fetchPrices(refinedIds, ROYAL_LOCS),
+    fetchHistory(refinedIds, ROYAL_LOCS, 6),
+  ]);
+  const royalVolMap = volumeMapFromHistory(royalHist);
+  const royalSell = new Map();
+  const royalSellDate = new Map();
+  for (const p of royalPrices) {
+    if (p.sell_price_min > 0) {
+      const key = `${p.city}|${p.item_id}`;
+      royalSell.set(key, p.sell_price_min);
+      royalSellDate.set(key, convertToUTC3(p.sell_price_min_date));
+    }
+  }
+
   let lastUpdated = null;
   for (const p of res) {
     const d = p.sell_price_min_date ? new Date(p.sell_price_min_date) : null;
@@ -262,18 +280,18 @@ async function processarRecurso(resource, body) {
     row.otimizado = otimizado;
     row.melhorLucro = otimizado;
 
-    // Cidade com maior sell order do refinado + seu volume
+    // Cidade com maior sell order do refinado nas 5 cidades reais
     let bestSellCity = null;
     let bestSellPrice = 0;
     let bestSellVol = 0;
     let bestSellDate = null;
-    for (const c of cities) {
-      const p = getDv(c.name, iP);
+    for (const rc of ROYAL_CITIES) {
+      const p = royalSell.get(`${rc}|${iP}`) ?? 0;
       if (p > bestSellPrice) {
         bestSellPrice = p;
-        bestSellCity = c.name;
-        bestSellVol = getVol(volMap, c.name, iP);
-        bestSellDate = getDvt(c.name, iP);
+        bestSellCity = rc;
+        bestSellVol = royalVolMap.get(`${rc}|${iP}`) ?? 0;
+        bestSellDate = royalSellDate.get(`${rc}|${iP}`) ?? null;
       }
     }
     row.melhorVenda = bestSellCity
