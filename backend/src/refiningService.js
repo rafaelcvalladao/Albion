@@ -49,7 +49,7 @@ const RESOURCE_CONFIGS = {
   },
   stone: {
     locations: ['Bridgewatch'],
-    rawSuffix: '_STONE',
+    rawSuffix: '_ROCK',
     refinedSuffix: '_STONEBLOCK',
     cityKey: 'bridgewatch',
     cityName: 'Bridgewatch',
