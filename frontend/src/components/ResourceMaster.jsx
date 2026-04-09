@@ -163,6 +163,7 @@ function StrategyTable({
   buildRefinedId,
   refinedAlt,
   refinedPlaceholder,
+  lucroMode,
 }) {
   const [sortColumn, setSortColumn] = useState(kind === 'foco' ? 'lucro' : null);
   const [sortAsc, setSortAsc] = useState(kind === 'foco' ? false : true);
@@ -178,6 +179,19 @@ function StrategyTable({
 
   const colHeaderLabel = kind === 'foco' ? 'Lucro' : 'Fama por Prata';
 
+  function getLucro(r) {
+    if (kind !== 'foco') return r.lucro;
+    if (lucroMode === 'opt') return r.lucroOpt ?? r.lucro;
+    if (lucroMode === 'ot') return r.lucroOT ?? r.lucro;
+    return r.lucro;
+  }
+  function getVol(r) {
+    if (kind !== 'foco') return r.volume;
+    if (lucroMode === 'opt') return r.volumeOpt ?? r.volume;
+    if (lucroMode === 'ot') return r.volumeOT ?? r.volume;
+    return r.volume;
+  }
+
   const handleHeaderClick = (column) => {
     if (sortColumn === column) setSortAsc(!sortAsc);
     else {
@@ -189,11 +203,11 @@ function StrategyTable({
   const sortedRows = [...rows].sort((a, b) => {
     let valA, valB;
     if (sortColumn === 'lucro' || sortColumn === 'fama') {
-      valA = kind === 'foco' ? a.lucro : a.famaPerPrata;
-      valB = kind === 'foco' ? b.lucro : b.famaPerPrata;
+      valA = kind === 'foco' ? getLucro(a) : a.famaPerPrata;
+      valB = kind === 'foco' ? getLucro(b) : b.famaPerPrata;
     } else if (sortColumn === 'volume') {
-      valA = a.volume ?? 0;
-      valB = b.volume ?? 0;
+      valA = getVol(a) ?? 0;
+      valB = getVol(b) ?? 0;
     } else {
       valA = a.item;
       valB = b.item;
@@ -240,15 +254,15 @@ function StrategyTable({
                   </div>
                 </td>
                 <td
-                  className={kind === 'fama' ? famaClass(r.lucro) : profitClass(r.lucro)}
+                  className={kind === 'fama' ? famaClass(getLucro(r)) : profitClass(getLucro(r))}
                   style={{ fontSize: '1.1rem', fontWeight: 700, textAlign: 'center' }}
                 >
                   {kind === 'foco'
-                    ? Math.round(r.lucro).toLocaleString('pt-PT')
+                    ? Math.round(getLucro(r)).toLocaleString('pt-PT')
                     : (r.famaPerPrata?.toFixed(4).toLocaleString('pt-PT') ?? '—')}
                 </td>
                 <td className="tabular-nums strategy-table-vol">
-                  {r.volume?.toLocaleString('pt-PT') ?? '—'}
+                  {getVol(r)?.toLocaleString('pt-PT') ?? '—'}
                 </td>
               </tr>
             ))}
@@ -359,6 +373,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
   const [showFarmFama, setShowFarmFama] = useState(false);
   const [strategy, setStrategy] = useState(null);
   const [strategyLoading, setStrategyLoading] = useState(false);
+  const [lucroMode, setLucroMode] = useState('local');
 
   useEffect(() => {
     localStorage.setItem(rc.storageKey, JSON.stringify(cfg));
@@ -732,6 +747,24 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
           <p className="strategy-hint">
             Top 8 com volume (todas as tiers). Atualiza ao mudar buy order / foco ou com Refresh.
           </p>
+          <div style={{ margin: '0.5rem 0' }}>
+            <select
+              value={lucroMode}
+              onChange={(e) => setLucroMode(e.target.value)}
+              className="strategy-select"
+            >
+              <option value="local">
+                Lucro {rc.cityDisplay.split(' ').map((w) => w[0]).join('')}
+              </option>
+              {rc.cities && rc.cities.length > 1 && (
+                <option value="opt">
+                  Lucro{' '}
+                  {rc.cities.map((c) => c.display.split(' ').map((w) => w[0]).join('')).join('-')}
+                </option>
+              )}
+              <option value="ot">Lucro OT</option>
+            </select>
+          </div>
           {strategyLoading && <p className="mono strategy-hint">A carregar…</p>}
           {strategy?.error && <p className="error">{strategy.error}</p>}
           {strategy && !strategy.error && (
@@ -743,6 +776,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
               buildRefinedId={rc.buildRefinedId}
               refinedAlt={rc.refinedAlt}
               refinedPlaceholder={rc.refinedPlaceholder}
+              lucroMode={lucroMode}
             />
           )}
         </aside>

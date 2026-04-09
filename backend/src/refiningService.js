@@ -380,6 +380,15 @@ async function estrategiaCompletaRecurso(resource, body) {
   const hist = await fetchHistory([...new Set(refinedIds)], cfg.locations, 24);
   const volData = volumeMapFromHistory(hist);
 
+  // Preços e volume das 5 cidades reais (para Lucro OT)
+  const ROYAL_LOCS = ['FortSterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
+  const ROYAL_NAMES = ['Fort Sterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
+  const [royalRes, royalHist] = await Promise.all([
+    fetchPrices([...new Set(allIds)], ROYAL_LOCS),
+    fetchHistory([...new Set(refinedIds)], ROYAL_LOCS, 24),
+  ]);
+  const royalVolData = volumeMapFromHistory(royalHist);
+
   const dc = new Map();
   const dv = new Map();
   for (const p of res) {
@@ -389,9 +398,22 @@ async function estrategiaCompletaRecurso(resource, body) {
     if (p.sell_price_min > 0) dv.set(key, p.sell_price_min);
   }
 
+  const royalDc = new Map();
+  const royalDv = new Map();
+  for (const p of royalRes) {
+    const key = `${p.city}|${p.item_id}`;
+    const val = buyOrder && p.buy_price_max > 0 ? p.buy_price_max : p.sell_price_min;
+    if (val > 0) royalDc.set(key, val);
+    if (p.sell_price_min > 0) royalDv.set(key, p.sell_price_min);
+  }
+
   const getDc = (c, it) => dc.get(`${c}|${it}`) ?? 0;
   const getDv = (c, it) => dv.get(`${c}|${it}`) ?? 0;
+  const getRoyalDc = (c, it) => royalDc.get(`${c}|${it}`) ?? 0;
+  const getRoyalDv = (c, it) => royalDv.get(`${c}|${it}`) ?? 0;
   const cityName = cfg.cityName;
+  const cfgCities = cfg.cities || [{ name: cfg.cityName }];
+  const cfgCityNames = cfgCities.map((c) => c.name);
 
   const fsFoco = [];
   const fsFama = [];
@@ -408,28 +430,67 @@ async function estrategiaCompletaRecurso(resource, body) {
       const iP = `${t}${cfg.refinedSuffix}${n}`;
       const iA = tAnt === 'T3' ? `${tAnt}${cfg.refinedSuffix}` : `${tAnt}${cfg.refinedSuffix}${n}`;
 
+      // Lucro local (cidade principal)
       const fsT = getDc(cityName, iT);
       const fsA = getDc(cityName, iA);
       const fsP = getDv(cityName, iP);
       const vFs = getVol(volData, cityName, iP);
 
+      // Lucro otimizado cfg cities (FS-LH para madeira)
+      function bestOpt(cities, dcFn, dvFn) {
+        const raws = cities.map((c) => dcFn(c, iT)).filter((v) => v > 0);
+        const prevs = cities.map((c) => dcFn(c, iA)).filter((v) => v > 0);
+        const prods = cities.map((c) => dvFn(c, iP)).filter((v) => v > 0);
+        const minR = raws.length ? Math.min(...raws) : 0;
+        const minP = prevs.length ? Math.min(...prevs) : 0;
+        const maxS = prods.length ? Math.max(...prods) : 0;
+        // Encontrar cidade com max sell para volume
+        let bestCity = null;
+        for (const c of cities) {
+          if (dvFn(c, iP) === maxS) { bestCity = c; break; }
+        }
+        return { minR, minP, maxS, bestCity };
+      }
+
+      const optCfg = bestOpt(cfgCityNames, getDc, getDv);
+      const optRoyal = bestOpt(ROYAL_NAMES, getRoyalDc, getRoyalDv);
+
       const rrrFoco = calcularRrrManual(foco, true);
       const rrrFama = calcularRrrManual(false, true);
       const fama = famaRefinoPorCraft(t, idxN);
 
-      if (fsT && fsA && fsP) {
+      const lucroLocal = fsT && fsA && fsP
+        ? fsP - ((fsT * qt + fsA) * (1 - rrrFoco) + txF)
+        : null;
+      const lucroOpt = optCfg.minR && optCfg.minP && optCfg.maxS
+        ? optCfg.maxS - ((optCfg.minR * qt + optCfg.minP) * (1 - rrrFoco) + txF)
+        : null;
+      const lucroOT = optRoyal.minR && optRoyal.minP && optRoyal.maxS
+        ? optRoyal.maxS - ((optRoyal.minR * qt + optRoyal.minP) * (1 - rrrFoco) + txF)
+        : null;
+
+      const volOpt = optCfg.bestCity ? (volData.get(`${optCfg.bestCity}|${iP}`) ?? 0) : 0;
+      const volOT = optRoyal.bestCity ? (royalVolData.get(`${optRoyal.bestCity}|${iP}`) ?? 0) : 0;
+
+      if (lucroLocal != null || lucroOpt != null || lucroOT != null) {
         fsFoco.push({
           item: `${t}${enc}`,
-          lucro: fsP - ((fsT * qt + fsA) * (1 - rrrFoco) + txF),
+          lucro: lucroLocal ?? -9e8,
           volume: vFs,
+          lucroOpt: lucroOpt ?? -9e8,
+          volumeOpt: volOpt,
+          lucroOT: lucroOT ?? -9e8,
+          volumeOT: volOT,
         });
-        const lucroBrutoFamaLocal = fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF);
+        const lucroFamaLocal = fsT && fsA && fsP
+          ? fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF)
+          : -9e8;
         fsFama.push({
           item: `${t}${enc}`,
           fama,
           famaPerPrata:
-            Math.abs(lucroBrutoFamaLocal) > 0 ? fama / Math.abs(lucroBrutoFamaLocal) : 0,
-          lucro: lucroBrutoFamaLocal,
+            Math.abs(lucroFamaLocal) > 0 ? fama / Math.abs(lucroFamaLocal) : 0,
+          lucro: lucroFamaLocal,
           volume: vFs,
         });
       }
