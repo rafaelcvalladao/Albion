@@ -56,6 +56,7 @@ export default function MarketAnalyzer() {
   const [loadingVolume, setLoadingVolume] = useState(false);
   const itemsPerPage = 20;
   const streamRef = useRef(null);
+  const scanIdRef = useRef(0);
 
   useEffect(() => {
     console.log('[MarketAnalyzer] 🚀 Iniciando carregamento de categorias...');
@@ -101,7 +102,7 @@ export default function MarketAnalyzer() {
   }, []);
 
   // Lazy volume loading: buscar volume depois que o scan termina
-  const carregarVolume = useCallback(async (currentRows) => {
+  const carregarVolume = useCallback(async (currentRows, expectedScanId) => {
     const uniqueIds = [...new Set(currentRows.map((r) => r.id))];
     if (uniqueIds.length === 0) return;
 
@@ -110,32 +111,46 @@ export default function MarketAnalyzer() {
       // Buscar em batches de 200 para não sobrecarregar
       const batchSize = 200;
       for (let i = 0; i < uniqueIds.length; i += batchSize) {
-        const batch = uniqueIds.slice(i, i + batchSize);
-        const data = await marketVolume(batch);
-        const volumes = data.volumes || {};
+        // Abortar se um novo scan foi iniciado
+        if (scanIdRef.current !== expectedScanId) break;
 
-        setRows((prev) =>
-          prev.map((op) => {
-            const vol = volumes[`${op.id}|${op.destino}`] || 0;
-            return vol > 0 ? { ...op, volumeDiario: vol } : op;
-          }),
-        );
+        const batch = uniqueIds.slice(i, i + batchSize);
+        try {
+          const data = await marketVolume(batch);
+          const volumes = data.volumes || {};
+
+          if (scanIdRef.current !== expectedScanId) break;
+
+          setRows((prev) =>
+            prev.map((op) => {
+              const vol = volumes[`${op.id}|${op.destino}`] || 0;
+              return vol > 0 ? { ...op, volumeDiario: vol } : op;
+            }),
+          );
+        } catch (batchErr) {
+          console.warn(`[Volume] Erro no batch ${i / batchSize + 1}:`, batchErr);
+          // Continua com o próximo batch
+        }
       }
-    } catch (e) {
-      console.warn('[Volume] Erro ao buscar volume:', e);
     } finally {
-      setLoadingVolume(false);
+      if (scanIdRef.current === expectedScanId) {
+        setLoadingVolume(false);
+      }
     }
   }, []);
 
   const buscar = () => {
-    // Abortar scan anterior se existir
+    // Invalidar scan anterior
     streamRef.current?.abort();
+    streamRef.current = null;
+    const currentScanId = ++scanIdRef.current;
 
+    // Limpar tabela imediatamente
+    setRows([]);
     setScanning(true);
     setLoading(true);
     setErr(null);
-    setRows([]);
+    setLoadingVolume(false);
     setItemsProcessados(0);
     setTotalItens(0);
     setCurrentPage(1);
@@ -156,6 +171,9 @@ export default function MarketAnalyzer() {
       },
       {
         onChunk: (oportunidades) => {
+          // Ignorar chunks de scans anteriores
+          if (scanIdRef.current !== currentScanId) return;
+
           for (const op of oportunidades) {
             const chave = `${op.id}|${op.origem}|${op.destino}`;
             if (!dedupSet.has(chave)) {
@@ -172,13 +190,15 @@ export default function MarketAnalyzer() {
           setTotalItens(total);
         },
         onDone: () => {
+          if (scanIdRef.current !== currentScanId) return;
           setScanning(false);
           setLoading(false);
           console.log(`[Market] Stream concluído: ${acumulador.length} oportunidades`);
           // Lazy: buscar volume em background
-          carregarVolume(acumulador);
+          carregarVolume(acumulador, currentScanId);
         },
         onError: (msg) => {
+          if (scanIdRef.current !== currentScanId) return;
           setErr(msg);
           setScanning(false);
           setLoading(false);
@@ -190,10 +210,12 @@ export default function MarketAnalyzer() {
   };
 
   const cancelar = () => {
+    scanIdRef.current++;
     streamRef.current?.abort();
     streamRef.current = null;
     setScanning(false);
     setLoading(false);
+    setLoadingVolume(false);
   };
 
   return (
@@ -459,8 +481,8 @@ export default function MarketAnalyzer() {
           ? validRows.filter((op) => op.vendaInstantanea)
           : validRows;
 
-        const getLucro = (op) => comTeleporte ? op.lucro : op.lucro + (op.custoTeleporte || 0);
-        const getTeleporte = (op) => comTeleporte ? (op.custoTeleporte || 0) : 0;
+        const getLucro = (op) => comTeleporte ? (Number(op.lucro) || 0) : (Number(op.lucro) || 0) + (Number(op.custoTeleporte) || 0);
+        const getTeleporte = (op) => comTeleporte ? (Number(op.custoTeleporte) || 0) : 0;
 
         const sortedRows = [...filteredRows].sort((a, b) => {
           let va, vb;
