@@ -262,6 +262,24 @@ async function processarRecurso(resource, body) {
     row.otimizado = otimizado;
     row.melhorLucro = otimizado;
 
+    // Cidade com maior sell order do refinado + seu volume
+    let bestSellCity = null;
+    let bestSellPrice = 0;
+    let bestSellVol = 0;
+    let bestSellDate = null;
+    for (const c of cities) {
+      const p = getDv(c.name, iP);
+      if (p > bestSellPrice) {
+        bestSellPrice = p;
+        bestSellCity = c.name;
+        bestSellVol = getVol(volMap, c.name, iP);
+        bestSellDate = getDvt(c.name, iP);
+      }
+    }
+    row.melhorVenda = bestSellCity
+      ? { cidade: bestSellCity, preco: bestSellPrice, volume: bestSellVol, data: bestSellDate }
+      : null;
+
     if (otimizado > -8e8 && foco) {
       row.foco = {
         unidades: fReal,

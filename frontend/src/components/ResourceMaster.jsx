@@ -668,6 +668,19 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                           : '—'}
                       </span>
                     </p>
+                    {row.melhorVenda && (
+                      <p className="otimizado-line">
+                        <span className="otimizado-line__label">Melhor venda</span>
+                        <span>
+                          {row.melhorVenda.cidade} ·{' '}
+                          {row.melhorVenda.preco.toLocaleString('pt-PT')} prata
+                          <span className="result-table__date">
+                            {' '}{formatTimeAgo(row.melhorVenda.data)}
+                          </span>
+                          {' '}· Vol. {row.melhorVenda.volume.toLocaleString('pt-PT')}
+                        </span>
+                      </p>
+                    )}
                     {row.foco && (
                       <p className="foco-line">
                         Foco: <span className="tabular-nums">{row.foco.unidades?.toFixed(1)}</span>{' '}
