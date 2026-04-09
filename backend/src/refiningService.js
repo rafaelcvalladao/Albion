@@ -113,8 +113,13 @@ function volumeMapFromHistory(hist) {
       volMap.set(`${cid}|${it}`, 0);
       continue;
     }
-    const totalVol = entry.data.reduce((s, d) => s + (d.item_count || 0), 0);
-    const days = entry.data.length || 1;
+    // Ordenar por timestamp e remover o data-point mais recente (dia parcial/incompleto)
+    const sorted = [...entry.data].sort(
+      (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+    );
+    const complete = sorted.length > 1 ? sorted.slice(0, -1) : sorted;
+    const totalVol = complete.reduce((s, d) => s + (d.item_count || 0), 0);
+    const days = complete.length || 1;
     volMap.set(`${cid}|${it}`, Math.round(totalVol / days));
   }
   return volMap;
