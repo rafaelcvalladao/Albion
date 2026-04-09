@@ -92,20 +92,20 @@ export async function fetchHistoryMarket(itemIds, locations) {
   }
 
   const volumeMap = new Map();
-  const agora = Date.now();
-  const seteDiasMs = 7 * 24 * 3600000;
 
   for (const entry of merged) {
     if (!entry.data || !Array.isArray(entry.data)) continue;
     const key = `${entry.item_id}|${entry.location}`;
-    let total = 0;
-    for (const d of entry.data) {
-      const ts = new Date(d.timestamp).getTime();
-      if (d.item_count > 0 && agora - ts <= seteDiasMs) {
-        total += d.item_count;
-      }
-    }
-    const avg = Math.round(total / 7);
+
+    // Ordenar por timestamp e remover o data-point mais recente (dia parcial/incompleto)
+    const sorted = [...entry.data].sort(
+      (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+    );
+    const complete = sorted.length > 1 ? sorted.slice(0, -1) : sorted;
+    const total = complete.reduce((s, d) => s + (d.item_count || 0), 0);
+    const days = complete.length || 1;
+    const avg = Math.round(total / days);
+
     const prev = volumeMap.get(key) || 0;
     if (avg > prev) volumeMap.set(key, avg);
   }
