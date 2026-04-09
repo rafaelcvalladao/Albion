@@ -52,6 +52,7 @@ export default function MarketAnalyzer() {
   const [searchItem, setSearchItem] = useState('');
   const [cidadeOrigem, setCidadeOrigem] = useState('Todos');
   const [cidadeDestino, setCidadeDestino] = useState('Todos');
+  const [comTeleporte, setComTeleporte] = useState(true);
   const [loadingVolume, setLoadingVolume] = useState(false);
   const itemsPerPage = 20;
   const streamRef = useRef(null);
@@ -311,6 +312,18 @@ export default function MarketAnalyzer() {
           </select>
         </div>
 
+        <div className="filter-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.9rem', userSelect: 'none' }}>
+            <input
+              type="checkbox"
+              checked={comTeleporte}
+              onChange={(e) => setComTeleporte(e.target.checked)}
+              style={{ accentColor: '#4caf50' }}
+            />
+            Teleporte
+          </label>
+        </div>
+
         <button
           type="button"
           className="btn btn-primary"
@@ -446,14 +459,17 @@ export default function MarketAnalyzer() {
           ? validRows.filter((op) => op.vendaInstantanea)
           : validRows;
 
+        const getLucro = (op) => comTeleporte ? op.lucro : op.lucro + (op.custoTeleporte || 0);
+        const getTeleporte = (op) => comTeleporte ? (op.custoTeleporte || 0) : 0;
+
         const sortedRows = [...filteredRows].sort((a, b) => {
           let va, vb;
           if (sortCol === 'instant') {
-            va = (Number(a.buyOrderDestino) || 0) - ((Number(a.compra) || 0) + (Number(a.custoTeleporte) || 0));
-            vb = (Number(b.buyOrderDestino) || 0) - ((Number(b.compra) || 0) + (Number(b.custoTeleporte) || 0));
+            va = (Number(a.buyOrderDestino) || 0) - ((Number(a.compra) || 0) + getTeleporte(a));
+            vb = (Number(b.buyOrderDestino) || 0) - ((Number(b.compra) || 0) + getTeleporte(b));
           } else if (sortCol === 'lucro') {
-            va = Number(a.lucro) || 0;
-            vb = Number(b.lucro) || 0;
+            va = getLucro(a);
+            vb = getLucro(b);
           } else if (sortCol === 'volume') {
             va = Number(a.volumeDiario) || 0;
             vb = Number(b.volumeDiario) || 0;
@@ -463,7 +479,7 @@ export default function MarketAnalyzer() {
           }
           const diff = sortAsc ? va - vb : vb - va;
           if (diff !== 0) return diff;
-          return (Number(b.lucro) || 0) - (Number(a.lucro) || 0);
+          return getLucro(b) - getLucro(a);
         });
 
         const totalPages = Math.ceil(sortedRows.length / itemsPerPage);
@@ -573,8 +589,8 @@ export default function MarketAnalyzer() {
                             {op.destino} · {timeAgo(op.atualizacaoBuyOrderDest)}
                           </div>
                         </td>
-                        <td className={profitClass(op.lucro)} style={{ fontWeight: 700 }}>
-                          {op.lucro?.toLocaleString('pt-PT', { maximumFractionDigits: 0 })}
+                        <td className={profitClass(getLucro(op))} style={{ fontWeight: 700 }}>
+                          {getLucro(op)?.toLocaleString('pt-PT', { maximumFractionDigits: 0 })}
                         </td>
                         <td style={{ textAlign: 'right' }}>{margem}%</td>
                         <td
@@ -597,7 +613,7 @@ export default function MarketAnalyzer() {
                             ? filterInstant
                               ? (() => {
                                   const lucroInstant =
-                                    op.buyOrderDestino - (op.compra + op.custoTeleporte);
+                                    op.buyOrderDestino - (op.compra + getTeleporte(op));
                                   return (
                                     <span className={profitClass(lucroInstant)} style={{ fontWeight: 700 }}>
                                       {lucroInstant.toLocaleString('pt-PT', { maximumFractionDigits: 0 })}
