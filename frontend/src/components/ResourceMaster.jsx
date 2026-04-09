@@ -657,6 +657,34 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                               );
                             },
                           )}
+                          {row.melhorPreco && (
+                            <tr style={{ borderTop: '1px solid rgba(0,255,255,0.15)' }}>
+                              <td style={{ fontSize: '0.85em', opacity: 0.8 }}>Melhor preço</td>
+                              {[row.melhorPreco.tronco, row.melhorPreco.tabuaAnt, row.melhorPreco.produto].map(
+                                (mp, i) => (
+                                  <td
+                                    key={i}
+                                    className="tabular-nums"
+                                    style={{ textAlign: 'center', fontSize: '0.85em' }}
+                                  >
+                                    {mp ? (
+                                      <>
+                                        <div>{mp.preco.toLocaleString('pt-PT')}</div>
+                                        <div style={{ fontSize: '0.85em', color: '#999' }}>
+                                          {mp.cidade} · {formatTimeAgo(mp.data)}
+                                        </div>
+                                      </>
+                                    ) : (
+                                      '—'
+                                    )}
+                                  </td>
+                                ),
+                              )}
+                              <td />
+                              <td />
+                              <td />
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -668,19 +696,6 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                           : '—'}
                       </span>
                     </p>
-                    {row.melhorVenda && (
-                      <p className="otimizado-line">
-                        <span className="otimizado-line__label">Melhor venda</span>
-                        <span>
-                          {row.melhorVenda.cidade} ·{' '}
-                          {row.melhorVenda.preco.toLocaleString('pt-PT')} prata
-                          <span className="result-table__date">
-                            {' '}{formatTimeAgo(row.melhorVenda.data)}
-                          </span>
-                          {' '}· Vol. {row.melhorVenda.volume.toLocaleString('pt-PT')}
-                        </span>
-                      </p>
-                    )}
                     {row.foco && (
                       <p className="foco-line">
                         Foco: <span className="tabular-nums">{row.foco.unidades?.toFixed(1)}</span>{' '}
