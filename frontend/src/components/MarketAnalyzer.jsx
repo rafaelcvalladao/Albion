@@ -50,6 +50,8 @@ export default function MarketAnalyzer() {
   const [filterInstant, setFilterInstant] = useState(false);
   const [sortAsc, setSortAsc] = useState(false);
   const [searchItem, setSearchItem] = useState('');
+  const [cidadeOrigem, setCidadeOrigem] = useState('Todos');
+  const [cidadeDestino, setCidadeDestino] = useState('Todos');
   const [loadingVolume, setLoadingVolume] = useState(false);
   const itemsPerPage = 20;
   const streamRef = useRef(null);
@@ -283,6 +285,32 @@ export default function MarketAnalyzer() {
           />
         </div>
 
+        <div className="filter-wrapper">
+          <label className="category-label-text">Cidade Origem</label>
+          <select value={cidadeOrigem} onChange={(e) => { setCidadeOrigem(e.target.value); setCurrentPage(1); }} className="filter-select">
+            <option value="Todos">Todas</option>
+            <option value="Bridgewatch">Bridgewatch</option>
+            <option value="Fort Sterling">Fort Sterling</option>
+            <option value="Lymhurst">Lymhurst</option>
+            <option value="Martlock">Martlock</option>
+            <option value="Thetford">Thetford</option>
+            <option value="Brecilien">Brecilien</option>
+          </select>
+        </div>
+
+        <div className="filter-wrapper">
+          <label className="category-label-text">Cidade Destino</label>
+          <select value={cidadeDestino} onChange={(e) => { setCidadeDestino(e.target.value); setCurrentPage(1); }} className="filter-select">
+            <option value="Todos">Todas</option>
+            <option value="Bridgewatch">Bridgewatch</option>
+            <option value="Fort Sterling">Fort Sterling</option>
+            <option value="Lymhurst">Lymhurst</option>
+            <option value="Martlock">Martlock</option>
+            <option value="Thetford">Thetford</option>
+            <option value="Brecilien">Brecilien</option>
+          </select>
+        </div>
+
         <button
           type="button"
           className="btn btn-primary"
@@ -291,7 +319,7 @@ export default function MarketAnalyzer() {
         >
           {scanning ? 'Escaneando…' : 'Buscar oportunidades'}
         </button>
-        {!scanning && (searchItem || maxPrata || filterInstant || sortCol !== 'lucro') && (
+        {!scanning && (searchItem || maxPrata || filterInstant || sortCol !== 'lucro' || cidadeOrigem !== 'Todos' || cidadeDestino !== 'Todos') && (
           <button
             type="button"
             className="btn"
@@ -299,6 +327,8 @@ export default function MarketAnalyzer() {
               setSearchItem('');
               setMaxPrata('');
               setFilterInstant(false);
+              setCidadeOrigem('Todos');
+              setCidadeDestino('Todos');
               setSortCol('lucro');
               setSortAsc(false);
               setCurrentPage(1);
@@ -364,6 +394,8 @@ export default function MarketAnalyzer() {
               const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
               const sl = searchItem.trim().toLowerCase();
               if (sl && !(op.nomeBase || op.id || '').toLowerCase().includes(sl)) return false;
+              if (cidadeOrigem !== 'Todos' && op.origem !== cidadeOrigem) return false;
+              if (cidadeDestino !== 'Todos' && op.destino !== cidadeDestino) return false;
               return margem <= 300 && (maxPrataNum === null || op.compra <= maxPrataNum);
             }).length
           }{' '}
@@ -386,6 +418,8 @@ export default function MarketAnalyzer() {
             const name = (op.nomeBase || op.id || '').toLowerCase();
             if (!name.includes(searchLower)) return false;
           }
+          if (cidadeOrigem !== 'Todos' && op.origem !== cidadeOrigem) return false;
+          if (cidadeDestino !== 'Todos' && op.destino !== cidadeDestino) return false;
           return margem <= 300 && prataValida;
         });
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import ResourceMaster from './components/ResourceMaster.jsx';
 import MarketAnalyzer from './components/MarketAnalyzer.jsx';
+import TeleportCalculator from './components/TeleportCalculator.jsx';
 import LoginGate from './components/LoginGate.jsx';
 import {
   calculateWood,
@@ -76,6 +77,13 @@ export default function App() {
           >
             Market Analyzer
           </button>
+          <button
+            type="button"
+            className={tab === 'teleport' ? 'tab active' : 'tab'}
+            onClick={() => setTab('teleport')}
+          >
+            Teleporte
+          </button>
         </nav>
       </header>
       <main className="app-main">
@@ -111,6 +119,7 @@ export default function App() {
           />
         )}
         {tab === 'market' && <MarketAnalyzer />}
+        {tab === 'teleport' && <TeleportCalculator />}
       </main>
     </div>
   );
