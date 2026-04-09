@@ -164,7 +164,11 @@ async function processarRecurso(resource, body) {
   // Preços de todas as 5 cidades reais para linha "melhor preço"
   const ROYAL_LOCS = ['FortSterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
   const ROYAL_NAMES = ['Fort Sterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
-  const royalRes = await fetchPrices([...new Set(ids)], ROYAL_LOCS);
+  const [royalRes, royalHist] = await Promise.all([
+    fetchPrices([...new Set(ids)], ROYAL_LOCS),
+    fetchHistory(refinedIds, ROYAL_LOCS, 6),
+  ]);
+  const royalVolMap = volumeMapFromHistory(royalHist);
 
   const royalDc = new Map();
   const royalDcDate = new Map();
@@ -300,10 +304,21 @@ async function processarRecurso(resource, body) {
       }
       return best;
     }
+    const mpTronco = bestRoyal(iT, royalDc, royalDcDate);
+    const mpTabuaAnt = bestRoyal(iA, royalDc, royalDcDate);
+    const mpProduto = bestRoyal(iP, royalSell, royalSellDate);
+
+    let mpLucro = -9e8;
+    if (mpTronco && mpTabuaAnt && mpProduto) {
+      mpLucro = mpProduto.preco - ((mpTronco.preco * qt + mpTabuaAnt.preco) * (1 - rrr) + txF);
+    }
+
     row.melhorPreco = {
-      tronco: bestRoyal(iT, royalDc, royalDcDate),
-      tabuaAnt: bestRoyal(iA, royalDc, royalDcDate),
-      produto: bestRoyal(iP, royalSell, royalSellDate),
+      tronco: mpTronco,
+      tabuaAnt: mpTabuaAnt,
+      produto: mpProduto,
+      lucro: mpLucro,
+      volumeProduto: mpProduto ? (royalVolMap.get(`${mpProduto.cidade}|${iP}`) ?? 0) : 0,
     };
 
     if (otimizado > -8e8 && foco) {

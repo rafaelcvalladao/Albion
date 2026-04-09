@@ -680,8 +680,16 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                                   </td>
                                 ),
                               )}
-                              <td />
-                              <td />
+                              <td className={profitClass(row.melhorPreco.lucro)}>
+                                {Number.isFinite(row.melhorPreco.lucro) && row.melhorPreco.lucro > -8e8
+                                  ? row.melhorPreco.lucro.toLocaleString('pt-PT', { maximumFractionDigits: 0 })
+                                  : '—'}
+                              </td>
+                              <td className="tabular-nums" style={{ textAlign: 'center', fontSize: '0.85em' }}>
+                                {row.melhorPreco.volumeProduto != null
+                                  ? row.melhorPreco.volumeProduto.toLocaleString('pt-PT')
+                                  : '—'}
+                              </td>
                               <td />
                             </tr>
                           )}
