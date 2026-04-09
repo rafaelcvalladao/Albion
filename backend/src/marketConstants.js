@@ -209,11 +209,28 @@ export function extrairInfoItem(itemId) {
   return { tier, encanto };
 }
 
+// Padrões de item IDs que são recursos ou journals (modificador ×2.25 no teleporte)
+const RESOURCE_PATTERNS = [
+  '_ORE', '_WOOD', '_HIDE', '_FIBER', '_ROCK',           // raw
+  '_PLANKS', '_METALBAR', '_CLOTH', '_LEATHER', '_STONEBLOCK', // refined
+];
+
+function isResourceOrJournal(itemId) {
+  const upper = itemId.toUpperCase();
+  if (upper.includes('JOURNAL_')) return true;
+  for (const pat of RESOURCE_PATTERNS) {
+    if (upper.includes(pat)) return true;
+  }
+  return false;
+}
+
 export function calcularCustoTeleporte(itemId, cidadeOrigem, cidadeDestino) {
   const peso = obterPesoReal(itemId);
+  const multiplicadorCarga = isResourceOrJournal(itemId) ? 2.25 : 1;
+  const pesoEfetivo = peso * multiplicadorCarga;
   const vizinha = CITY_NEIGHBORS[cidadeOrigem]?.has(cidadeDestino) ?? false;
   if (vizinha) {
-    return Math.max(TELEPORT_MIN_NEIGHBOR, Math.floor(peso * TELEPORT_RATE_PER_KG));
+    return Math.max(TELEPORT_MIN_NEIGHBOR, Math.floor(pesoEfetivo * TELEPORT_RATE_PER_KG));
   }
-  return Math.max(TELEPORT_MIN_FAR, Math.floor(peso * TELEPORT_RATE_PER_KG * 2));
+  return Math.max(TELEPORT_MIN_FAR, Math.floor(pesoEfetivo * TELEPORT_RATE_PER_KG * 2));
 }
