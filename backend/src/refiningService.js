@@ -275,17 +275,17 @@ async function processarRecurso(resource, body) {
       };
     }
 
-    // Otimizado: min cost across cities for materials, min sell order for product
+    // Otimizado: min cost across cities for materials, max sell order for product
     const rawPrices = cities.map((c) => getDc(c.name, iT)).filter((v) => v > 0);
     const prevPrices = cities.map((c) => getDc(c.name, iA)).filter((v) => v > 0);
     const prodPrices = cities.map((c) => getDv(c.name, iP)).filter((v) => v > 0);
 
     const minRaw = rawPrices.length ? Math.min(...rawPrices) : 0;
     const minPrev = prevPrices.length ? Math.min(...prevPrices) : 0;
-    const minProd = prodPrices.length ? Math.min(...prodPrices) : 0;
+    const maxProd = prodPrices.length ? Math.max(...prodPrices) : 0;
 
-    const otimizado = minRaw && minPrev && minProd
-      ? minProd - ((minRaw * qt + minPrev) * (1 - rrr) + txF)
+    const otimizado = minRaw && minPrev && maxProd
+      ? maxProd - ((minRaw * qt + minPrev) * (1 - rrr) + txF)
       : -9e8;
 
     row.otimizado = otimizado;
@@ -293,8 +293,8 @@ async function processarRecurso(resource, body) {
 
     // Melhor preço por material nas 5 cidades reais
     // Materiais: menor preço de compra (sell order ou buy order conforme config)
-    // Produto refinado: menor sell order
-    function bestRoyal(itemId, map, dateMap) {
+    // Produto refinado: maior sell order (vender pelo maior valor)
+    function bestRoyalMin(itemId, map, dateMap) {
       let best = null;
       for (const rc of ROYAL_NAMES) {
         const p = map.get(`${rc}|${itemId}`) ?? 0;
@@ -304,9 +304,19 @@ async function processarRecurso(resource, body) {
       }
       return best;
     }
-    const mpTronco = bestRoyal(iT, royalDc, royalDcDate);
-    const mpTabuaAnt = bestRoyal(iA, royalDc, royalDcDate);
-    const mpProduto = bestRoyal(iP, royalSell, royalSellDate);
+    function bestRoyalMax(itemId, map, dateMap) {
+      let best = null;
+      for (const rc of ROYAL_NAMES) {
+        const p = map.get(`${rc}|${itemId}`) ?? 0;
+        if (p > 0 && (!best || p > best.preco)) {
+          best = { cidade: rc, preco: p, data: dateMap.get(`${rc}|${itemId}`) ?? null };
+        }
+      }
+      return best;
+    }
+    const mpTronco = bestRoyalMin(iT, royalDc, royalDcDate);
+    const mpTabuaAnt = bestRoyalMin(iA, royalDc, royalDcDate);
+    const mpProduto = bestRoyalMax(iP, royalSell, royalSellDate);
 
     let mpLucro = -9e8;
     if (mpTronco && mpTabuaAnt && mpProduto) {
