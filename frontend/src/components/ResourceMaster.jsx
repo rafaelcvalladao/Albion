@@ -697,7 +697,12 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                       </table>
                     </div>
                     <p className="otimizado-line">
-                      <span className="otimizado-line__label">Otimizado (compra/venda)</span>
+                      <span className="otimizado-line__label">
+                        Otimizado{' '}
+                        {(rc.cities || [{ display: rc.cityDisplay }])
+                          .map((c) => c.display.split(' ').map((w) => w[0]).join(''))
+                          .join('-')}
+                      </span>
                       <span className={profitClass(row.otimizado)}>
                         {Number.isFinite(row.otimizado)
                           ? `${row.otimizado.toLocaleString('pt-PT', { maximumFractionDigits: 0 })} prata`
