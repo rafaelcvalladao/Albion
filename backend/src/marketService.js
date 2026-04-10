@@ -214,9 +214,13 @@ export async function buscarOportunidades({
   }
 
   for (const op of oportunidadesUnicas) {
-    const volOrig = volumeMap.get(`${op.id}|${op.origem}`) || 0;
-    const volDest = volumeMap.get(`${op.id}|${op.destino}`) || 0;
+    const dataOrig = volumeMap.get(`${op.id}|${op.origem}`);
+    const dataDest = volumeMap.get(`${op.id}|${op.destino}`);
+    const volOrig = dataOrig?.volume || 0;
+    const volDest = dataDest?.volume || 0;
     op.volumeDiario = Math.max(volOrig, volDest);
+    // Preço médio na cidade de destino
+    op.precoMedioDest = dataDest?.avgPrice || 0;
   }
 
   return oportunidadesUnicas;
@@ -312,6 +316,7 @@ export async function buscarVolumeParaItens(itemIds) {
     // Continua sem volume
   }
 
+  // Retorna { "itemId|city": { volume, avgPrice } }
   const result = {};
   for (const [key, val] of volumeMap) result[key] = val;
   return result;

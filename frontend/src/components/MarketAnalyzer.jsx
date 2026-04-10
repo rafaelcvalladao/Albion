@@ -118,8 +118,14 @@ export default function MarketAnalyzer() {
 
           setRows((prev) =>
             prev.map((op) => {
-              const vol = volumes[`${op.id}|${op.destino}`] || 0;
-              return vol > 0 ? { ...op, volumeDiario: vol } : op;
+              const entry = volumes[`${op.id}|${op.destino}`];
+              if (!entry) return op;
+              const vol = typeof entry === 'object' ? (entry.volume || 0) : (entry || 0);
+              const avgP = typeof entry === 'object' ? (entry.avgPrice || 0) : 0;
+              const updates = {};
+              if (vol > 0) updates.volumeDiario = vol;
+              if (avgP > 0) updates.precoMedioDest = avgP;
+              return Object.keys(updates).length > 0 ? { ...op, ...updates } : op;
             }),
           );
         } catch {
@@ -416,15 +422,19 @@ export default function MarketAnalyzer() {
         >
           <strong style={{ color: '#fff' }}>Dica:</strong> Exibindo{' '}
           {
-            rows.filter((op) => {
-              const margem = op.compra > 0 ? (op.venda / op.compra - 1) * 100 : 0;
-              const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
-              const sl = searchItem.trim().toLowerCase();
-              if (sl && !(op.nomeBase || op.id || '').toLowerCase().includes(sl)) return false;
-              if (cidadeOrigem !== 'Todos' && op.origem !== cidadeOrigem) return false;
-              if (cidadeDestino !== 'Todos' && op.destino !== cidadeDestino) return false;
-              return margem <= 300 && (maxPrataNum === null || op.compra <= maxPrataNum);
-            }).length
+            (() => {
+              const volLoaded = !scanning && !loadingVolume;
+              return rows.filter((op) => {
+                const margem = op.compra > 0 ? (op.venda / op.compra - 1) * 100 : 0;
+                const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
+                const sl = searchItem.trim().toLowerCase();
+                if (sl && !(op.nomeBase || op.id || '').toLowerCase().includes(sl)) return false;
+                if (cidadeOrigem !== 'Todos' && op.origem !== cidadeOrigem) return false;
+                if (cidadeDestino !== 'Todos' && op.destino !== cidadeDestino) return false;
+                if (volLoaded && (Number(op.volumeDiario) || 0) <= 0) return false;
+                return margem <= 300 && (maxPrataNum === null || op.compra <= maxPrataNum);
+              }).length;
+            })()
           }{' '}
           oportunidades{' '}
           {maxPrata ? `com prata \u2264 ${parseInt(maxPrata).toLocaleString('pt-PT')}` : ''}{' '}
@@ -437,6 +447,7 @@ export default function MarketAnalyzer() {
       {/* Calcular paginação */}
       {(() => {
         const searchLower = searchItem.trim().toLowerCase();
+        const volumeLoaded = !scanning && !loadingVolume;
         const validRows = rows.filter((op) => {
           const margem = op.compra > 0 ? (op.venda / op.compra - 1) * 100 : 0;
           const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
@@ -447,6 +458,8 @@ export default function MarketAnalyzer() {
           }
           if (cidadeOrigem !== 'Todos' && op.origem !== cidadeOrigem) return false;
           if (cidadeDestino !== 'Todos' && op.destino !== cidadeDestino) return false;
+          // Após volume carregado, excluir itens com volume 0
+          if (volumeLoaded && (Number(op.volumeDiario) || 0) <= 0) return false;
           return margem <= 300 && prataValida;
         });
 
@@ -487,6 +500,9 @@ export default function MarketAnalyzer() {
           } else if (sortCol === 'volume') {
             va = Number(a.volumeDiario) || 0;
             vb = Number(b.volumeDiario) || 0;
+          } else if (sortCol === 'precoMedio') {
+            va = Number(a.precoMedioDest) || 0;
+            vb = Number(b.precoMedioDest) || 0;
           } else {
             va = a.compra > 0 ? a.venda / a.compra : 0;
             vb = b.compra > 0 ? b.venda / b.compra : 0;
@@ -528,6 +544,13 @@ export default function MarketAnalyzer() {
                       onClick={() => handleSort('volume')}
                     >
                       Vol/dia{sortIndicator('volume')}
+                    </th>
+                    <th
+                      style={{ cursor: 'pointer', userSelect: 'none' }}
+                      onClick={() => handleSort('precoMedio')}
+                      title="Preço médio de venda na cidade destino"
+                    >
+                      P. Médio{sortIndicator('precoMedio')}
                     </th>
                     <th
                       style={{ cursor: 'pointer', userSelect: 'none' }}
@@ -619,7 +642,14 @@ export default function MarketAnalyzer() {
                           }}
                         >
                           {(op.volumeDiario || 0) > 0
-                            ? op.volumeDiario.toLocaleString('pt-PT')
+                            ? Number(op.volumeDiario) % 1 === 0
+                              ? op.volumeDiario.toLocaleString('pt-PT')
+                              : Number(op.volumeDiario).toLocaleString('pt-PT', { maximumFractionDigits: 1 })
+                            : '-'}
+                        </td>
+                        <td style={{ textAlign: 'right', color: '#b0b0b0' }}>
+                          {(op.precoMedioDest || 0) > 0
+                            ? op.precoMedioDest.toLocaleString('pt-PT')
                             : '-'}
                         </td>
                         <td style={{ textAlign: 'center' }}>

@@ -78,9 +78,10 @@ export async function fetchHistoryMarket(itemIds, locations) {
   const unique = [...new Set(itemIds.filter(Boolean))];
   const loc = Array.isArray(locations) ? locations.join(',') : locations;
   const allChunks = chunk(unique, HISTORY_CHUNK_SIZE);
-  const merged = [];
   const concurrency = HISTORY_CONCURRENCY;
 
+  // --- Fase 1: buscar histórico diário (7 dias, time-scale=24) ---
+  const merged = [];
   for (let i = 0; i < allChunks.length; i += concurrency) {
     const batch = allChunks.slice(i, i + concurrency);
     const calls = batch.map(async (part) => {
@@ -100,23 +101,85 @@ export async function fetchHistoryMarket(itemIds, locations) {
     }
   }
 
+  // volumeMap: key → { volume, avgPrice }
   const volumeMap = new Map();
 
   for (const entry of merged) {
     if (!entry.data || !Array.isArray(entry.data)) continue;
     const key = `${entry.item_id}|${entry.location}`;
 
-    // Ordenar por timestamp e remover o data-point mais recente (dia parcial/incompleto)
     const sorted = [...entry.data].sort(
       (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
     );
     const complete = sorted.length > 1 ? sorted.slice(0, -1) : sorted;
-    const total = complete.reduce((s, d) => s + (d.item_count || 0), 0);
+    const totalCount = complete.reduce((s, d) => s + (d.item_count || 0), 0);
+    const totalSilver = complete.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
     const days = complete.length || 1;
-    const avg = Math.round(total / days);
+    const avgVol = totalCount / days;
+    const avgPrice = totalCount > 0 ? Math.round(totalSilver / totalCount) : 0;
 
-    const prev = volumeMap.get(key) || 0;
-    if (avg > prev) volumeMap.set(key, avg);
+    const prev = volumeMap.get(key);
+    if (!prev || avgVol > prev.volume) {
+      volumeMap.set(key, { volume: avgVol, avgPrice });
+    }
+  }
+
+  // --- Fase 2: fallback semanal (4 semanas) para itens com volume 0 ---
+  const zeroVolumeIds = new Set();
+  for (const id of unique) {
+    // Checar se alguma localização retornou volume > 0
+    let hasVolume = false;
+    for (const [k, v] of volumeMap) {
+      if (k.startsWith(`${id}|`) && v.volume > 0) { hasVolume = true; break; }
+    }
+    if (!hasVolume) zeroVolumeIds.add(id);
+  }
+
+  if (zeroVolumeIds.size > 0) {
+    const fallbackIds = [...zeroVolumeIds];
+    const fallbackChunks = chunk(fallbackIds, HISTORY_CHUNK_SIZE);
+    const fallbackMerged = [];
+
+    for (let i = 0; i < fallbackChunks.length; i += concurrency) {
+      const batch = fallbackChunks.slice(i, i + concurrency);
+      const calls = batch.map(async (part) => {
+        const url = `https://www.albion-online-data.com/api/v2/stats/history/${part.join(',')}?locations=${encodeURIComponent(loc)}&time-scale=168`;
+        const res = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (!res.ok) return [];
+        return res.json();
+      });
+
+      const results = await Promise.allSettled(calls);
+      for (const r of results) {
+        if (r.status === 'fulfilled' && Array.isArray(r.value)) fallbackMerged.push(...r.value);
+      }
+
+      if (i + concurrency < fallbackChunks.length) {
+        await new Promise((resolve) => setTimeout(resolve, HISTORY_THROTTLE_MS));
+      }
+    }
+
+    for (const entry of fallbackMerged) {
+      if (!entry.data || !Array.isArray(entry.data)) continue;
+      const key = `${entry.item_id}|${entry.location}`;
+
+      const sorted = [...entry.data].sort(
+        (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+      );
+      // Cada data-point = 1 semana; remover o mais recente (parcial)
+      const complete = sorted.length > 1 ? sorted.slice(0, -1) : sorted;
+      const totalCount = complete.reduce((s, d) => s + (d.item_count || 0), 0);
+      const totalSilver = complete.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
+      const weeks = complete.length || 1;
+      // Converter volume semanal para diário
+      const avgVol = totalCount / (weeks * 7);
+      const avgPrice = totalCount > 0 ? Math.round(totalSilver / totalCount) : 0;
+
+      const prev = volumeMap.get(key);
+      if (!prev || avgVol > prev.volume) {
+        volumeMap.set(key, { volume: avgVol, avgPrice });
+      }
+    }
   }
 
   return volumeMap;
