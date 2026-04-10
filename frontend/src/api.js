@@ -120,6 +120,8 @@ export function marketOpportunitiesStream(params, { onChunk, onProgress, onDone,
           if (event.type === 'chunk') {
             onChunk?.(event.oportunidades || []);
             onProgress?.({ processados: event.processados, totalItens: event.totalItens });
+          } else if (event.type === 'progress') {
+            onProgress?.({ processados: event.processados, totalItens: event.totalItens });
           } else if (event.type === 'start') {
             onProgress?.({ processados: 0, totalItens: event.totalItens });
           } else if (event.type === 'done') {

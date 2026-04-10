@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { marketCategories, marketOpportunitiesStream, marketVolume } from '../api.js';
+import { useEffect, useState, useRef } from 'react';
+import { marketCategories, marketOpportunitiesStream } from '../api.js';
 import { profitClass } from '../utils/profit.js';
 import NestedCategorySelector from './NestedCategorySelector.jsx';
 
@@ -55,7 +55,6 @@ export default function MarketAnalyzer() {
   const [cidadeOrigem, setCidadeOrigem] = useState('Todos');
   const [cidadeDestino, setCidadeDestino] = useState('Todos');
   const [comTeleporte, setComTeleporte] = useState(true);
-  const [loadingVolume, setLoadingVolume] = useState(false);
   const streamRef = useRef(null);
   const scanIdRef = useRef(0);
 
@@ -96,49 +95,6 @@ export default function MarketAnalyzer() {
     };
   }, []);
 
-  // Lazy volume loading: buscar volume depois que o scan termina
-  const carregarVolume = useCallback(async (currentRows, expectedScanId) => {
-    const uniqueIds = [...new Set(currentRows.map((r) => r.id))];
-    if (uniqueIds.length === 0) return;
-
-    setLoadingVolume(true);
-    try {
-      // Buscar em batches de 200 para não sobrecarregar
-      const batchSize = 200;
-      for (let i = 0; i < uniqueIds.length; i += batchSize) {
-        // Abortar se um novo scan foi iniciado
-        if (scanIdRef.current !== expectedScanId) break;
-
-        const batch = uniqueIds.slice(i, i + batchSize);
-        try {
-          const data = await marketVolume(batch);
-          const volumes = data.volumes || {};
-
-          if (scanIdRef.current !== expectedScanId) break;
-
-          setRows((prev) =>
-            prev.map((op) => {
-              const entry = volumes[`${op.id}|${op.destino}`];
-              if (!entry) return op;
-              const vol = typeof entry === 'object' ? (entry.volume || 0) : (entry || 0);
-              const avgP = typeof entry === 'object' ? (entry.avgPrice || 0) : 0;
-              const updates = {};
-              if (vol > 0) updates.volumeDiario = vol;
-              if (avgP > 0) updates.precoMedioDest = avgP;
-              return Object.keys(updates).length > 0 ? { ...op, ...updates } : op;
-            }),
-          );
-        } catch {
-          // Continua com o próximo batch
-        }
-      }
-    } finally {
-      if (scanIdRef.current === expectedScanId) {
-        setLoadingVolume(false);
-      }
-    }
-  }, []);
-
   const buscar = () => {
     // Invalidar scan anterior
     streamRef.current?.abort();
@@ -150,7 +106,6 @@ export default function MarketAnalyzer() {
     setScanning(true);
     setLoading(true);
     setErr(null);
-    setLoadingVolume(false);
     setItemsProcessados(0);
     setTotalItens(0);
     setCurrentPage(1);
@@ -192,8 +147,6 @@ export default function MarketAnalyzer() {
           if (scanIdRef.current !== currentScanId) return;
           setScanning(false);
           setLoading(false);
-          // Lazy: buscar volume em background
-          carregarVolume(acumulador, currentScanId);
         },
         onError: (msg) => {
           if (scanIdRef.current !== currentScanId) return;
@@ -213,7 +166,6 @@ export default function MarketAnalyzer() {
     streamRef.current = null;
     setScanning(false);
     setLoading(false);
-    setLoadingVolume(false);
   };
 
   return (
@@ -399,12 +351,6 @@ export default function MarketAnalyzer() {
           <span>
             Último escaneamento:{' '}
             {rows.length > 0 ? `Concluído (${rows.length} oportunidades)` : 'Aguardando'}
-            {loadingVolume && (
-              <span style={{ marginLeft: '0.5rem', color: '#ff9800' }}>
-                {' '}
-                — carregando volumes...
-              </span>
-            )}
           </span>
         )}
       </div>
@@ -423,7 +369,6 @@ export default function MarketAnalyzer() {
           <strong style={{ color: '#fff' }}>Dica:</strong> Exibindo{' '}
           {
             (() => {
-              const volLoaded = !scanning && !loadingVolume;
               return rows.filter((op) => {
                 const margem = op.compra > 0 ? (op.venda / op.compra - 1) * 100 : 0;
                 const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
@@ -431,7 +376,7 @@ export default function MarketAnalyzer() {
                 if (sl && !(op.nomeBase || op.id || '').toLowerCase().includes(sl)) return false;
                 if (cidadeOrigem !== 'Todos' && op.origem !== cidadeOrigem) return false;
                 if (cidadeDestino !== 'Todos' && op.destino !== cidadeDestino) return false;
-                if (volLoaded && (Number(op.volumeDiario) || 0) <= 0) return false;
+                if ((Number(op.volumeDiario) || 0) <= 0) return false;
                 return margem <= 300 && (maxPrataNum === null || op.compra <= maxPrataNum);
               }).length;
             })()
@@ -447,7 +392,6 @@ export default function MarketAnalyzer() {
       {/* Calcular paginação */}
       {(() => {
         const searchLower = searchItem.trim().toLowerCase();
-        const volumeLoaded = !scanning && !loadingVolume;
         const validRows = rows.filter((op) => {
           const margem = op.compra > 0 ? (op.venda / op.compra - 1) * 100 : 0;
           const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
@@ -458,8 +402,8 @@ export default function MarketAnalyzer() {
           }
           if (cidadeOrigem !== 'Todos' && op.origem !== cidadeOrigem) return false;
           if (cidadeDestino !== 'Todos' && op.destino !== cidadeDestino) return false;
-          // Após volume carregado, excluir itens com volume 0
-          if (volumeLoaded && (Number(op.volumeDiario) || 0) <= 0) return false;
+          // Excluir itens com volume 0 (volume já vem inline do backend)
+          if ((Number(op.volumeDiario) || 0) <= 0) return false;
           return margem <= 300 && prataValida;
         });
 

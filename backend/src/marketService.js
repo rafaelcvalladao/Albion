@@ -282,17 +282,45 @@ export async function buscarOportunidadesStream(
       }),
     );
 
+    // Coletar oportunidades do batch
+    const batchOps = [];
     for (const result of batchResults) {
-      processados += 100;
+      processados += ITEMS_PER_CHUNK;
       if (result.status === 'fulfilled' && result.value.length > 0) {
-        totalOportunidades += result.value.length;
-        onChunk({
-          type: 'chunk',
-          oportunidades: result.value,
-          processados: Math.min(processados, totalItens),
-          totalItens,
-        });
+        batchOps.push(...result.value);
       }
+    }
+
+    // Enriquecer com volume diário e preço médio (destino) antes de enviar
+    if (batchOps.length > 0) {
+      const uniqueIds = [...new Set(batchOps.map((op) => op.id))];
+      let volumeMap = new Map();
+      try {
+        volumeMap = await fetchHistoryMarket(uniqueIds, cidadesStr);
+      } catch {
+        // Continua sem volume
+      }
+
+      for (const op of batchOps) {
+        const dataDest = volumeMap.get(`${op.id}|${op.destino}`);
+        op.volumeDiario = dataDest?.volume || 0;
+        op.precoMedioDest = dataDest?.avgPrice || 0;
+      }
+
+      totalOportunidades += batchOps.length;
+      onChunk({
+        type: 'chunk',
+        oportunidades: batchOps,
+        processados: Math.min(processados, totalItens),
+        totalItens,
+      });
+    } else {
+      // Sem oportunidades neste batch — enviar progresso
+      onChunk({
+        type: 'progress',
+        processados: Math.min(processados, totalItens),
+        totalItens,
+      });
     }
 
     if (i + concurrency < chunks.length) {
