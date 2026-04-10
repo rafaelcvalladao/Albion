@@ -13,7 +13,6 @@ const base = getApiBase();
 
 async function request(path, options = {}) {
   const fullUrl = `${base}${path}`;
-  console.log(`[API] 🌐 Chamando: ${fullUrl}`, options.method ? `(${options.method})` : '(GET)');
 
   const res = await fetch(fullUrl, {
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -21,64 +20,47 @@ async function request(path, options = {}) {
   });
 
   const text = await res.text();
-  console.log(`[API] 📨 Status ${res.status} para ${path}`);
 
   let data;
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
-    console.error(`[API] ❌ Erro ao fazer parse do JSON para ${path}:`, text);
     throw new Error(text || `HTTP ${res.status}`);
   }
 
   if (!res.ok) {
-    console.error(`[API] ❌ Erro HTTP ${res.status} para ${path}:`, data?.error || data);
     throw new Error(data?.error || `HTTP ${res.status}`);
   }
 
-  console.log(`[API] ✓ Sucesso para ${path}:`, data);
   return data;
 }
 
-export function calculateWood(body) {
-  return request('/api/wood/calculate', { method: 'POST', body: JSON.stringify(body) });
+function createResourceFns(resource) {
+  return {
+    calculate: (body) =>
+      request(`/api/${resource}/calculate`, { method: 'POST', body: JSON.stringify(body) }),
+    strategy: (body) =>
+      request(`/api/${resource}/strategy`, { method: 'POST', body: JSON.stringify(body) }),
+  };
 }
 
-export function strategyWood(body) {
-  return request('/api/wood/strategy', { method: 'POST', body: JSON.stringify(body) });
-}
+export const wood = createResourceFns('wood');
+export const fiber = createResourceFns('fiber');
+export const leather = createResourceFns('leather');
+export const metal = createResourceFns('metal');
+export const stone = createResourceFns('stone');
 
-export function calculateFiber(body) {
-  return request('/api/fiber/calculate', { method: 'POST', body: JSON.stringify(body) });
-}
-
-export function strategyFiber(body) {
-  return request('/api/fiber/strategy', { method: 'POST', body: JSON.stringify(body) });
-}
-
-export function calculateLeather(body) {
-  return request('/api/leather/calculate', { method: 'POST', body: JSON.stringify(body) });
-}
-
-export function strategyLeather(body) {
-  return request('/api/leather/strategy', { method: 'POST', body: JSON.stringify(body) });
-}
-
-export function calculateMetal(body) {
-  return request('/api/metal/calculate', { method: 'POST', body: JSON.stringify(body) });
-}
-
-export function strategyMetal(body) {
-  return request('/api/metal/strategy', { method: 'POST', body: JSON.stringify(body) });
-}
-
-export function calculateStone(body) {
-  return request('/api/stone/calculate', { method: 'POST', body: JSON.stringify(body) });
-}
-
-export function strategyStone(body) {
-  return request('/api/stone/strategy', { method: 'POST', body: JSON.stringify(body) });
-}
+// Aliases individuais para compatibilidade
+export const calculateWood = wood.calculate;
+export const strategyWood = wood.strategy;
+export const calculateFiber = fiber.calculate;
+export const strategyFiber = fiber.strategy;
+export const calculateLeather = leather.calculate;
+export const strategyLeather = leather.strategy;
+export const calculateMetal = metal.calculate;
+export const strategyMetal = metal.strategy;
+export const calculateStone = stone.calculate;
+export const strategyStone = stone.strategy;
 
 export function marketCategories() {
   return request('/api/market/categories');

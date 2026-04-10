@@ -3,6 +3,8 @@ import { marketCategories, marketOpportunitiesStream, marketVolume } from '../ap
 import { profitClass } from '../utils/profit.js';
 import NestedCategorySelector from './NestedCategorySelector.jsx';
 
+const ITEMS_PER_PAGE = 20;
+
 function tierStyle(tier) {
   const colors = {
     T4: '#9f6d34',
@@ -54,26 +56,19 @@ export default function MarketAnalyzer() {
   const [cidadeDestino, setCidadeDestino] = useState('Todos');
   const [comTeleporte, setComTeleporte] = useState(true);
   const [loadingVolume, setLoadingVolume] = useState(false);
-  const itemsPerPage = 20;
   const streamRef = useRef(null);
   const scanIdRef = useRef(0);
 
   useEffect(() => {
-    console.log('[MarketAnalyzer] 🚀 Iniciando carregamento de categorias...');
     marketCategories()
       .then((d) => {
-        console.log('[MarketAnalyzer] ✓ Resposta recebida:', d);
         const cats = d.categories || [];
-        console.log(`[MarketAnalyzer] ✓ Categorias carregadas: ${cats.length} categorias`);
-        console.log(`[MarketAnalyzer] Primeiras 5: ${cats.slice(0, 5).join(', ')}`);
         setCategories(cats);
         if (cats.length && !cats.includes(categoria)) {
           setCategoria(cats[0]);
         }
       })
-      .catch((err) => {
-        console.error('[MarketAnalyzer] ❌ Erro ao carregar categorias:', err);
-        console.error('[MarketAnalyzer] Usando categorias estáticas como fallback');
+      .catch(() => {
         setCategories([
           'Todos',
           'Armas',
@@ -127,8 +122,7 @@ export default function MarketAnalyzer() {
               return vol > 0 ? { ...op, volumeDiario: vol } : op;
             }),
           );
-        } catch (batchErr) {
-          console.warn(`[Volume] Erro no batch ${i / batchSize + 1}:`, batchErr);
+        } catch {
           // Continua com o próximo batch
         }
       }
@@ -181,8 +175,7 @@ export default function MarketAnalyzer() {
               acumulador.push(op);
             }
           }
-          // Ordenar e atualizar a UI imediatamente
-          acumulador.sort((a, b) => (Number(b.lucro) || 0) - (Number(a.lucro) || 0));
+          // Atualizar a UI sem re-ordenar a cada chunk (ordenação fica no render)
           setRows([...acumulador]);
         },
         onProgress: ({ processados, totalItens: total }) => {
@@ -193,7 +186,6 @@ export default function MarketAnalyzer() {
           if (scanIdRef.current !== currentScanId) return;
           setScanning(false);
           setLoading(false);
-          console.log(`[Market] Stream concluído: ${acumulador.length} oportunidades`);
           // Lazy: buscar volume em background
           carregarVolume(acumulador, currentScanId);
         },
@@ -504,9 +496,9 @@ export default function MarketAnalyzer() {
           return getLucro(b) - getLucro(a);
         });
 
-        const totalPages = Math.ceil(sortedRows.length / itemsPerPage);
-        const startIdx = (currentPage - 1) * itemsPerPage;
-        const pageRows = sortedRows.slice(startIdx, startIdx + itemsPerPage);
+        const totalPages = Math.ceil(sortedRows.length / ITEMS_PER_PAGE);
+        const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+        const pageRows = sortedRows.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
         return (
           <>

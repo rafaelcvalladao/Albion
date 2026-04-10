@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { profitClass, famaClass } from '../utils/profit.js';
 
 const ITEM_ICON_URL = (id) => `https://render.albiononline.com/v1/item/${id}.png?quality=1`;
@@ -200,7 +200,7 @@ function StrategyTable({
     }
   };
 
-  const sortedRows = [...rows].sort((a, b) => {
+  const sortedRows = useMemo(() => [...rows].sort((a, b) => {
     let valA, valB;
     if (sortColumn === 'lucro' || sortColumn === 'fama') {
       valA = kind === 'foco' ? getLucro(a) : a.famaPerPrata;
@@ -215,7 +215,7 @@ function StrategyTable({
     if (typeof valA === 'string')
       return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
     return sortAsc ? valA - valB : valB - valA;
-  });
+  }), [rows, sortColumn, sortAsc, kind, lucroMode]);
 
   const ind = (col) => (sortColumn !== col ? '' : sortAsc ? ' ↑' : ' ↓');
 

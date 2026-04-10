@@ -1,6 +1,15 @@
 // ─── Cache de preços com TTL ───
 const PRICE_CACHE = new Map();
 const PRICE_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+const PRICE_CACHE_MAX_SIZE = 500;
+
+const PRICE_CHUNK_SIZE = 100;
+const PRICE_CONCURRENCY = 5;
+const PRICE_THROTTLE_MS = 300;
+
+const HISTORY_CHUNK_SIZE = 50;
+const HISTORY_CONCURRENCY = 3;
+const HISTORY_THROTTLE_MS = 300;
 
 function getPriceCacheKey(itemIds, locations, quality) {
   return `${itemIds.sort().join(',')}|${locations}|${quality}`;
@@ -15,7 +24,7 @@ function getCachedPrices(key) {
 
 function setCachedPrices(key, data) {
   PRICE_CACHE.set(key, { data, ts: Date.now() });
-  if (PRICE_CACHE.size > 500) {
+  if (PRICE_CACHE.size > PRICE_CACHE_MAX_SIZE) {
     const now = Date.now();
     for (const [k, v] of PRICE_CACHE) {
       if (now - v.ts > PRICE_CACHE_TTL) PRICE_CACHE.delete(k);
@@ -32,9 +41,9 @@ export function chunk(arr, size) {
 export async function fetchPricesMarket(itemIds, locations, quality = 0) {
   const unique = [...new Set(itemIds.filter(Boolean))];
   const loc = Array.isArray(locations) ? locations.join(',') : locations;
-  const allChunks = chunk(unique, 100);
+  const allChunks = chunk(unique, PRICE_CHUNK_SIZE);
   const merged = [];
-  const concurrency = 5;
+  const concurrency = PRICE_CONCURRENCY;
   const qualitiesParam = quality > 0 ? `&qualities=${quality}` : '';
 
   for (let i = 0; i < allChunks.length; i += concurrency) {
@@ -58,7 +67,7 @@ export async function fetchPricesMarket(itemIds, locations, quality = 0) {
     }
 
     if (i + concurrency < allChunks.length) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, PRICE_THROTTLE_MS));
     }
   }
 
@@ -68,9 +77,9 @@ export async function fetchPricesMarket(itemIds, locations, quality = 0) {
 export async function fetchHistoryMarket(itemIds, locations) {
   const unique = [...new Set(itemIds.filter(Boolean))];
   const loc = Array.isArray(locations) ? locations.join(',') : locations;
-  const allChunks = chunk(unique, 50);
+  const allChunks = chunk(unique, HISTORY_CHUNK_SIZE);
   const merged = [];
-  const concurrency = 3;
+  const concurrency = HISTORY_CONCURRENCY;
 
   for (let i = 0; i < allChunks.length; i += concurrency) {
     const batch = allChunks.slice(i, i + concurrency);
@@ -87,7 +96,7 @@ export async function fetchHistoryMarket(itemIds, locations) {
     }
 
     if (i + concurrency < allChunks.length) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, HISTORY_THROTTLE_MS));
     }
   }
 

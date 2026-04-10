@@ -12,6 +12,8 @@ import { chunk, fetchPricesMarket, fetchHistoryMarket } from './marketPrices.js'
 // Re-export para manter compatibilidade com index.js
 export { CATEGORIAS, obterCategoriasDinamicas };
 
+const ITEMS_PER_CHUNK = 100;
+
 // ─── Extrai oportunidades de um chunk de preços ───
 function extrairOportunidadesDePrecos(respostaPrecos, maxIdade, agora, qualityNum, taxaVendaNota) {
   const mapaPrecos = new Map();
@@ -137,9 +139,7 @@ export async function buscarOportunidades({
   categoria,
   maxIdadeHoras = 168,
   quality = 0,
-  _usarBuyOrder = false,
   taxaVenda = 6.5,
-  _maxItensProcessar = 999999,
   offset = 0,
   step = 500,
   tier = 'Todos',
@@ -147,18 +147,14 @@ export async function buscarOportunidades({
 }) {
   let itens = await gerarListaItens(categoria);
 
-  console.log(`[Market] Categoria: ${categoria}, Total itens carregados: ${itens?.length || 0}`);
-
   if (tier && tier !== 'Todos') {
     itens = itens.filter((id) => id.startsWith(tier + '_'));
-    console.log(`[Market] Filtro tier=${tier}: ${itens.length} itens restantes`);
   }
 
   if (enchantment !== undefined && enchantment !== null && enchantment !== 'Todos') {
     const enc = parseInt(enchantment);
     if (enc === 0) itens = itens.filter((id) => !id.includes('@'));
     else if (!isNaN(enc)) itens = itens.filter((id) => id.includes(`@${enc}`));
-    console.log(`[Market] Filtro enchantment=${enchantment}: ${itens.length} itens restantes`);
   }
 
   if (!Array.isArray(itens) || itens.length === 0) return [];
@@ -166,14 +162,8 @@ export async function buscarOportunidades({
   let itensProcessar;
   if (categoria === 'Todos') {
     itensProcessar = itens;
-    console.log(
-      `[Market] ✓ Categoria "Todos": processando ${itensProcessar.length} items (SEM paginação)`,
-    );
   } else {
     itensProcessar = itens.slice(offset, Math.min(offset + step, itens.length));
-    console.log(
-      `[Market] Processando slice: offset=${offset}, step=${step}, itens neste batch=${itensProcessar.length}/${itens.length}`,
-    );
   }
 
   if (!itensProcessar.length) return [];
@@ -184,21 +174,14 @@ export async function buscarOportunidades({
   const qualityNum = Number(quality) || 0;
   const taxaVendaNota = 1 - taxaVenda / 100;
 
-  const chunks = chunk(itensProcessar, 100);
-  console.log(`[Market] Processa ${itensProcessar.length} items em ${chunks.length} chunks de 100`);
+  const chunks = chunk(itensProcessar, ITEMS_PER_CHUNK);
 
   const oportunidadesBrutas = [];
 
   for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
     const chunkItems = chunks[chunkIdx];
-    console.log(
-      `[Market] Chunk ${chunkIdx + 1}/${chunks.length}: fetching ${chunkItems.length} items...`,
-    );
 
     const respostaPrecos = await fetchPricesMarket(chunkItems, cidadesStr, qualityNum);
-    console.log(
-      `[Market] Chunk ${chunkIdx + 1}: API retornou ${respostaPrecos?.length || 0} registros de preço`,
-    );
 
     const ops = extrairOportunidadesDePrecos(
       respostaPrecos,
@@ -211,7 +194,6 @@ export async function buscarOportunidades({
   }
 
   oportunidadesBrutas.sort((a, b) => b.lucro - a.lucro);
-  console.log(`[Market] Total oportunidades encontradas: ${oportunidadesBrutas.length}`);
 
   const dedupSet = new Set();
   const oportunidadesUnicas = [];
@@ -222,16 +204,13 @@ export async function buscarOportunidades({
       oportunidadesUnicas.push(op);
     }
   }
-  console.log(`[Market] Após deduplicar: ${oportunidadesUnicas.length} oportunidades únicas`);
 
   const uniqueItemIds = [...new Set(oportunidadesUnicas.map((o) => o.id))];
-  console.log(`[Market] Buscando volume diário para ${uniqueItemIds.length} itens únicos...`);
   let volumeMap = new Map();
   try {
     volumeMap = await fetchHistoryMarket(uniqueItemIds, cidadesStr);
-    console.log(`[Market] ✓ Volume obtido para ${volumeMap.size} combinações item+cidade`);
-  } catch (e) {
-    console.log(`[Market] ⚠️ Erro ao buscar volume (continuando sem): ${e.message}`);
+  } catch {
+    // Continua sem volume
   }
 
   for (const op of oportunidadesUnicas) {
@@ -240,7 +219,6 @@ export async function buscarOportunidades({
     op.volumeDiario = Math.max(volOrig, volDest);
   }
 
-  console.log(`[Market] Retornando ${oportunidadesUnicas.length} oportunidades deste batch`);
   return oportunidadesUnicas;
 }
 
@@ -276,13 +254,12 @@ export async function buscarOportunidadesStream(
   const qualityNum = Number(quality) || 0;
   const taxaVendaNota = 1 - taxaVenda / 100;
 
-  const chunks = chunk(itens, 100);
+  const chunks = chunk(itens, ITEMS_PER_CHUNK);
   const totalItens = itens.length;
   let processados = 0;
   let totalOportunidades = 0;
   const concurrency = 5;
 
-  console.log(`[Stream] Iniciando scan: ${totalItens} itens em ${chunks.length} chunks`);
   onChunk({ type: 'start', totalItens, totalChunks: chunks.length });
 
   for (let i = 0; i < chunks.length; i += concurrency) {
@@ -319,7 +296,6 @@ export async function buscarOportunidadesStream(
     }
   }
 
-  console.log(`[Stream] Scan completo: ${totalOportunidades} oportunidades`);
   onChunk({ type: 'done', total: totalOportunidades, processados: totalItens });
 }
 
@@ -329,13 +305,11 @@ export async function buscarVolumeParaItens(itemIds) {
   const uniqueIds = [...new Set(itemIds.filter(Boolean))];
   if (uniqueIds.length === 0) return {};
 
-  console.log(`[Volume] Buscando volume para ${uniqueIds.length} itens...`);
   let volumeMap = new Map();
   try {
     volumeMap = await fetchHistoryMarket(uniqueIds, cidadesStr);
-    console.log(`[Volume] ✓ Volume obtido para ${volumeMap.size} combinações`);
-  } catch (e) {
-    console.log(`[Volume] ⚠️ Erro: ${e.message}`);
+  } catch {
+    // Continua sem volume
   }
 
   const result = {};

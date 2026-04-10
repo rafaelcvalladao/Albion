@@ -30,12 +30,16 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
 
 app.use(
   cors({
-    origin: ALLOWED_ORIGINS || true,
+    origin: ALLOWED_ORIGINS || 'http://localhost:5173',
   }),
 );
 app.use(express.json());
 
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN || 'xabufael';
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
+if (!ACCESS_TOKEN) {
+  console.error('FATAL: ACCESS_TOKEN env var is required');
+  process.exit(1);
+}
 
 /** Wrapper: try/catch + log + 500 automático */
 const wrap = (fn) => async (req, res) => {
@@ -92,14 +96,9 @@ app.get(
 app.get('/api/market/categories', async (_req, res) => {
   try {
     const categories = await obterCategoriasDinamicas();
-    console.log(
-      `[/api/market/categories] Retornando ${categories.length} categorias: ${categories.slice(0, 5).join(', ')}...`,
-    );
     res.json({ categories });
   } catch (e) {
-    console.error('[/api/market/categories] Erro ao obter categorias:', e);
     const staticCats = Object.keys(CATEGORIAS);
-    console.log(`[/api/market/categories] Fallback para ${staticCats.length} categorias estáticas`);
     res.json({ categories: staticCats });
   }
 });
@@ -120,10 +119,6 @@ app.post(
       enchantment = 'Todos',
     } = req.body;
 
-    console.log(
-      `[/api/market/opportunities] Solicitado: categoria="${categoria}", tier="${tier}", enchantment="${enchantment}", offset=${offset}, step=${step}`,
-    );
-
     const resultados = await buscarOportunidades({
       categoria,
       offset,
@@ -136,8 +131,6 @@ app.post(
       tier,
       enchantment,
     });
-
-    console.log(`[/api/market/opportunities] Retornando ${resultados.length} oportunidades`);
     return { oportunidades: resultados };
   }),
 );

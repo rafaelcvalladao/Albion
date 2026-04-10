@@ -282,15 +282,6 @@ table.result-table {
   vertical-align: middle;
 }
 
-/* Legado — preferir .num-profit / profitClass */
-.row-lucro-pos {
-  color: var(--profit-pos);
-}
-
-.row-lucro-neg {
-  color: var(--profit-neg);
-}
-
 /* Wood Master */
 .wood-layout {
   display: flex;
