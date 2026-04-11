@@ -63,7 +63,7 @@ const EquipBuy = () => {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center' }}>
           <label style={{ display: 'flex', flexDirection: 'column', fontWeight: 500 }}>
             Slot:
-            <select value={slot} onChange={e => setSlot(e.target.value)} style={{ minWidth: 120, padding: 6, borderRadius: 6 }}>
+            <select value={slot} onChange={e => setSlot(e.target.value)} style={{ minWidth: 120, padding: 6, borderRadius: 6, background: '#23232e', color: '#fff', border: '1px solid #444' }}>
               {SLOTS.map(s => (
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
@@ -71,7 +71,7 @@ const EquipBuy = () => {
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', fontWeight: 500 }}>
             Tier desejado:
-            <select value={tier} onChange={e => setTier(e.target.value)} style={{ minWidth: 80, padding: 6, borderRadius: 6 }}>
+            <select value={tier} onChange={e => setTier(e.target.value)} style={{ minWidth: 80, padding: 6, borderRadius: 6, background: '#23232e', color: '#fff', border: '1px solid #444' }}>
               {TIERS.map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
@@ -79,7 +79,7 @@ const EquipBuy = () => {
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', fontWeight: 500 }}>
             Cidade:
-            <select value={cidade} onChange={e => setCidade(e.target.value)} style={{ minWidth: 140, padding: 6, borderRadius: 6 }}>
+            <select value={cidade} onChange={e => setCidade(e.target.value)} style={{ minWidth: 140, padding: 6, borderRadius: 6, background: '#23232e', color: '#fff', border: '1px solid #444' }}>
               {CIDADES.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -92,7 +92,7 @@ const EquipBuy = () => {
               value={equipamento}
               onChange={e => setEquipamento(e.target.value)}
               placeholder="Ex: Claymore, Royal Armor..."
-              style={{ padding: 6, borderRadius: 6, width: '100%' }}
+              style={{ padding: 6, borderRadius: 6, width: '100%', background: '#23232e', color: '#fff', border: '1px solid #444', '::placeholder': { color: '#bbb' } }}
             />
           </label>
           <button type="submit" disabled={loading} style={{
