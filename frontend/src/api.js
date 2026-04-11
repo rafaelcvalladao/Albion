@@ -1,3 +1,9 @@
+export function equipBuyOptions({ slot, tier, cidade, equipamento }) {
+  return request('/api/equipbuy/options', {
+    method: 'POST',
+    body: JSON.stringify({ slot, tier, cidade, equipamento }),
+  });
+}
 /**
  * URL base do backend (ex.: https://api.exemplo.com).
  * Definir em build/runtime via `VITE_API_BASE` (Vite injeta em `import.meta.env`).

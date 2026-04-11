@@ -3,6 +3,7 @@ import ResourceMaster from './components/ResourceMaster.jsx';
 import MarketAnalyzer from './components/MarketAnalyzer.jsx';
 import TeleportCalculator from './components/TeleportCalculator.jsx';
 import LoginGate from './components/LoginGate.jsx';
+import EquipBuy from './components/EquipBuy.jsx';
 import {
   calculateWood,
   strategyWood,
@@ -84,6 +85,13 @@ export default function App() {
           >
             Teleporte
           </button>
+           <button
+             type="button"
+             className={tab === 'equipbuy' ? 'tab active' : 'tab'}
+             onClick={() => setTab('equipbuy')}
+           >
+             Equip Buy
+           </button>
         </nav>
       </header>
       <main className="app-main">
@@ -120,6 +128,7 @@ export default function App() {
         )}
         {tab === 'market' && <MarketAnalyzer />}
         {tab === 'teleport' && <TeleportCalculator />}
+        {tab === 'equipbuy' && <EquipBuy />}
       </main>
     </div>
   );
