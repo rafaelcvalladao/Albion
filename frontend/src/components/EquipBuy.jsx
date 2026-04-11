@@ -48,53 +48,77 @@ const EquipBuy = () => {
   };
 
   return (
-    <div className="equip-buy-container">
-      <h2>Equip Buy</h2>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <label>Slot:</label>
-          <select value={slot} onChange={e => setSlot(e.target.value)}>
-            {SLOTS.map(s => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
+    <div className="equip-buy-container" style={{ maxWidth: 900, margin: '0 auto', padding: '2rem 1rem' }}>
+      <h2 style={{ marginBottom: '1.5rem' }}>Equip Buy</h2>
+      <form onSubmit={handleSubmit} style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.2rem',
+        background: 'rgba(30,30,40,0.85)',
+        borderRadius: 12,
+        padding: '1.5rem 1rem',
+        boxShadow: '0 2px 12px #0002',
+        marginBottom: '2rem',
+      }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', fontWeight: 500 }}>
+            Slot:
+            <select value={slot} onChange={e => setSlot(e.target.value)} style={{ minWidth: 120, padding: 6, borderRadius: 6 }}>
+              {SLOTS.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', fontWeight: 500 }}>
+            Tier desejado:
+            <select value={tier} onChange={e => setTier(e.target.value)} style={{ minWidth: 80, padding: 6, borderRadius: 6 }}>
+              {TIERS.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', fontWeight: 500 }}>
+            Cidade:
+            <select value={cidade} onChange={e => setCidade(e.target.value)} style={{ minWidth: 140, padding: 6, borderRadius: 6 }}>
+              {CIDADES.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', fontWeight: 500, flex: 1 }}>
+            Equipamento:
+            <input
+              type="text"
+              value={equipamento}
+              onChange={e => setEquipamento(e.target.value)}
+              placeholder="Ex: Claymore, Royal Armor..."
+              style={{ padding: 6, borderRadius: 6, width: '100%' }}
+            />
+          </label>
+          <button type="submit" disabled={loading} style={{
+            padding: '0.7rem 1.2rem',
+            borderRadius: 8,
+            background: '#4caf50',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: 16,
+            border: 'none',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.6 : 1,
+            marginTop: 24,
+            minWidth: 180,
+          }}>
+            {loading ? "Buscando..." : "Buscar Melhor Opção"}
+          </button>
         </div>
-        <div>
-          <label>Tier desejado:</label>
-          <select value={tier} onChange={e => setTier(e.target.value)}>
-            {TIERS.map(t => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label>Cidade:</label>
-          <select value={cidade} onChange={e => setCidade(e.target.value)}>
-            {CIDADES.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label>Equipamento:</label>
-          <input
-            type="text"
-            value={equipamento}
-            onChange={e => setEquipamento(e.target.value)}
-            placeholder="Ex: Claymore, Royal Armor..."
-          />
-        </div>
-        <button type="submit" disabled={loading}>
-          {loading ? "Buscando..." : "Buscar Melhor Opção"}
-        </button>
       </form>
       <div className="equip-buy-results" style={{ marginTop: '1.5rem' }}>
         {erro && <div style={{ color: 'red' }}>{erro}</div>}
         {resultados.length === 0 && !loading && <div>Nenhum resultado ainda.</div>}
         {resultados.length > 0 && (
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem', background: '#181820', borderRadius: 8, overflow: 'hidden' }}>
             <thead>
-              <tr>
+              <tr style={{ background: '#23232e', color: '#fff' }}>
                 <th>Nome</th>
                 <th>Cidade</th>
                 <th>Encantamento</th>
@@ -109,7 +133,7 @@ const EquipBuy = () => {
             </thead>
             <tbody>
               {resultados.map((r, i) => (
-                <tr key={r.itemId + r.cidade + i}>
+                <tr key={r.itemId + r.cidade + i} style={{ background: i % 2 === 0 ? '#23232e' : '#181820', color: '#fff' }}>
                   <td>{r.nome}</td>
                   <td>{r.cidade}</td>
                   <td>{r.encantamento}</td>
