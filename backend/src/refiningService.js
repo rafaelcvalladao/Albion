@@ -113,14 +113,14 @@ function volumeMapFromHistory(hist) {
       volMap.set(`${cid}|${it}`, 0);
       continue;
     }
-    // Ordenar por timestamp e remover o data-point mais recente (dia parcial/incompleto)
+    // Ordenar por timestamp decrescente (mais recente primeiro)
     const sorted = [...entry.data].sort(
-      (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
     );
-    const complete = sorted.length > 1 ? sorted.slice(0, -1) : sorted;
-    const totalVol = complete.reduce((s, d) => s + (d.item_count || 0), 0);
-    const days = complete.length || 1;
-    volMap.set(`${cid}|${it}`, Math.round(totalVol / days));
+    // Pegar os últimos 24 registros (24h)
+    const last24h = sorted.slice(0, 24);
+    const totalVol = last24h.reduce((s, d) => s + (d.item_count || 0), 0);
+    volMap.set(`${cid}|${it}`, totalVol);
   }
   return volMap;
 }
