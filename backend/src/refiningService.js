@@ -106,8 +106,6 @@ function buildIdsForTier(tSel, rawSuffix, refinedSuffix) {
 
 function volumeMapFromHistory(hist) {
   const volMap = new Map();
-  const now = Date.now();
-  const ms24h = 24 * 60 * 60 * 1000;
   for (const entry of hist) {
     const cid = entry.location;
     const it = entry.item_id;
@@ -115,18 +113,14 @@ function volumeMapFromHistory(hist) {
       volMap.set(`${cid}|${it}`, 0);
       continue;
     }
-    // Filtrar apenas registros das últimas 24 horas reais
-    const last24h = entry.data.filter(d => now - new Date(d.timestamp).getTime() <= ms24h);
-    const totalVol = last24h.reduce((s, d) => s + (d.item_count || 0), 0);
-    // Log para depuração detalhada
-    if (it === 'T6_PLANKS_LEVEL2@2' && cid === 'Fort Sterling') {
-      console.log('DEBUG vol.24h T6_PLANKS_LEVEL2@2 Fort Sterling:');
-      console.log('  Agora:', new Date(now).toISOString());
-      console.log('  Registros considerados:', last24h.length);
-      console.log('  Timestamps usados:', last24h.map(d => d.timestamp));
-      console.log('  Soma total:', totalVol);
-    }
-    volMap.set(`${cid}|${it}`, totalVol);
+    // Ordenar por timestamp e remover o data-point mais recente (dia parcial/incompleto)
+    const sorted = [...entry.data].sort(
+      (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+    );
+    const complete = sorted.length > 1 ? sorted.slice(0, -1) : sorted;
+    const totalVol = complete.reduce((s, d) => s + (d.item_count || 0), 0);
+    const days = complete.length || 1;
+    volMap.set(`${cid}|${it}`, Math.round(totalVol / days));
   }
   return volMap;
 }
