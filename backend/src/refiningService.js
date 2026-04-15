@@ -118,14 +118,6 @@ function volumeMapFromHistory(hist) {
     // Filtrar apenas registros das últimas 24 horas reais
     const last24h = entry.data.filter(d => now - new Date(d.timestamp).getTime() <= ms24h);
     const totalVol = last24h.reduce((s, d) => s + (d.item_count || 0), 0);
-    // Log para depuração detalhada
-    if (it === 'T6_PLANKS_LEVEL2@2' && cid === 'Fort Sterling') {
-      console.log('DEBUG vol.24h T6_PLANKS_LEVEL2@2 Fort Sterling:');
-      console.log('  Agora:', new Date(now).toISOString());
-      console.log('  Registros considerados:', last24h.length);
-      console.log('  Timestamps usados:', last24h.map(d => d.timestamp));
-      console.log('  Soma total:', totalVol);
-    }
     volMap.set(`${cid}|${it}`, totalVol);
   }
   return volMap;
