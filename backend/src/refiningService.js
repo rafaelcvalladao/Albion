@@ -106,8 +106,6 @@ function buildIdsForTier(tSel, rawSuffix, refinedSuffix) {
 
 function volumeMapFromHistory(hist) {
   const volMap = new Map();
-  const now = Date.now();
-  const ms24h = 24 * 60 * 60 * 1000;
   for (const entry of hist) {
     const cid = entry.location;
     const it = entry.item_id;
@@ -115,8 +113,12 @@ function volumeMapFromHistory(hist) {
       volMap.set(`${cid}|${it}`, 0);
       continue;
     }
-    // Filtrar apenas registros das últimas 24 horas reais
-    const last24h = entry.data.filter(d => now - new Date(d.timestamp).getTime() <= ms24h);
+    // Ordenar por timestamp decrescente (mais recente primeiro)
+    const sorted = [...entry.data].sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
+    );
+    // Pegar os últimos 24 registros (24h)
+    const last24h = sorted.slice(0, 24);
     const totalVol = last24h.reduce((s, d) => s + (d.item_count || 0), 0);
     volMap.set(`${cid}|${it}`, totalVol);
   }
