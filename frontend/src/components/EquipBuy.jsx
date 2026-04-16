@@ -315,10 +315,11 @@ const EquipBuy = () => {
               <table style={{ width: '100%', borderCollapse: 'collapse', background: '#181820', borderRadius: 8, overflow: 'hidden' }}>
                 <thead>
                   <tr style={{ background: '#23232e', color: '#fff' }}>
-                    <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333' }}>Nome</th>
-                    <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333' }}>Cidade Origem</th>
+                    <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333' }}>Item</th>
+                    <th style={{ padding: '0.8rem', textAlign: 'center', borderBottom: '1px solid #333' }}>✨ Enc.</th>
+                    <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333' }}>Cidade</th>
                     <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333' }}>Preço</th>
-                    <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333' }}>Custo Teleporte</th>
+                    <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333' }}>Teleporte</th>
                     <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333', color: '#4caf50', fontWeight: 'bold' }}>Custo Final</th>
                     <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333', fontSize: '0.85rem' }}>Data</th>
                   </tr>
@@ -327,9 +328,14 @@ const EquipBuy = () => {
                   {resultados.map((r, i) => (
                     <tr key={r.itemId + r.cidadeOrigem + i} style={{ background: i % 2 === 0 ? '#23232e' : '#1a1a22', color: '#fff', borderBottom: '1px solid #333' }}>
                       <td style={{ padding: '0.8rem' }}>{r.nome}</td>
+                      <td style={{ padding: '0.8rem', textAlign: 'center', fontWeight: 'bold', color: r.enchant > 0 ? '#ffd700' : '#999' }}>
+                        {r.enchant === 0 ? '—' : `+${r.enchant}`}
+                      </td>
                       <td style={{ padding: '0.8rem' }}>{r.cidadeOrigem}</td>
                       <td style={{ padding: '0.8rem', textAlign: 'right' }}>{formatarMoeda(r.preco)}</td>
-                      <td style={{ padding: '0.8rem', textAlign: 'right', color: '#ffb74d' }}>{formatarMoeda(r.custoTeleporte)}</td>
+                      <td style={{ padding: '0.8rem', textAlign: 'right', color: r.custoTeleporte === 0 ? '#888' : '#ffb74d' }}>
+                        {formatarMoeda(r.custoTeleporte)}
+                      </td>
                       <td style={{ padding: '0.8rem', textAlign: 'right', fontWeight: 'bold', color: '#4caf50' }}>{formatarMoeda(r.custoFinal)}</td>
                       <td style={{ padding: '0.8rem', fontSize: '0.85rem', color: '#888' }}>{r.data ? r.data.replace('T', ' ') : '-'}</td>
                     </tr>

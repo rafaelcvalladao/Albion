@@ -77,8 +77,8 @@ export async function buscarEquipamentoPorNomeComTeleporte({
     return [];
   }
 
-  // 4. Agrupar por cidade e encontrar o melhor preço em cada uma
-  const mapaPrecosPorCidade = new Map();
+  // 4. Processar preços diretos (mantendo TODAS as variações de encantamento)
+  const resultados = [];
   
   for (const p of precos) {
     const { item_id, city, sell_price_min, sell_price_min_date, quality } = p;
@@ -86,53 +86,39 @@ export async function buscarEquipamentoPorNomeComTeleporte({
     // Validar que é a qualidade correta
     if (quality && quality !== qualidade) continue;
 
-    const chave = city;
-    
-    if (!mapaPrecosPorCidade.has(chave)) {
-      mapaPrecosPorCidade.set(chave, {
-        itemId: item_id,
-        preco: sell_price_min,
-        data: sell_price_min_date,
-        quality: quality || qualidade,
-      });
-    } else {
-      // Manter o menor preço
-      const existente = mapaPrecosPorCidade.get(chave);
-      if (sell_price_min < existente.preco) {
-        existente.itemId = item_id;
-        existente.preco = sell_price_min;
-        existente.data = sell_price_min_date;
-      }
-    }
-  }
-
-  // 5. Para cada cidade, calcular custo total com teleporte
-  const resultados = [];
-  
-  for (const [cidade, dadosPreco] of mapaPrecosPorCidade.entries()) {
-    const cidadeNormalizada = normalizarCidade(cidade);
+    const cidadeNormalizada = normalizarCidade(city);
     const eMesmaCidade = cidadeNormalizada === cidadeDestinoNormalizada;
     const custoTeleporte = eMesmaCidade 
       ? 0 
-      : calcularCustoTeleporte(dadosPreco.itemId, cidadeNormalizada, cidadeDestinoNormalizada);
+      : calcularCustoTeleporte(item_id, cidadeNormalizada, cidadeDestinoNormalizada);
     
-    const custoFinal = (dadosPreco.preco || 0) + custoTeleporte;
+    const custoFinal = (sell_price_min || 0) + custoTeleporte;
+
+    // Extrair nível de encantamento do item_id
+    const enchantMatch = item_id.match(/@(\d)$/);
+    const enchant = enchantMatch ? parseInt(enchantMatch[1], 10) : 0;
 
     resultados.push({
-      itemId: dadosPreco.itemId,
-      nome: nomeItemEmPortugues(dadosPreco.itemId),
-      cidadeOrigem: cidade, // Mantém nome original da API para exibir
-      cidadeDestino: cidadeDestino, // Mantém nome original para exibir
-      preco: dadosPreco.preco || 0,
+      itemId: item_id,
+      nome: nomeItemEmPortugues(item_id),
+      cidadeOrigem: city, // Nome original da API
+      cidadeDestino: cidadeDestino,
+      enchant: enchant,
+      preco: sell_price_min || 0,
       custoTeleporte: custoTeleporte,
       custoFinal: custoFinal,
-      data: dadosPreco.data,
-      quality: dadosPreco.quality,
+      data: sell_price_min_date,
+      quality: quality || qualidade,
     });
   }
 
-  // 6. Ordenar pelo custo final (menor primeiro)
-  resultados.sort((a, b) => a.custoFinal - b.custoFinal);
+  // 5. Ordenar pelo custo final (menor primeiro), depois por encantamento
+  resultados.sort((a, b) => {
+    if (a.custoFinal !== b.custoFinal) {
+      return a.custoFinal - b.custoFinal;
+    }
+    return a.enchant - b.enchant;
+  });
   
   console.log(`[buscarEquipamentoPorNomeComTeleporte] ${resultados.length} resultados retornados`);
   
