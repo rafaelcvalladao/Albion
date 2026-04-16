@@ -92,7 +92,9 @@ export async function buscarEquipamentoPorNomeComTeleporte({
       ? 0 
       : calcularCustoTeleporte(item_id, cidadeNormalizada, cidadeDestinoNormalizada);
     
-    const custoFinal = (sell_price_min || 0) + custoTeleporte;
+    const precoNumero = Number(sell_price_min) || 0;
+    const custoTeleporteNumero = Number(custoTeleporte) || 0;
+    const custoFinal = precoNumero + custoTeleporteNumero;
 
     // Extrair nível de encantamento do item_id
     const enchantMatch = item_id.match(/@(\d)$/);
@@ -101,14 +103,14 @@ export async function buscarEquipamentoPorNomeComTeleporte({
     resultados.push({
       itemId: item_id,
       nome: nomeItemEmPortugues(item_id),
-      cidadeOrigem: city, // Nome original da API
-      cidadeDestino: cidadeDestino,
-      enchant: enchant,
-      preco: sell_price_min || 0,
-      custoTeleporte: custoTeleporte,
+      cidadeOrigem: String(city || ''),
+      cidadeDestino: String(cidadeDestino || ''),
+      enchant: Number(enchant) || 0,
+      preco: precoNumero,
+      custoTeleporte: custoTeleporteNumero,
       custoFinal: custoFinal,
-      data: sell_price_min_date,
-      quality: quality || qualidade,
+      data: String(sell_price_min_date || ''),
+      quality: Number(quality || qualidade),
     });
   }
 

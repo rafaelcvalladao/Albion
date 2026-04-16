@@ -18,6 +18,7 @@ const EquipBuy = () => {
   const [qualidade, setQualidade] = useState("1");
   const [tier, setTier] = useState("T7");
   const [cidade, setCidade] = useState("Caerleon");
+  const [enchantFilter, setEnchantFilter] = useState("Todos");
   const [resultados, setResultados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
@@ -109,6 +110,22 @@ const EquipBuy = () => {
     if (!valor && valor !== 0) return '-';
     return valor.toLocaleString('pt-BR');
   };
+
+  const formatarData = (dataStr) => {
+    if (!dataStr || dataStr === '0001-01-01' || dataStr === '') return 'N/A';
+    try {
+      const data = new Date(dataStr);
+      if (isNaN(data.getTime())) return 'N/A';
+      return data.toLocaleString('pt-BR');
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  const resultadosFiltrados = resultados.filter(r => {
+    if (enchantFilter === 'Todos') return true;
+    return String(r.enchant) === enchantFilter;
+  });
 
   return (
     <div className="equip-buy-container" style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1rem' }}>
@@ -279,6 +296,31 @@ const EquipBuy = () => {
             </select>
           </label>
 
+          {/* Encantamento (filtro pós-busca) */}
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#ccc' }}>Filtrar Encantamento</span>
+            <select 
+              value={enchantFilter}
+              onChange={e => setEnchantFilter(e.target.value)}
+              style={{ 
+                padding: '0.6rem 0.8rem',
+                borderRadius: 6,
+                background: '#23232e',
+                color: '#fff',
+                border: '1px solid #555',
+                fontSize: '0.95rem',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="Todos">Todos</option>
+              <option value="0">Sem Encantamento</option>
+              <option value="1">+1 Encantamento</option>
+              <option value="2">+2 Encantamento</option>
+              <option value="3">+3 Encantamento</option>
+              <option value="4">+4 Encantamento</option>
+            </select>
+          </label>
+
           {/* Botão */}
           <button 
             type="submit" 
@@ -308,38 +350,79 @@ const EquipBuy = () => {
         {resultados.length === 0 && !loading && <div style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>Nenhum resultado ainda. Selecione um item e clique em "Buscar".</div>}
         {resultados.length > 0 && (
           <div>
-            <div style={{ marginBottom: '1rem', color: '#4caf50', fontWeight: 600 }}>
-              ✓ {resultados.length} opções encontradas - Melhor preço: {formatarMoeda(resultados[0]?.custoFinal)} (com teleporte)
+            <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(76,175,80,0.15)', borderRadius: 8, borderLeft: '3px solid #4caf50' }}>
+              <div style={{ color: '#4caf50', fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.3rem' }}>
+                ✓ {resultadosFiltrados.length} de {resultados.length} opções encontradas
+              </div>
+              <div style={{ color: '#8bc34a', fontSize: '0.95rem' }}>
+                💰 Melhor preço: <span style={{ fontWeight: 'bold', color: '#4caf50' }}>{formatarMoeda(resultadosFiltrados[0]?.custoFinal)} prata</span>
+                {resultadosFiltrados[0]?.custoTeleporte > 0 && 
+                  <span> (item: {formatarMoeda(resultadosFiltrados[0]?.preco)} + teleporte: {formatarMoeda(resultadosFiltrados[0]?.custoTeleporte)})</span>
+                }
+              </div>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', background: '#181820', borderRadius: 8, overflow: 'hidden' }}>
                 <thead>
                   <tr style={{ background: '#23232e', color: '#fff' }}>
-                    <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333' }}>Item</th>
-                    <th style={{ padding: '0.8rem', textAlign: 'center', borderBottom: '1px solid #333' }}>✨ Enc.</th>
-                    <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333' }}>Cidade</th>
-                    <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333' }}>Preço</th>
-                    <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333' }}>Teleporte</th>
-                    <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333', color: '#4caf50', fontWeight: 'bold' }}>Custo Final</th>
-                    <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333', fontSize: '0.85rem' }}>Data</th>
+                    <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #444', fontWeight: 700 }}>Item</th>
+                    <th style={{ padding: '1rem', textAlign: 'center', borderBottom: '2px solid #444', fontWeight: 700 }}>✨ Enc.</th>
+                    <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #444', fontWeight: 700 }}>De Cidade</th>
+                    <th style={{ padding: '1rem', textAlign: 'right', borderBottom: '2px solid #444', fontWeight: 700 }} title="Preço base do item">Preço Item</th>
+                    <th style={{ padding: '1rem', textAlign: 'right', borderBottom: '2px solid #444', fontWeight: 700 }} title="Custo de teleporte (0 = mesma cidade)">Taxa Teleporte</th>
+                    <th style={{ padding: '1rem', textAlign: 'right', borderBottom: '2px solid #444', fontWeight: 700, color: '#4caf50', backgroundColor: 'rgba(76,175,80,0.1)' }} title="Preço final = item + teleporte">💚 TOTAL</th>
+                    <th style={{ padding: '1rem', textAlign: 'center', borderBottom: '2px solid #444', fontWeight: 700, fontSize: '0.85rem' }}>Atualizado</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {resultados.map((r, i) => (
-                    <tr key={r.itemId + r.cidadeOrigem + i} style={{ background: i % 2 === 0 ? '#23232e' : '#1a1a22', color: '#fff', borderBottom: '1px solid #333' }}>
-                      <td style={{ padding: '0.8rem' }}>{r.nome}</td>
-                      <td style={{ padding: '0.8rem', textAlign: 'center', fontWeight: 'bold', color: r.enchant > 0 ? '#ffd700' : '#999' }}>
+                  {resultadosFiltrados.length > 0 ? resultadosFiltrados.map((r, i) => (
+                    <tr key={r.itemId + r.cidadeOrigem + i} style={{ 
+                      background: i % 2 === 0 ? '#23232e' : '#1a1a22', 
+                      color: '#fff', 
+                      borderBottom: '1px solid #333',
+                      hover: { background: '#2a2a35' }
+                    }}>
+                      <td style={{ padding: '0.9rem 1rem' }}>
+                        <div style={{ fontWeight: 500 }}>{r.nome}</div>
+                      </td>
+                      <td style={{ padding: '0.9rem 1rem', textAlign: 'center', fontWeight: 'bold', color: r.enchant > 0 ? '#ffd700' : '#888', fontSize: '0.95rem' }}>
                         {r.enchant === 0 ? '—' : `+${r.enchant}`}
                       </td>
-                      <td style={{ padding: '0.8rem' }}>{r.cidadeOrigem}</td>
-                      <td style={{ padding: '0.8rem', textAlign: 'right' }}>{formatarMoeda(r.preco)}</td>
-                      <td style={{ padding: '0.8rem', textAlign: 'right', color: r.custoTeleporte === 0 ? '#888' : '#ffb74d' }}>
-                        {formatarMoeda(r.custoTeleporte)}
+                      <td style={{ padding: '0.9rem 1rem', color: '#bbb' }}>
+                        {r.cidadeOrigem || 'N/A'}
                       </td>
-                      <td style={{ padding: '0.8rem', textAlign: 'right', fontWeight: 'bold', color: '#4caf50' }}>{formatarMoeda(r.custoFinal)}</td>
-                      <td style={{ padding: '0.8rem', fontSize: '0.85rem', color: '#888' }}>{r.data ? r.data.replace('T', ' ') : '-'}</td>
+                      <td style={{ padding: '0.9rem 1rem', textAlign: 'right', color: '#ddd' }}>
+                        {formatarMoeda(r.preco)}
+                      </td>
+                      <td style={{ 
+                        padding: '0.9rem 1rem', 
+                        textAlign: 'right', 
+                        color: r.custoTeleporte === 0 ? '#888' : '#ffb74d',
+                        fontWeight: r.custoTeleporte === 0 ? 'normal' : 'bold'
+                      }}>
+                        {r.custoTeleporte === 0 ? '(mesma cidade)' : formatarMoeda(r.custoTeleporte)}
+                      </td>
+                      <td style={{ 
+                        padding: '0.9rem 1rem', 
+                        textAlign: 'right', 
+                        fontWeight: 'bold', 
+                        color: '#4caf50',
+                        backgroundColor: i === 0 ? 'rgba(76,175,80,0.15)' : 'transparent',
+                        fontSize: '1rem'
+                      }}>
+                        {formatarMoeda(r.custoFinal)}
+                      </td>
+                      <td style={{ padding: '0.9rem 1rem', textAlign: 'center', fontSize: '0.8rem', color: '#666' }}>
+                        {formatarData(r.data)}
+                      </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
+                        Nenhum resultado para o filtro de encantamento selecionado
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
