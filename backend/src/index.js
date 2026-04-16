@@ -209,12 +209,18 @@ app.post(
   '/api/equipbuy/options',
   wrap(async (req) => {
     const { equipamentoNome, tier, qualidade, cidadeDestino } = req.body || {};
-    return await buscarEquipamentoPorNomeComTeleporte({ 
+    console.log('[/api/equipbuy/options] Parâmetros:', { equipamentoNome, tier, qualidade, cidadeDestino });
+    const resultado = await buscarEquipamentoPorNomeComTeleporte({ 
       equipamentoNome, 
       tier, 
       qualidade, 
       cidadeDestino 
     });
+    console.log(`[/api/equipbuy/options] Retornando ${resultado.length} resultados`);
+    if (resultado.length > 0) {
+      console.log('[/api/equipbuy/options] Primeiro resultado:', JSON.stringify(resultado[0], null, 2));
+    }
+    return resultado;
   }),
 );
 

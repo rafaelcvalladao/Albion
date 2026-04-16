@@ -63,10 +63,10 @@ export async function buscarEquipamentoPorNomeComTeleporte({
 
   console.log(`[buscarEquipamentoPorNomeComTeleporte] ${itensFiltrados.length} itens encontrados para: ${equipamentoNome} (${tier})`);
 
-  // 3. Buscar preços em TODAS as cidades (não filtrar)
+  // 3. Buscar preços em TODAS as cidades (qualidade 0 = não filtrar por qualidade)
   let precos = [];
   try {
-    precos = await fetchPricesMarket(itensFiltrados, undefined, qualidade);
+    precos = await fetchPricesMarket(itensFiltrados, undefined, 0);
   } catch (e) {
     console.error('[buscarEquipamentoPorNomeComTeleporte] Erro ao buscar preços:', e.message);
     return [];
@@ -77,14 +77,19 @@ export async function buscarEquipamentoPorNomeComTeleporte({
     return [];
   }
 
+  console.log(`[buscarEquipamentoPorNomeComTeleporte] ${precos.length} preços retornados`);
+  console.log('[buscarEquipamentoPorNomeComTeleporte] Primeiros 3 preços:');
+  for (let i = 0; i < Math.min(3, precos.length); i++) {
+    console.log(`  [${i}]:`, JSON.stringify(precos[i], null, 2));
+  }
+
   // 4. Processar preços diretos (mantendo TODAS as variações de encantamento)
   const resultados = [];
   
   for (const p of precos) {
     const { item_id, city, sell_price_min, sell_price_min_date, quality } = p;
     
-    // Validar que é a qualidade correta
-    if (quality && quality !== qualidade) continue;
+    // NÃO filtrar por qualidade aqui - a API pode não retornar esse campo
 
     const cidadeNormalizada = normalizarCidade(city);
     const eMesmaCidade = cidadeNormalizada === cidadeDestinoNormalizada;

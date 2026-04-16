@@ -98,6 +98,10 @@ const EquipBuy = () => {
         qualidade: parseInt(qualidade),
         cidadeDestino: cidade
       });
+      console.log('[EquipBuy] Resposta da API:', res);
+      if (res && res.length > 0) {
+        console.log('[EquipBuy] Primeiro resultado:', res[0]);
+      }
       setResultados(res);
     } catch (err) {
       setErro(err.message || 'Erro ao buscar opções');
@@ -359,6 +363,10 @@ const EquipBuy = () => {
                 {resultadosFiltrados[0]?.custoTeleporte > 0 && 
                   <span> (item: {formatarMoeda(resultadosFiltrados[0]?.preco)} + teleporte: {formatarMoeda(resultadosFiltrados[0]?.custoTeleporte)})</span>
                 }
+              </div>
+              {/* Debug: mostrar primeiro resultado */}
+              <div style={{ marginTop: '0.8rem', fontSize: '0.75rem', background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: 4, color: '#888', fontFamily: 'monospace' }}>
+                DEBUG: {resultadosFiltrados[0] ? `cidade="${resultadosFiltrados[0].cidadeOrigem}" preco=${resultadosFiltrados[0].preco} teleporte=${resultadosFiltrados[0].custoTeleporte} data="${resultadosFiltrados[0].data}"` : 'sem dados'}
               </div>
             </div>
             <div style={{ overflowX: 'auto' }}>
