@@ -15,6 +15,13 @@ export const EQUIPMENT_HIERARCHY_FALLBACK = {
       Arco: ['Arco', 'Arco Longo', 'Arco de Guerra', 'Arco Sussurrante'],
       Besta: ['Besta', 'Besta Arcana', 'Besta de Fogo', 'Besta de Gelo'],
       Machado: ['Machado', 'Machado de Mão', 'Machado Duplo'],
+      Martelo: ['Martelo', 'Martelo Duplo'],
+      Maça: ['Maça', 'Maça de Cura'],
+      Foice: ['Foice', 'Foice Longa'],
+      'Lança/Halberd': ['Lança', 'Lança de Guerra', 'Halberd'],
+      Cetro: ['Cetro', 'Cetro de Fogo'],
+      Adaga: ['Adaga', 'Adaga Dupla'],
+      Punhos: ['Punhos', 'Punhos de Gelo'],
     }
   },
   Topo: {
