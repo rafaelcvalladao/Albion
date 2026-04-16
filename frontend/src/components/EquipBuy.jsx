@@ -3,10 +3,10 @@ import { equipBuyOptions } from '../api.js';
 import { EQUIPMENT_HIERARCHY, getAllEquipmentCategories, QUALITY_LEVELS } from '../data/equipmentHierarchy.js';
 
 const CIDADES = [
+  "Fort Sterling",
+  "Lymhurst",
   "Bridgewatch",
   "Martlock",
-  "Lymhurst",
-  "Fort Sterling",
   "Thetford",
   "Brecilien",
 ];
@@ -22,7 +22,7 @@ const EquipBuy = () => {
   const [itemSelecionado, setItemSelecionado] = useState("");
   const [qualidade, setQualidade] = useState("1");
   const [tierEnchant, setTierEnchant] = useState("7.0");
-  const [cidade, setCidade] = useState("Bridgewatch");
+  const [cidade, setCidade] = useState("Fort Sterling");
   const [resultados, setResultados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
