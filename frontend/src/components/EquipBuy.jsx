@@ -116,11 +116,22 @@ const EquipBuy = () => {
   };
 
   const formatarData = (dataStr) => {
-    if (!dataStr || dataStr === '0001-01-01' || dataStr === '') return 'N/A';
+    if (!dataStr || dataStr.startsWith('0001') || dataStr === '') return 'N/A';
     try {
-      const data = new Date(dataStr);
+      // A API retorna UTC — garantir sufixo Z para parsing correto
+      const iso = (dataStr.includes('Z') || dataStr.includes('+')) ? dataStr : dataStr + 'Z';
+      const data = new Date(iso);
       if (isNaN(data.getTime())) return 'N/A';
-      return data.toLocaleString('pt-BR');
+      const diffMs = Date.now() - data.getTime();
+      if (diffMs < 0) return 'agora';
+      const diffS = Math.floor(diffMs / 1000);
+      if (diffS < 60) return `há ${diffS}s`;
+      const diffM = Math.floor(diffS / 60);
+      if (diffM < 60) return `há ${diffM}min`;
+      const diffH = Math.floor(diffM / 60);
+      if (diffH < 24) return `há ${diffH}h`;
+      const diffD = Math.floor(diffH / 24);
+      return `há ${diffD}d`;
     } catch {
       return 'N/A';
     }
