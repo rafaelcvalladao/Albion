@@ -52,14 +52,14 @@ export const EQUIPMENT_HIERARCHY = {
 
 /**
  * Níveis de qualidade dos itens baseado em ao-bin-dumps
- * @1 = Rara, @2 = Excepcional, @3 = Excepcional (alt), @4 = Pristina
+ * @0 = Normal, @1 = Bom, @2 = Excepcional, @3 = Excelente, @4 = Obra-prima
  */
 export const QUALITY_LEVELS = [
-  { value: '0', label: 'Padrão', suffix: '' },
-  { value: '1', label: 'Rara', suffix: '@1' },
+  { value: '0', label: 'Normal', suffix: '' },
+  { value: '1', label: 'Bom', suffix: '@1' },
   { value: '2', label: 'Excepcional', suffix: '@2' },
-  { value: '3', label: 'Excepcional (Alt)', suffix: '@3' },
-  { value: '4', label: 'Pristina', suffix: '@4' },
+  { value: '3', label: 'Excelente', suffix: '@3' },
+  { value: '4', label: 'Obra-prima', suffix: '@4' },
 ];
 
 /**
