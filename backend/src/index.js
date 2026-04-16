@@ -1,4 +1,5 @@
 import { calcularMelhorEquipOption } from './equipBuyService.js';
+import { getEquipmentData } from './equipmentService.js';
 
 import express from 'express';
 import cors from 'cors';
@@ -209,6 +210,15 @@ app.post(
   wrap(async (req) => {
     const { slot, tier, cidade, equipamento } = req.body || {};
     return await calcularMelhorEquipOption({ slot, tier, cidade, equipamento });
+  }),
+);
+
+/** Hierarquia de equipamentos - dados dinâmicos do items.json */
+app.get(
+  '/api/equipment/hierarchy',
+  wrap((_req) => {
+    const equipment = getEquipmentData();
+    return { equipment };
   }),
 );
 

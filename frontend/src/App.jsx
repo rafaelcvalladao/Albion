@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ResourceMaster from './components/ResourceMaster.jsx';
 import MarketAnalyzer from './components/MarketAnalyzer.jsx';
 import LoginGate from './components/LoginGate.jsx';
 import EquipBuy from './components/EquipBuy.jsx';
+import { loadEquipmentHierarchy } from './data/equipmentHierarchy.js';
 import {
   calculateWood,
   strategyWood,
@@ -22,6 +23,11 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(
     () => sessionStorage.getItem('albion_token') != null,
   );
+
+  // Carregar hierarquia de equipamentos do backend ao inicializar
+  useEffect(() => {
+    loadEquipmentHierarchy();
+  }, []);
 
   if (!authenticated) {
     return <LoginGate onSuccess={() => setAuthenticated(true)} />;

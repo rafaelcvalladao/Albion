@@ -1,54 +1,87 @@
 /**
- * Hierarquia de equipamentos baseada em ao-bin-dumps
- * Estrutura: Equipamento → Tipo → Variantes específicas
+ * Hierarquia de equipamentos - CARREGADO DINAMICAMENTE
+ * Dados são obtidos de /api/equipment/hierarchy do backend
+ * que lê items.json em tempo de execução
+ * 
+ * Fallback com dados padrão caso o backend não responda
  */
 
-export const EQUIPMENT_HIERARCHY = {
+// Dados padrão (fallback se o backend não responder)
+export const EQUIPMENT_HIERARCHY_FALLBACK = {
   Arma: {
     label: 'Arma',
     types: {
       Espada: ['Espada', 'Espada Longa', 'Espada de Guerra', 'Espada Corrupta'],
-      Arco: ['Arco', 'Arco Longo', 'Arco de Guerra', 'Arco Sussurrante', 'Arco Plangente', 'Arco Badônico', 'Fura-bruma', 'Arco do Andarilho Celeste'],
-      Besta: ['Besta', 'Besta Arcana', 'Besta de Fogo', 'Besta de Gelo', 'Besta Sagrada', 'Besta da Natureza', 'Metamorfo da Besta'],
-      Machado: ['Machado', 'Machado de Mão', 'Machado Duplo', 'Machado Duplo Guardião', 'Machado Guardião'],
-      'Dois Machados': ['Dois Machados', 'Dois Machados de Mão', 'Machado Duplo Gigante'],
-      Maça: ['Maça', 'Maça de Cura', 'Maça Mágica', 'Maça Guardião'],
-      Foice: ['Foice', 'Foice Longa', 'Foice Mágica', 'Foice Corrupta'],
-      'Lança/Halberd': ['Lança', 'Lança de Guerra', 'Halberd', 'Pike'],
+      Arco: ['Arco', 'Arco Longo', 'Arco de Guerra', 'Arco Sussurrante'],
+      Besta: ['Besta', 'Besta Arcana', 'Besta de Fogo', 'Besta de Gelo'],
+      Machado: ['Machado', 'Machado de Mão', 'Machado Duplo'],
     }
   },
   Topo: {
     label: 'Topo (Capacete)',
     types: {
-      Pano: ['Capuz de Pano', 'Capuz de Mago', 'Coração de Clérigo', 'Capuz de Assassino'],
-      Couro: ['Capacete de Couro', 'Elmo de Couro', 'Capuz de Caçador', 'Máscara de Couro'],
-      Placa: ['Elmo de Placa', 'Elmo de Soldado', 'Elmo de Guardião', 'Coroa de Placa'],
+      Pano: ['Capuz de Pano', 'Capuz de Mago', 'Capuz de Assassino'],
+      Couro: ['Capacete de Couro', 'Capuz de Caçador', 'Máscara de Couro'],
+      Placa: ['Elmo de Placa', 'Elmo de Soldado', 'Coroa de Placa'],
     }
   },
   Armadura: {
     label: 'Armadura (Peitoral)',
     types: {
-      Pano: ['Robe de Pano', 'Robe de Clérigo', 'Robe de Mago', 'Jaqueta de Assassino', 'Jaqueta Arcana'],
-      Couro: ['Armadura de Couro', 'Jaqueta de Couro', 'Armadura de Caçador', 'Colete de Couro'],
-      Placa: ['Armadura de Placa', 'Armadura de Soldado', 'Armadura de Guardião', 'Torso de Placa'],
+      Pano: ['Robe de Pano', 'Robe de Clérigo', 'Robe de Mago'],
+      Couro: ['Armadura de Couro', 'Jaqueta de Couro', 'Colete de Couro'],
+      Placa: ['Armadura de Placa', 'Armadura de Soldado', 'Torso de Placa'],
     }
   },
   Bota: {
     label: 'Bota (Calçado)',
     types: {
-      Pano: ['Sapatos de Pano', 'Botas de Mago', 'Sapatos de Clérigo', 'Sapatos de Assassino'],
-      Couro: ['Botas de Couro', 'Sapatos de Caçador', 'Botas de Caçador', 'Sapatos de Caçador Leve'],
-      Placa: ['Botas de Placa', 'Botas de Soldado', 'Botas de Guardião', 'Botas de Placa Pesada'],
+      Pano: ['Sapatos de Pano', 'Botas de Mago', 'Sapatos de Clérigo'],
+      Couro: ['Botas de Couro', 'Sapatos de Caçador', 'Sapatos de Caçador Leve'],
+      Placa: ['Botas de Placa', 'Botas de Soldado', 'Botas de Guardião'],
     }
   },
   Capa: {
     label: 'Capa',
     types: {
       Normal: ['Capa Simples', 'Capa de Viajante', 'Capa Elemental'],
-      'Facção FW': ['Capa Fort Sterling', 'Capa Lymhurst', 'Capa Bridgewatch', 'Capa Martlock', 'Capa Thetford'],
     }
   }
 };
+
+// Será preenchido dinamicamente ao carregar
+export let EQUIPMENT_HIERARCHY = { ...EQUIPMENT_HIERARCHY_FALLBACK };
+
+/**
+ * Carrega hierarquia de equipamentos do backend
+ * Chamado ao inicializar a aplicação no App.jsx
+ */
+export async function loadEquipmentHierarchy() {
+  try {
+    const response = await fetch('/api/equipment/hierarchy');
+    
+    if (!response.ok) {
+      console.warn(`⚠️  Erro ao carregar hierarquia (${response.status}), usando fallback`);
+      return EQUIPMENT_HIERARCHY;
+    }
+    
+    const data = await response.json();
+    
+    if (data.equipment && typeof data.equipment === 'object') {
+      EQUIPMENT_HIERARCHY = data.equipment;
+      console.log('✓ Hierarquia de equipamentos carregada do backend');
+    } else {
+      console.warn('⚠️  Formato inválido de resposta, usando fallback');
+    }
+    
+    return EQUIPMENT_HIERARCHY;
+    
+  } catch (error) {
+    console.error('❌ Erro ao carregar hierarquia:', error);
+    console.log('📌 Usando dados fallback');
+    return EQUIPMENT_HIERARCHY;
+  }
+}
 
 /**
  * Níveis de qualidade dos itens baseado em ao-bin-dumps
