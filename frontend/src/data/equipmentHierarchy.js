@@ -76,7 +76,9 @@ export let EQUIPMENT_HIERARCHY = { ...EQUIPMENT_HIERARCHY_FALLBACK };
  */
 export async function loadEquipmentHierarchy() {
   try {
-    const response = await fetch('/api/equipment/hierarchy');
+    const raw = import.meta.env.VITE_API_BASE;
+    const base = raw == null || raw === '' ? '' : String(raw).trim().replace(/\/+$/, '');
+    const response = await fetch(`${base}/api/equipment/hierarchy`);
     
     if (!response.ok) {
       console.warn(`⚠️  Erro ao carregar hierarquia (${response.status}), usando fallback`);
