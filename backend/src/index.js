@@ -208,18 +208,16 @@ app.post(
 app.post(
   '/api/equipbuy/options',
   wrap(async (req) => {
-    const { equipamentoNome, tier, qualidade, cidadeDestino } = req.body || {};
-    console.log('[/api/equipbuy/options] Parâmetros:', { equipamentoNome, tier, qualidade, cidadeDestino });
-    const resultado = await buscarEquipamentoPorNomeComTeleporte({ 
-      equipamentoNome, 
-      tier, 
-      qualidade, 
-      cidadeDestino 
+    const { equipamentoNome, tier, qualidade, cidadeDestino, encantamento } = req.body || {};
+    console.log('[/api/equipbuy/options] Parâmetros:', { equipamentoNome, tier, qualidade, cidadeDestino, encantamento });
+    const resultado = await buscarEquipamentoPorNomeComTeleporte({
+      equipamentoNome,
+      tier,
+      qualidade,
+      cidadeDestino,
+      encantamento,
     });
     console.log(`[/api/equipbuy/options] Retornando ${resultado.length} resultados`);
-    if (resultado.length > 0) {
-      console.log('[/api/equipbuy/options] Primeiro resultado:', JSON.stringify(resultado[0], null, 2));
-    }
     return resultado;
   }),
 );

@@ -1,13 +1,19 @@
 import { fetchPricesMarket } from './marketPrices.js';
-import { nomeItemEmPortugues, extrairInfoItem, calcularCustoTeleporte, CIDADES_SEGURAS } from './marketConstants.js';
+import { nomeItemEmPortugues, calcularCustoTeleporte } from './marketConstants.js';
 import { gerarListaItens } from './marketItems.js';
 
-/**
- * Normaliza o nome da cidade para o formato esperado (ex: "Fort Sterling" -> "FortSterling")
- */
+const TODAS_CIDADES = [
+  'Bridgewatch',
+  'FortSterling',
+  'Lymhurst',
+  'Martlock',
+  'Thetford',
+  'Caerleon',
+  'Brecilien',
+];
+
 function normalizarCidade(cidade) {
   if (!cidade) return '';
-  // Remove espaços e mantém a capitalização correta
   return cidade
     .split(' ')
     .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
@@ -17,91 +23,88 @@ function normalizarCidade(cidade) {
 /**
  * Busca um equipamento específico em todas as cidades e calcula o preço final
  * considerando o custo de teleporte para trazer para a cidade selecionada.
- * 
- * @param {string} equipamentoNome - Nome do equipamento (ex: "Espada de Guerra")
- * @param {string} tier - Tier do item (ex: "T7")
- * @param {number} qualidade - Qualidade do item (1-5)
- * @param {string} cidadeDestino - Cidade para onde trazer o item (ex: "Fort Sterling")
- * @returns {Promise<Array>} Lista de opções com preço final + teleporte
  */
-export async function buscarEquipamentoPorNomeComTeleporte({ 
-  equipamentoNome, 
-  tier, 
-  qualidade, 
-  cidadeDestino 
+export async function buscarEquipamentoPorNomeComTeleporte({
+  equipamentoNome,
+  tier,
+  qualidade,
+  cidadeDestino,
+  encantamento,
 }) {
-  // Normalizar cidade destino
   const cidadeDestinoNormalizada = normalizarCidade(cidadeDestino);
 
-  // 1. Gerar lista de TODOS os itens
   let todosItens = [];
   try {
     todosItens = await gerarListaItens('Todos');
   } catch (e) {
-    console.error('[buscarEquipamentoPorNomeComTeleporte] Erro ao gerar lista de itens:', e.message);
+    console.error('[equipBuy] Erro ao gerar lista de itens:', e.message);
     return [];
   }
 
-  // 2. Filtrar por nome (case-insensitive) e tier
+  // Filtrar por nome e tier
   const termoBusca = equipamentoNome.toLowerCase();
-  const itensFiltrados = todosItens.filter(itemId => {
-    // O ID tem formato como: T7_MAIN_SWORD ou T7_MAIN_SWORD@3
-    const base = itemId.split('@')[0]; // Remove enchantment se existe
-    
-    // Verificar se começa com o tier correto
+  let itensFiltrados = todosItens.filter(itemId => {
+    const base = itemId.split('@')[0];
     if (!base.startsWith(tier)) return false;
-    
-    // Verificar se o nome em português contém o termo de busca
     const nomeItem = nomeItemEmPortugues(itemId).toLowerCase();
     return nomeItem.includes(termoBusca);
   });
 
   if (itensFiltrados.length === 0) {
-    console.log(`[buscarEquipamentoPorNomeComTeleporte] Nenhum item encontrado para: ${equipamentoNome} (${tier})`);
+    console.log(`[equipBuy] Nenhum item encontrado: ${equipamentoNome} (${tier})`);
     return [];
   }
 
-  console.log(`[buscarEquipamentoPorNomeComTeleporte] ${itensFiltrados.length} itens encontrados para: ${equipamentoNome} (${tier})`);
+  // Filtrar por encantamento se especificado
+  const encStr = String(encantamento ?? '');
+  if (encStr !== '' && encStr !== 'Todos') {
+    const nivel = parseInt(encStr, 10);
+    if (nivel === 0) {
+      itensFiltrados = itensFiltrados.filter(id => !id.includes('@') || id.endsWith('@0'));
+    } else {
+      itensFiltrados = itensFiltrados.filter(id => id.endsWith(`@${nivel}`));
+    }
+  }
 
-  // 3. Buscar preços em TODAS as cidades (qualidade 0 = não filtrar por qualidade)
+  if (itensFiltrados.length === 0) {
+    console.log(`[equipBuy] Nenhum item para encantamento ${encantamento}`);
+    return [];
+  }
+
+  console.log(`[equipBuy] ${itensFiltrados.length} itens para: ${equipamentoNome} (${tier}) enc=${encantamento}`);
+
+  // Qualidade: frontend usa 0-based (0=Normal,1=Bom...), API usa 1-based (1=Normal,2=Bom...)
+  const qualidadeAPI = (parseInt(qualidade) || 0) + 1;
+
   let precos = [];
   try {
-    precos = await fetchPricesMarket(itensFiltrados, undefined, 0);
+    precos = await fetchPricesMarket(itensFiltrados, TODAS_CIDADES, qualidadeAPI);
   } catch (e) {
-    console.error('[buscarEquipamentoPorNomeComTeleporte] Erro ao buscar preços:', e.message);
+    console.error('[equipBuy] Erro ao buscar preços:', e.message);
     return [];
   }
 
   if (!precos || precos.length === 0) {
-    console.log(`[buscarEquipamentoPorNomeComTeleporte] Nenhum preço encontrado para os itens filtrados`);
     return [];
   }
 
-  console.log(`[buscarEquipamentoPorNomeComTeleporte] ${precos.length} preços retornados`);
-  console.log('[buscarEquipamentoPorNomeComTeleporte] Primeiros 3 preços:');
-  for (let i = 0; i < Math.min(3, precos.length); i++) {
-    console.log(`  [${i}]:`, JSON.stringify(precos[i], null, 2));
-  }
-
-  // 4. Processar preços diretos (mantendo TODAS as variações de encantamento)
   const resultados = [];
-  
+
   for (const p of precos) {
     const { item_id, city, sell_price_min, sell_price_min_date, quality } = p;
-    
-    // NÃO filtrar por qualidade aqui - a API pode não retornar esse campo
+
+    const precoNumero = Number(sell_price_min) || 0;
+    if (precoNumero === 0) continue; // sem ordens de mercado
 
     const cidadeNormalizada = normalizarCidade(city);
     const eMesmaCidade = cidadeNormalizada === cidadeDestinoNormalizada;
-    const custoTeleporte = eMesmaCidade 
-      ? 0 
+    const custoTeleporte = eMesmaCidade
+      ? 0
       : calcularCustoTeleporte(item_id, cidadeNormalizada, cidadeDestinoNormalizada);
-    
-    const precoNumero = Number(sell_price_min) || 0;
+
     const custoTeleporteNumero = Number(custoTeleporte) || 0;
     const custoFinal = precoNumero + custoTeleporteNumero;
 
-    // Extrair nível de encantamento do item_id
     const enchantMatch = item_id.match(/@(\d)$/);
     const enchant = enchantMatch ? parseInt(enchantMatch[1], 10) : 0;
 
@@ -115,19 +118,16 @@ export async function buscarEquipamentoPorNomeComTeleporte({
       custoTeleporte: custoTeleporteNumero,
       custoFinal: custoFinal,
       data: String(sell_price_min_date || ''),
-      quality: Number(quality || qualidade),
+      quality: Number(quality || qualidadeAPI),
     });
   }
 
-  // 5. Ordenar pelo custo final (menor primeiro), depois por encantamento
   resultados.sort((a, b) => {
-    if (a.custoFinal !== b.custoFinal) {
-      return a.custoFinal - b.custoFinal;
-    }
+    if (a.custoFinal !== b.custoFinal) return a.custoFinal - b.custoFinal;
     return a.enchant - b.enchant;
   });
-  
-  console.log(`[buscarEquipamentoPorNomeComTeleporte] ${resultados.length} resultados retornados`);
-  
+
+  console.log(`[equipBuy] ${resultados.length} resultados retornados`);
+
   return resultados;
 }
