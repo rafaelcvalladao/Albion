@@ -2,9 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { equipBuyOptions } from '../api.js';
 import { EQUIPMENT_HIERARCHY, getAllEquipmentCategories, QUALITY_LEVELS } from '../data/equipmentHierarchy.js';
 
-const TIERS = ["T4", "T5", "T6", "T7", "T8"];
 const CIDADES = [
-  "Caerleon",
   "Bridgewatch",
   "Martlock",
   "Lymhurst",
@@ -13,22 +11,18 @@ const CIDADES = [
   "Brecilien",
 ];
 
-const ENCHANTMENT_OPTIONS = [
-  { value: 'Todos', label: 'Todos' },
-  { value: '0', label: 'Sem Encantamento' },
-  { value: '1', label: '+1' },
-  { value: '2', label: '+2' },
-  { value: '3', label: '+3' },
-  { value: '4', label: '+4' },
-];
+function parseTierEnchant(valor) {
+  const match = valor.trim().match(/^([4-8])\.([0-4])$/);
+  if (!match) return null;
+  return { tier: `T${match[1]}`, encantamento: match[2] };
+}
 
 const EquipBuy = () => {
   const [searchText, setSearchText] = useState("");
   const [itemSelecionado, setItemSelecionado] = useState("");
   const [qualidade, setQualidade] = useState("1");
-  const [tier, setTier] = useState("T7");
-  const [cidade, setCidade] = useState("Caerleon");
-  const [encantamento, setEncantamento] = useState("0");
+  const [tierEnchant, setTierEnchant] = useState("7.0");
+  const [cidade, setCidade] = useState("Bridgewatch");
   const [resultados, setResultados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
@@ -84,16 +78,21 @@ const EquipBuy = () => {
       setErro("Selecione um item");
       return;
     }
+    const parsed = parseTierEnchant(tierEnchant);
+    if (!parsed) {
+      setErro("Formato inválido. Use tier.encantamento (ex: 7.3, 5.0, 8.4)");
+      return;
+    }
     setLoading(true);
     setErro(null);
     setResultados([]);
     try {
       const res = await equipBuyOptions({
         equipamentoNome: itemSelecionado,
-        tier,
+        tier: parsed.tier,
         qualidade: parseInt(qualidade),
         cidadeDestino: cidade,
-        encantamento,
+        encantamento: parsed.encantamento,
       });
       setResultados(res);
     } catch (err) {
@@ -226,28 +225,30 @@ const EquipBuy = () => {
             )}
           </div>
 
-          {/* Tier */}
+          {/* Tier.Encantamento */}
           <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#ccc' }}>Tier</span>
-            <select
-              value={tier}
-              onChange={e => setTier(e.target.value)}
-              style={{ padding: '0.6rem 0.8rem', borderRadius: 6, background: '#23232e', color: '#fff', border: '1px solid #555', fontSize: '0.95rem', cursor: 'pointer' }}
-            >
-              {TIERS.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </label>
-
-          {/* Encantamento */}
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#ccc' }}>Encantamento</span>
-            <select
-              value={encantamento}
-              onChange={e => setEncantamento(e.target.value)}
-              style={{ padding: '0.6rem 0.8rem', borderRadius: 6, background: '#23232e', color: '#fff', border: '1px solid #555', fontSize: '0.95rem', cursor: 'pointer' }}
-            >
-              {ENCHANTMENT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#ccc' }}>
+              Tier.Encantamento
+              <span style={{ fontWeight: 400, color: '#666', marginLeft: '0.4rem' }}>ex: 7.3 · 5.0 · 8.4</span>
+            </span>
+            <input
+              type="text"
+              value={tierEnchant}
+              onChange={e => setTierEnchant(e.target.value)}
+              placeholder="7.0"
+              maxLength={3}
+              style={{
+                padding: '0.6rem 0.8rem',
+                borderRadius: 6,
+                background: '#23232e',
+                color: '#fff',
+                border: parseTierEnchant(tierEnchant) ? '1px solid #4caf50' : '1px solid #555',
+                fontSize: '1.1rem',
+                fontFamily: 'monospace',
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+            />
           </label>
 
           {/* Qualidade */}
