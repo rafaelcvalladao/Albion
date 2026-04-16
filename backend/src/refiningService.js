@@ -113,16 +113,15 @@ function volumeMapFromHistory(hist) {
       volMap.set(`${cid}|${it}`, 0);
       continue;
     }
-    // Ordenar por timestamp e remover o data-point mais recente (dia parcial/incompleto)
+    // Ordenar por timestamp (data hourária com time-scale=1)
     const sorted = [...entry.data].sort(
       (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
     );
-    const complete = sorted.length > 1 ? sorted.slice(0, -1) : sorted;
     
-    // Usar últimas 96h (4 dias) e dividir por 4 para obter a média de 24h
-    const last4Days = complete.slice(-4);
-    const totalVol = last4Days.reduce((s, d) => s + (d.item_count || 0), 0);
-    const avgVol = totalVol / 4; // Sempre divide por 4 (96h / 24h)
+    // Usar últimas 96 horas (96 pontos de dados com time-scale=1)
+    const last96h = sorted.slice(-96);
+    const totalVol = last96h.reduce((s, d) => s + (d.item_count || 0), 0);
+    const avgVol = totalVol / 4; // 96h / 24h = 4 dias → média de 24h
     volMap.set(`${cid}|${it}`, Math.round(avgVol));
   }
   return volMap;
@@ -161,7 +160,7 @@ async function processarRecurso(resource, body) {
   const { ids, refinedIds } = buildIdsForTier(tSel, cfg.rawSuffix, cfg.refinedSuffix);
 
   const res = await fetchPrices(ids, cfg.locations);
-  const hist = await fetchHistory(refinedIds, cfg.locations, 24);
+  const hist = await fetchHistory(refinedIds, cfg.locations, 1);
   const volMap = volumeMapFromHistory(hist);
 
   // Preços de todas as 5 cidades reais para linha "melhor preço"
@@ -169,7 +168,7 @@ async function processarRecurso(resource, body) {
   const ROYAL_NAMES = ['Fort Sterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
   const [royalRes, royalHist] = await Promise.all([
     fetchPrices([...new Set(ids)], ROYAL_LOCS),
-    fetchHistory(refinedIds, ROYAL_LOCS, 24),
+    fetchHistory(refinedIds, ROYAL_LOCS, 1),
   ]);
   const royalVolMap = volumeMapFromHistory(royalHist);
 
@@ -380,7 +379,7 @@ async function estrategiaCompletaRecurso(resource, body) {
   }
 
   const res = await fetchPrices([...new Set(allIds)], cfg.locations);
-  const hist = await fetchHistory([...new Set(refinedIds)], cfg.locations, 24);
+  const hist = await fetchHistory([...new Set(refinedIds)], cfg.locations, 1);
   const volData = volumeMapFromHistory(hist);
 
   // Preços e volume das 5 cidades reais (para Lucro OT)
@@ -388,7 +387,7 @@ async function estrategiaCompletaRecurso(resource, body) {
   const ROYAL_NAMES = ['Fort Sterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
   const [royalRes, royalHist] = await Promise.all([
     fetchPrices([...new Set(allIds)], ROYAL_LOCS),
-    fetchHistory([...new Set(refinedIds)], ROYAL_LOCS, 24),
+    fetchHistory([...new Set(refinedIds)], ROYAL_LOCS, 1),
   ]);
   const royalVolData = volumeMapFromHistory(royalHist);
 

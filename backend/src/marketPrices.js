@@ -80,12 +80,12 @@ export async function fetchHistoryMarket(itemIds, locations) {
   const allChunks = chunk(unique, HISTORY_CHUNK_SIZE);
   const concurrency = HISTORY_CONCURRENCY;
 
-  // --- Fase 1: buscar histórico diário (7 dias, time-scale=24) ---
+  // --- Fase 1: buscar histórico horário (96 horas, time-scale=1) ---
   const merged = [];
   for (let i = 0; i < allChunks.length; i += concurrency) {
     const batch = allChunks.slice(i, i + concurrency);
     const calls = batch.map(async (part) => {
-      const url = `https://www.albion-online-data.com/api/v2/stats/history/${part.join(',')}?locations=${encodeURIComponent(loc)}&time-scale=24`;
+      const url = `https://www.albion-online-data.com/api/v2/stats/history/${part.join(',')}?locations=${encodeURIComponent(loc)}&time-scale=1`;
       const res = await fetch(url, { headers: { Accept: 'application/json' } });
       if (!res.ok) return [];
       return res.json();
@@ -111,13 +111,13 @@ export async function fetchHistoryMarket(itemIds, locations) {
     const sorted = [...entry.data].sort(
       (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
     );
-    const complete = sorted.length > 1 ? sorted.slice(0, -1) : sorted;
+    const complete = sorted;
     
-    // Usar últimas 96h (4 dias) e dividir por 4 para obter a média de 24h
-    const last4Days = complete.slice(-4);
-    const totalCount = last4Days.reduce((s, d) => s + (d.item_count || 0), 0);
-    const totalSilver = last4Days.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
-    const avgVol = totalCount / 4; // Sempre divide por 4 (96h / 24h)
+    // Usar últimas 96 horas (96 pontos de dados com time-scale=1)
+    const last96h = complete.slice(-96);
+    const totalCount = last96h.reduce((s, d) => s + (d.item_count || 0), 0);
+    const totalSilver = last96h.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
+    const avgVol = totalCount / 4; // 96h / 24h = 4 dias → média de 24h
     const avgPrice = totalCount > 0 ? Math.round(totalSilver / totalCount) : 0;
 
     const prev = volumeMap.get(key);
