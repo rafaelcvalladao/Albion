@@ -8,7 +8,6 @@ const TODAS_CIDADES = [
   'Lymhurst',
   'Martlock',
   'Thetford',
-  'Caerleon',
   'Brecilien',
 ];
 
