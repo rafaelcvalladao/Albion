@@ -1,12 +1,5 @@
 import { calcularMelhorEquipOption } from './equipBuyService.js';
-/** Melhor opção de compra/encantamento de equipamento */
-app.post(
-  '/api/equipbuy/options',
-  wrap(async (req) => {
-    const { slot, tier, cidade, equipamento } = req.body || {};
-    return await calcularMelhorEquipOption({ slot, tier, cidade, equipamento });
-  }),
-);
+
 import express from 'express';
 import cors from 'cors';
 import {
@@ -207,6 +200,15 @@ app.post(
     const ids = itemIds.slice(0, 500);
     const volumes = await buscarVolumeParaItens(ids);
     return { volumes };
+  }),
+);
+
+/** Melhor opção de compra/encantamento de equipamento */
+app.post(
+  '/api/equipbuy/options',
+  wrap(async (req) => {
+    const { slot, tier, cidade, equipamento } = req.body || {};
+    return await calcularMelhorEquipOption({ slot, tier, cidade, equipamento });
   }),
 );
 
