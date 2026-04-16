@@ -103,6 +103,14 @@ const EquipBuy = () => {
     }
   };
 
+  // Uma linha por cidade, a de menor custo total (resultados já vêm ordenados pelo backend)
+  const resultadosPorCidade = Object.values(
+    resultados.reduce((acc, r) => {
+      if (!acc[r.cidadeOrigem]) acc[r.cidadeOrigem] = r;
+      return acc;
+    }, {})
+  ).sort((a, b) => a.custoFinal - b.custoFinal);
+
   const formatarMoeda = (valor) => {
     if (!valor && valor !== 0) return '-';
     return valor.toLocaleString('pt-BR');
@@ -296,22 +304,22 @@ const EquipBuy = () => {
             ⚠️ {erro}
           </div>
         )}
-        {resultados.length === 0 && !loading && (
+        {resultadosPorCidade.length === 0 && !loading && (
           <div style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>
             Nenhum resultado ainda. Selecione um item e clique em "Buscar".
           </div>
         )}
-        {resultados.length > 0 && (
+        {resultadosPorCidade.length > 0 && (
           <div>
             <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(76,175,80,0.15)', borderRadius: 8, borderLeft: '3px solid #4caf50' }}>
               <div style={{ color: '#4caf50', fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.3rem' }}>
-                ✓ {resultados.length} opções encontradas
+                ✓ {resultadosPorCidade.length} cidades encontradas
               </div>
               <div style={{ color: '#8bc34a', fontSize: '0.95rem' }}>
-                Melhor preço: <span style={{ fontWeight: 'bold', color: '#4caf50' }}>{formatarMoeda(resultados[0]?.custoFinal)} prata</span>
-                {' '}em <span style={{ fontWeight: 'bold', color: '#fff' }}>{resultados[0]?.cidadeOrigem}</span>
-                {resultados[0]?.custoTeleporte > 0 && (
-                  <span style={{ color: '#aaa', fontSize: '0.88rem' }}>{' '}(item: {formatarMoeda(resultados[0]?.preco)} + teleporte: {formatarMoeda(resultados[0]?.custoTeleporte)})</span>
+                Melhor preço: <span style={{ fontWeight: 'bold', color: '#4caf50' }}>{formatarMoeda(resultadosPorCidade[0]?.custoFinal)} prata</span>
+                {' '}em <span style={{ fontWeight: 'bold', color: '#fff' }}>{resultadosPorCidade[0]?.cidadeOrigem}</span>
+                {resultadosPorCidade[0]?.custoTeleporte > 0 && (
+                  <span style={{ color: '#aaa', fontSize: '0.88rem' }}>{' '}(item: {formatarMoeda(resultadosPorCidade[0]?.preco)} + teleporte: {formatarMoeda(resultadosPorCidade[0]?.custoTeleporte)})</span>
                 )}
               </div>
             </div>
@@ -329,9 +337,9 @@ const EquipBuy = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {resultados.map((r, i) => (
+                  {resultadosPorCidade.map((r, i) => (
                     <tr
-                      key={r.itemId + r.cidadeOrigem + i}
+                      key={r.cidadeOrigem}
                       style={{
                         background: i === 0 ? 'rgba(76,175,80,0.08)' : i % 2 === 0 ? '#23232e' : '#1a1a22',
                         color: '#fff',
