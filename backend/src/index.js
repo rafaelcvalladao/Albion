@@ -1,4 +1,4 @@
-import { calcularMelhorEquipOption } from './equipBuyService.js';
+import { buscarEquipamentoPorNomeComTeleporte } from './equipBuyService.js';
 import { getEquipmentData } from './equipmentService.js';
 
 import express from 'express';
@@ -204,12 +204,17 @@ app.post(
   }),
 );
 
-/** Melhor opção de compra/encantamento de equipamento */
+/** Melhor opção de compra de equipamento (procura em todas as cidades com custo de teleporte) */
 app.post(
   '/api/equipbuy/options',
   wrap(async (req) => {
-    const { slot, tier, cidade, equipamento } = req.body || {};
-    return await calcularMelhorEquipOption({ slot, tier, cidade, equipamento });
+    const { equipamentoNome, tier, qualidade, cidadeDestino } = req.body || {};
+    return await buscarEquipamentoPorNomeComTeleporte({ 
+      equipamentoNome, 
+      tier, 
+      qualidade, 
+      cidadeDestino 
+    });
   }),
 );
 

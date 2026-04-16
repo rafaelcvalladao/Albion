@@ -4,7 +4,6 @@ import { EQUIPMENT_HIERARCHY, getAllEquipmentCategories, QUALITY_LEVELS } from '
 
 const TIERS = ["T4", "T5", "T6", "T7", "T8"];
 const CIDADES = [
-  "Todos",
   "Caerleon",
   "Bridgewatch",
   "Martlock",
@@ -16,14 +15,14 @@ const CIDADES = [
 const EquipBuy = () => {
   const [searchText, setSearchText] = useState("");
   const [itemSelecionado, setItemSelecionado] = useState("");
-  const [qualidade, setQualidade] = useState("0");
+  const [qualidade, setQualidade] = useState("1");
   const [tier, setTier] = useState("T7");
-  const [cidade, setCidade] = useState("Todos");
+  const [cidade, setCidade] = useState("Caerleon");
   const [resultados, setResultados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
   const [sugestoesVisivel, setSugestoesVisivel] = useState(false);
-  const [todosOsItens, setTodosOsItens] = useState([]); // ✨ Estado para itens
+  const [todosOsItens, setTodosOsItens] = useState([]);
   const searchInputRef = useRef(null);
 
   // Atualizar lista de itens quando EQUIPMENT_HIERARCHY muda
@@ -49,7 +48,7 @@ const EquipBuy = () => {
     if (items.length > 0) {
       console.log(`✓ ${items.length} itens carregados para busca`);
     }
-  }, []); // Executa uma vez quando componente monta
+  }, []);
 
   // Filtra sugestões baseado no texto de busca
   const sugestoes = useMemo(() => {
@@ -59,7 +58,7 @@ const EquipBuy = () => {
     return todosOsItens
       .filter(item => item.toLowerCase().includes(termo))
       .sort()
-      .slice(0, 15); // Máximo de 15 sugestões
+      .slice(0, 15);
   }, [searchText, todosOsItens]);
 
   // Handler para seleção de sugestão
@@ -92,16 +91,11 @@ const EquipBuy = () => {
     setErro(null);
     setResultados([]);
     try {
-      // Construir nome do equipamento com sufixo de qualidade se aplicável
-      const qualidadeSuffix = QUALITY_LEVELS.find(q => q.value === qualidade)?.suffix || '';
-      const equipamentoCompleto = itemSelecionado + qualidadeSuffix;
-      
-      // Para a nova API, passamos o item completo
       const res = await equipBuyOptions({ 
-        slot: 'item', 
-        tier, 
-        cidade, 
-        equipamento: equipamentoCompleto 
+        equipamentoNome: itemSelecionado,
+        tier,
+        qualidade: parseInt(qualidade),
+        cidadeDestino: cidade
       });
       setResultados(res);
     } catch (err) {
@@ -109,6 +103,11 @@ const EquipBuy = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatarMoeda = (valor) => {
+    if (!valor && valor !== 0) return '-';
+    return valor.toLocaleString('pt-BR');
   };
 
   return (
@@ -308,37 +307,36 @@ const EquipBuy = () => {
         {erro && <div style={{ color: '#ff6b6b', padding: '1rem', background: 'rgba(255,107,107,0.1)', borderRadius: 8, marginBottom: '1rem' }}>⚠️ {erro}</div>}
         {resultados.length === 0 && !loading && <div style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>Nenhum resultado ainda. Selecione um item e clique em "Buscar".</div>}
         {resultados.length > 0 && (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', background: '#181820', borderRadius: 8, overflow: 'hidden' }}>
-              <thead>
-                <tr style={{ background: '#23232e', color: '#fff' }}>
-                  <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333' }}>Nome</th>
-                  <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333' }}>Cidade</th>
-                  <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333' }}>Encantamento</th>
-                  <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333' }}>Preço Item</th>
-                  <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333' }}>Recurso</th>
-                  <th style={{ padding: '0.8rem', textAlign: 'center', borderBottom: '1px solid #333' }}>Qtd</th>
-                  <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333' }}>Preço Recurso</th>
-                  <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333', color: '#4caf50' }}>Custo Total</th>
-                  <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333', fontSize: '0.85rem' }}>Data</th>
-                </tr>
-              </thead>
-              <tbody>
-                {resultados.map((r, i) => (
-                  <tr key={r.itemId + r.cidade + i} style={{ background: i % 2 === 0 ? '#23232e' : '#1a1a22', color: '#fff', borderBottom: '1px solid #333' }}>
-                    <td style={{ padding: '0.8rem' }}>{r.nome}</td>
-                    <td style={{ padding: '0.8rem' }}>{r.cidade}</td>
-                    <td style={{ padding: '0.8rem' }}>{r.encantamento}</td>
-                    <td style={{ padding: '0.8rem', textAlign: 'right' }}>{r.preco?.toLocaleString('pt-BR') ?? '-'}</td>
-                    <td style={{ padding: '0.8rem' }}>{r.recurso || '-'}</td>
-                    <td style={{ padding: '0.8rem', textAlign: 'center' }}>{r.recursoQtd || '-'}</td>
-                    <td style={{ padding: '0.8rem', textAlign: 'right' }}>{r.precoRecurso?.toLocaleString('pt-BR') ?? '-'}</td>
-                    <td style={{ padding: '0.8rem', textAlign: 'right', fontWeight: 'bold', color: '#4caf50' }}>{r.custoTotal?.toLocaleString('pt-BR') ?? '-'}</td>
-                    <td style={{ padding: '0.8rem', fontSize: '0.85rem', color: '#888' }}>{r.data ? r.data.replace('T', ' ') : '-'}</td>
+          <div>
+            <div style={{ marginBottom: '1rem', color: '#4caf50', fontWeight: 600 }}>
+              ✓ {resultados.length} opções encontradas - Melhor preço: {formatarMoeda(resultados[0]?.custoFinal)} (com teleporte)
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', background: '#181820', borderRadius: 8, overflow: 'hidden' }}>
+                <thead>
+                  <tr style={{ background: '#23232e', color: '#fff' }}>
+                    <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333' }}>Nome</th>
+                    <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333' }}>Cidade Origem</th>
+                    <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333' }}>Preço</th>
+                    <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333' }}>Custo Teleporte</th>
+                    <th style={{ padding: '0.8rem', textAlign: 'right', borderBottom: '1px solid #333', color: '#4caf50', fontWeight: 'bold' }}>Custo Final</th>
+                    <th style={{ padding: '0.8rem', textAlign: 'left', borderBottom: '1px solid #333', fontSize: '0.85rem' }}>Data</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {resultados.map((r, i) => (
+                    <tr key={r.itemId + r.cidadeOrigem + i} style={{ background: i % 2 === 0 ? '#23232e' : '#1a1a22', color: '#fff', borderBottom: '1px solid #333' }}>
+                      <td style={{ padding: '0.8rem' }}>{r.nome}</td>
+                      <td style={{ padding: '0.8rem' }}>{r.cidadeOrigem}</td>
+                      <td style={{ padding: '0.8rem', textAlign: 'right' }}>{formatarMoeda(r.preco)}</td>
+                      <td style={{ padding: '0.8rem', textAlign: 'right', color: '#ffb74d' }}>{formatarMoeda(r.custoTeleporte)}</td>
+                      <td style={{ padding: '0.8rem', textAlign: 'right', fontWeight: 'bold', color: '#4caf50' }}>{formatarMoeda(r.custoFinal)}</td>
+                      <td style={{ padding: '0.8rem', fontSize: '0.85rem', color: '#888' }}>{r.data ? r.data.replace('T', ' ') : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

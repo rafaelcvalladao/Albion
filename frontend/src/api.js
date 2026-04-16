@@ -1,7 +1,7 @@
-export function equipBuyOptions({ slot, tier, cidade, equipamento }) {
+export function equipBuyOptions({ equipamentoNome, tier, qualidade, cidadeDestino }) {
   return request('/api/equipbuy/options', {
     method: 'POST',
-    body: JSON.stringify({ slot, tier, cidade, equipamento }),
+    body: JSON.stringify({ equipamentoNome, tier, qualidade, cidadeDestino }),
   });
 }
 /**
