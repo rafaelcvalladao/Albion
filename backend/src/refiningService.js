@@ -118,9 +118,12 @@ function volumeMapFromHistory(hist) {
       (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
     );
     const complete = sorted.length > 1 ? sorted.slice(0, -1) : sorted;
-    const totalVol = complete.reduce((s, d) => s + (d.item_count || 0), 0);
-    const days = complete.length || 1;
-    volMap.set(`${cid}|${it}`, Math.round(totalVol / days));
+    
+    // Usar últimas 96h (4 dias) e dividir por 4 para obter a média de 24h
+    const last4Days = complete.slice(-4);
+    const totalVol = last4Days.reduce((s, d) => s + (d.item_count || 0), 0);
+    const avgVol = totalVol / 4; // Sempre divide por 4 (96h / 24h)
+    volMap.set(`${cid}|${it}`, Math.round(avgVol));
   }
   return volMap;
 }
@@ -158,7 +161,7 @@ async function processarRecurso(resource, body) {
   const { ids, refinedIds } = buildIdsForTier(tSel, cfg.rawSuffix, cfg.refinedSuffix);
 
   const res = await fetchPrices(ids, cfg.locations);
-  const hist = await fetchHistory(refinedIds, cfg.locations, 6);
+  const hist = await fetchHistory(refinedIds, cfg.locations, 24);
   const volMap = volumeMapFromHistory(hist);
 
   // Preços de todas as 5 cidades reais para linha "melhor preço"
@@ -166,7 +169,7 @@ async function processarRecurso(resource, body) {
   const ROYAL_NAMES = ['Fort Sterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
   const [royalRes, royalHist] = await Promise.all([
     fetchPrices([...new Set(ids)], ROYAL_LOCS),
-    fetchHistory(refinedIds, ROYAL_LOCS, 6),
+    fetchHistory(refinedIds, ROYAL_LOCS, 24),
   ]);
   const royalVolMap = volumeMapFromHistory(royalHist);
 

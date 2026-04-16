@@ -112,10 +112,12 @@ export async function fetchHistoryMarket(itemIds, locations) {
       (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
     );
     const complete = sorted.length > 1 ? sorted.slice(0, -1) : sorted;
-    const totalCount = complete.reduce((s, d) => s + (d.item_count || 0), 0);
-    const totalSilver = complete.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
-    const days = complete.length || 1;
-    const avgVol = totalCount / days;
+    
+    // Usar últimas 96h (4 dias) e dividir por 4 para obter a média de 24h
+    const last4Days = complete.slice(-4);
+    const totalCount = last4Days.reduce((s, d) => s + (d.item_count || 0), 0);
+    const totalSilver = last4Days.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
+    const avgVol = totalCount / 4; // Sempre divide por 4 (96h / 24h)
     const avgPrice = totalCount > 0 ? Math.round(totalSilver / totalCount) : 0;
 
     const prev = volumeMap.get(key);
