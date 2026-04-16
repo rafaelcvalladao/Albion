@@ -59,7 +59,8 @@ export function extractEquipmentHierarchy() {
       
       if (!uniqueName || !localizedNames || typeof localizedNames !== 'object') return;
       
-      const localizedName = localizedNames['EN-US'];
+      // Usar português (PT-BR) para nomes de itens
+      const localizedName = localizedNames['PT-BR'] || localizedNames['EN-US'];
       if (!localizedName) return;
       
       // Filtrar apenas items com tier T4-T8
@@ -115,16 +116,57 @@ export function extractEquipmentHierarchy() {
     }
   });
   
-  // Remover duplicatas, ordenar e limitar quantidade
+  // Remover duplicatas (baseado em nome base sem tier), ordenar e limitar quantidade
   Object.values(equipment).forEach(cat => {
     Object.keys(cat.subtypes).forEach(type => {
-      const unique = [...new Set(cat.subtypes[type])].sort();
-      // Manter no máximo 100 itens por subtipo
+      // Usar Set com nomes deduplicated (sem tier prefix)
+      const uniqueItems = new Set();
+      cat.subtypes[type].forEach(item => {
+        const baseName = extractBaseName(item);
+        uniqueItems.add(baseName);
+      });
+      
+      // Converter Set para array, ordenar e limitar
+      const unique = Array.from(uniqueItems).sort();
       cat.subtypes[type] = unique.slice(0, 100);
     });
   });
   
   return equipment;
+}
+
+/**
+ * Extrai o nome base do item, removendo prefixos de tier
+ * Ex: "Robe de Clérigo do Adepto" → "Robe de Clérigo"
+ * Ex: "Traje do Cavouqueiro Adepto" → "Traje do Cavouqueiro"
+ */
+function extractBaseName(localizedName) {
+  // Prefixos de tier em português para remover (com ou sem "do" antes)
+  const tierPrefixes = [
+    / do Adepto$/,      // Tier 4 com "do"
+    / do Curandeiro$/,  // Tier 5 com "do"
+    / do Perito$/,      // Tier 5 com "do"
+    / do Experiente$/,  // Tier 5 com "do"
+    / do Mestre$/,      // Tier 6 com "do"
+    / do Grão-mestre$/, // Tier 7 com "do"
+    / do Ancião$/,      // Tier 8 com "do"
+    / do Encantador$/,  // Tier 8 com "do"
+    / Adepto$/,         // Tier 4 sem "do"
+    / Curandeiro$/,     // Tier 5 sem "do"
+    / Perito$/,         // Tier 5 sem "do"
+    / Experiente$/,     // Tier 5 sem "do"
+    / Mestre$/,         // Tier 6 sem "do"
+    / Grão-mestre$/,    // Tier 7 sem "do"
+    / Ancião$/,         // Tier 8 sem "do"
+    / Encantador$/,     // Tier 8 sem "do"
+  ];
+  
+  let baseName = localizedName;
+  for (const pattern of tierPrefixes) {
+    baseName = baseName.replace(pattern, '');
+  }
+  
+  return baseName.trim();
 }
 
 /**
