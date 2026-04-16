@@ -51,6 +51,18 @@ export const EQUIPMENT_HIERARCHY = {
 };
 
 /**
+ * Níveis de qualidade dos itens baseado em ao-bin-dumps
+ * @1 = Rara, @2 = Excepcional, @3 = Excepcional (alt), @4 = Pristina
+ */
+export const QUALITY_LEVELS = [
+  { value: '0', label: 'Padrão', suffix: '' },
+  { value: '1', label: 'Rara', suffix: '@1' },
+  { value: '2', label: 'Excepcional', suffix: '@2' },
+  { value: '3', label: 'Excepcional (Alt)', suffix: '@3' },
+  { value: '4', label: 'Pristina', suffix: '@4' },
+];
+
+/**
  * Mapeamento detalhado de código → nome para equipamentos
  * Usando padrões baseados em ao-bin-dumps
  */
@@ -114,4 +126,11 @@ export function getTypesForEquipment(equipment) {
  */
 export function getAllEquipmentCategories() {
   return Object.keys(EQUIPMENT_HIERARCHY);
+}
+
+/**
+ * Obtém todos os níveis de qualidade disponíveis
+ */
+export function getAllQualityLevels() {
+  return QUALITY_LEVELS;
 }

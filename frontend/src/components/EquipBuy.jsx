@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { equipBuyOptions } from '../api.js';
-import { EQUIPMENT_HIERARCHY, getTypesForEquipment, getVariantsForEquipmentType, getAllEquipmentCategories } from '../data/equipmentHierarchy.js';
+import { EQUIPMENT_HIERARCHY, getTypesForEquipment, getVariantsForEquipmentType, getAllEquipmentCategories, QUALITY_LEVELS } from '../data/equipmentHierarchy.js';
 
 const TIERS = ["T4", "T5", "T6", "T7", "T8"];
 const CIDADES = [
@@ -17,6 +17,7 @@ const EquipBuy = () => {
   const [equipamento, setEquipamento] = useState("");
   const [tipo, setTipo] = useState("");
   const [variante, setVariante] = useState("");
+  const [qualidade, setQualidade] = useState("0");
   const [tier, setTier] = useState("T7");
   const [cidade, setCidade] = useState("Todos");
   const [resultados, setResultados] = useState([]);
@@ -62,7 +63,11 @@ const EquipBuy = () => {
     try {
       // Mapeando para o slot esperado pela API
       const slot = equipamento.toLowerCase();
-      const res = await equipBuyOptions({ slot, tier, cidade, equipamento: variante });
+      // Construir nome do equipamento com sufixo de qualidade se aplicável
+      const qualidadeSuffix = QUALITY_LEVELS.find(q => q.value === qualidade)?.suffix || '';
+      const equipamentoCompleto = variante + qualidadeSuffix;
+      
+      const res = await equipBuyOptions({ slot, tier, cidade, equipamento: equipamentoCompleto });
       setResultados(res);
     } catch (err) {
       setErro(err.message || 'Erro ao buscar opções');
@@ -154,6 +159,28 @@ const EquipBuy = () => {
               <option value="">Selecionar...</option>
               {variantes.map(v => (
                 <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+          </label>
+
+          {/* Qualidade */}
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#ccc' }}>Qualidade</span>
+            <select 
+              value={qualidade}
+              onChange={e => setQualidade(e.target.value)}
+              style={{ 
+                padding: '0.6rem 0.8rem',
+                borderRadius: 6,
+                background: '#23232e',
+                color: '#fff',
+                border: '1px solid #555',
+                fontSize: '0.95rem',
+                cursor: 'pointer',
+              }}
+            >
+              {QUALITY_LEVELS.map(q => (
+                <option key={q.value} value={q.value}>{q.label}</option>
               ))}
             </select>
           </label>
