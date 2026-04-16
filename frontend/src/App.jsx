@@ -23,10 +23,19 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(
     () => sessionStorage.getItem('albion_token') != null,
   );
+  const [equipmentReady, setEquipmentReady] = useState(false);
 
   // Carregar hierarquia de equipamentos do backend ao inicializar
   useEffect(() => {
-    loadEquipmentHierarchy();
+    loadEquipmentHierarchy()
+      .then(() => {
+        console.log('✓ Equipamentos carregados');
+        setEquipmentReady(true);
+      })
+      .catch(err => {
+        console.error('Erro ao carregar equipamentos:', err);
+        setEquipmentReady(true); // Use fallback mesmo com erro
+      });
   }, []);
 
   if (!authenticated) {
@@ -125,7 +134,15 @@ export default function App() {
           />
         )}
         {tab === 'market' && <MarketAnalyzer />}
-        {tab === 'equipbuy' && <EquipBuy />}
+        {tab === 'equipbuy' && (
+          equipmentReady ? (
+            <EquipBuy />
+          ) : (
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
+              ⏳ Carregando base de dados de equipamentos...
+            </div>
+          )
+        )}
       </main>
     </div>
   );

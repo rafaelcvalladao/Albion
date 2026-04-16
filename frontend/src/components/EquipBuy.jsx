@@ -23,10 +23,11 @@ const EquipBuy = () => {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
   const [sugestoesVisivel, setSugestoesVisivel] = useState(false);
+  const [todosOsItens, setTodosOsItens] = useState([]); // ✨ Estado para itens
   const searchInputRef = useRef(null);
 
-  // Coleta todos os itens de forma flat (de todas as categorias)
-  const todosOsItens = useMemo(() => {
+  // Atualizar lista de itens quando EQUIPMENT_HIERARCHY muda
+  useEffect(() => {
     const items = [];
     const equipamentos = getAllEquipmentCategories();
     
@@ -44,8 +45,11 @@ const EquipBuy = () => {
       }
     });
     
-    return items;
-  }, []);
+    setTodosOsItens(items);
+    if (items.length > 0) {
+      console.log(`✓ ${items.length} itens carregados para busca`);
+    }
+  }, []); // Executa uma vez quando componente monta
 
   // Filtra sugestões baseado no texto de busca
   const sugestoes = useMemo(() => {
