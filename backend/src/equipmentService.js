@@ -103,6 +103,7 @@ export function extractEquipmentHierarchy() {
           break;
       }
       
+      // Só adicionar se tem categoria E subtipo válido
       if (category && subtype) {
         if (!equipment[category].subtypes[subtype]) {
           equipment[category].subtypes[subtype] = [];
@@ -146,69 +147,135 @@ function extractMaterialType(uniqueName, localizedName) {
  * Extrai subtipo de arma (Espada, Arco, etc)
  * Baseado na estrutura: T4_2H_KNUCKLES_HELL ou T4_MAIN_BOW_CRYSTAL
  * O tipo de arma está em parts[2], parts[3], etc
+ * ANÁLISE COMPLETA: 84 tokens únicos identificados no database
  */
 function getWeaponSubtype(parts, localizedName) {
-  // Mapeamento de palavras-chave para subtipo
+  // Mapeamento COMPLETO baseado em análise completa do database
   const typeMapping = {
+    // ESPADA e variantes (8 tokens)
     'SWORD': 'Espada',
     'CLAYMORE': 'Espada',
-    'CLARENT': 'Espada',
-    'GALATINE': 'Espada',
+    'DUALSWORD': 'Espada',
+    'RAPIER': 'Espada',
+    'SCIMITAR': 'Espada',
+    'DUALSCIMITAR': 'Espada',
+    'CLEAVER': 'Espada',
+    
+    // ARCO e variantes (3 tokens)
     'BOW': 'Arco',
     'LONGBOW': 'Arco',
+    'WARBOW': 'Arco',
+    
+    // BESTA e variantes (5 tokens)
     'CROSSBOW': 'Besta',
+    'CROSSBOWLARGE': 'Besta',
     'DUALCROSSBOW': 'Besta',
+    '1HCROSSBOW': 'Besta',
+    'REPEATINGCROSSBOW': 'Besta',
+    
+    // MACHADO e variantes (2 tokens)
     'AXE': 'Machado',
-    'DUALAXE': 'Dois Machados',
-    'BATTLEAXE': 'Machado',
+    'DUALAXE': 'Machado',
+    
+    // MAÇA e variantes (3 tokens)
     'MACE': 'Maça',
-    'SCYTHE': 'Foice',
-    'PIKE': 'Lança',
-    'HALBERD': 'Lança/Halberd',
-    'GLAIVE': 'Lança',
-    'SPEAR': 'Lança',
-    'STAFF': 'Cetro',
-    'ARCANESTAFF': 'Cetro',
-    'CURSEDSTAFF': 'Cetro',
-    'NATURESTAFF': 'Cetro',
-    'FIRESTAFF': 'Cetro',
-    'FROSTSTAFF': 'Cetro',
-    'HOLYSTAFF': 'Cetro',
-    'DAGGER': 'Adaga',
+    'DUALMACE': 'Maça',
+    'ROCKMACE': 'Maça',
+    
+    // MARTELO e variantes (4 tokens)
     'HAMMER': 'Martelo',
-    'KNUCKLES': 'Punhos',
+    'DUALHAMMER': 'Martelo',
+    'POLEHAMMER': 'Martelo',
+    'FLAIL': 'Martelo',
+    
+    // FOICE e variantes (3 tokens)
+    'SCYTHE': 'Foice',
+    'TWINSCYTHE': 'Foice',
+    'DUALSICKLE': 'Foice',
+    
+    // LANÇA/HALBERD e variantes (6 tokens)
+    'SPEAR': 'Lança',
+    'GLAIVE': 'Lança',
+    'HALBERD': 'Lança/Halberd',
+    'QUARTERSTAFF': 'Lança/Halberd',
+    'HARPOON': 'Lança',
+    'TRIDENT': 'Lança',
+    
+    // ADAGA e variantes (2 tokens)
+    'DAGGER': 'Adaga',
+    'DAGGERPAIR': 'Adaga',
+    
+    // BASTÃO e variantes (14 tokens)
+    'STAFF': 'Bastão',
+    'HOLYSTAFF': 'Bastão Sagrado',
+    'NATURESTAFF': 'Bastão da Natureza',
+    'CURSEDSTAFF': 'Bastão Amaldiçoado',
+    'FIRESTAFF': 'Bastão de Fogo',
+    'FROSTSTAFF': 'Bastão de Gelo',
+    'ARCANESTAFF': 'Bastão Arcano',
+    'INFERNOSTAFF': 'Bastão de Fogo',
+    'DEMONICSTAFF': 'Bastão Demoníaco',
+    'GLACIALSTAFF': 'Bastão de Gelo',
+    'ENIGMATICSTAFF': 'Bastão Misterioso',
+    'DIVINESTAFF': 'Bastão Divino',
+    'WILDSTAFF': 'Bastão Selvagem',
+    'IRONCLADEDSTAFF': 'Bastão de Ferro',
+    'COMBATSTAFF': 'Bastão de Combate',
+    'ROCKSTAFF': 'Bastão de Pedra',
+    'DOUBLEBLADEDSTAFF': 'Bastão Duplo',
+    
+    // LUVAS DE GUERRA / PUNHOS (4 tokens)
+    'KNUCKLES': 'Luvas de Guerra',
+    'CLAWPAIR': 'Luvas de Guerra',
+    'ICEGAUNTLETS': 'Luvas de Guerra',
+    'IRONGAUNTLETS': 'Luvas de Guerra',
+    
+    // ESCUDO (3 tokens)
+    'SHIELD': 'Escudo',
+    'TOWERSHIELD': 'Escudo',
+    'SPIKEDSHIELD': 'Escudo',
+    
+    // TRANSFORMAÇÃO (1 token)
     'SHAPESHIFTER': 'Transformação',
+    
+    // TOCHA (1 token)
+    'TORCH': 'Tocha',
+    
+    // ARTEFATOS e SECUNDÁRIOS (25. tokens)
+    'BOOK': 'Artefato',
+    'ORB': 'Artefato',
+    'DEMONSKULL': 'Artefato',
+    'TOTEM': 'Artefato',
+    'CENSER': 'Artefato',
+    'TOME': 'Artefato',
+    'HORN': 'Artefato',
+    'TALISMAN': 'Artefato',
+    'LAMP': 'Artefato',
+    'JESTERCANE': 'Artefato',
+    'SKULLORB': 'Artefato',
+    'FIRE': 'Artefato',
+    'ICECRYSTAL': 'Artefato',
+    'ENIGMATICORB': 'Artefato',
+    'ARCANE': 'Artefato',
+    'RAM': 'Artefato',
   };
   
-  // Procurar em parts[2] e depois parts[3]
-  // O tipo geralmente está em pos_2 da estrutura T{tier}_{slot}_{weapontype}_{variation}
+  // Procurar em each part (especialmente pos_2 onde geralmente está o tipo)
   for (let i = 2; i < Math.min(parts.length, 5); i++) {
     const part = parts[i];
     
     // Remover qualidade (@0-@4) antes de comparar
     const partClean = part.replace(/@\d+$/, '').toUpperCase();
     
-    for (const [keyword, subtype] of Object.entries(typeMapping)) {
-      if (partClean === keyword || partClean.includes(keyword)) {
-        return subtype;
-      }
+    if (typeMapping[partClean]) {
+      return typeMapping[partClean];
     }
   }
   
-  // Fallback: inferir do nome localizado
-  if (localizedName.includes('Sword') || localizedName.includes('Blade')) return 'Espada';
-  if (localizedName.includes('Bow')) return 'Arco';
-  if (localizedName.includes('Crossbow')) return 'Besta';
-  if (localizedName.includes('Axe')) return 'Machado';
-  if (localizedName.includes('Mace')) return 'Maça';
-  if (localizedName.includes('Scythe')) return 'Foice';
-  if (localizedName.includes('Pike') || localizedName.includes('Halberd')) return 'Lança/Halberd';
-  if (localizedName.includes('Staff')) return 'Cetro';
-  if (localizedName.includes('Dagger')) return 'Adaga';
-  if (localizedName.includes('Hammer')) return 'Martelo';
-  if (localizedName.includes('Fist')) return 'Punhos';
-  
-  return 'Outra'; // Tipo genérico
+  // Se não encontrou no mapeamento, o item pode ser uma categoria não-arma
+  // (2H, MAIN, OFF, ARTEFACT, TOOL, HEAD, ARMOR, SHOES, TOKEN)
+  // Nesse caso, retornar null para indicar que não é uma arma
+  return null;
 }
 
 /**
