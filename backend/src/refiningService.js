@@ -120,9 +120,13 @@ function volumeMapFromHistory(hist) {
     
     // Usar últimas 96 horas (96 pontos de dados com time-scale=1)
     const last96h = sorted.slice(-96);
+    if (last96h.length === 0) {
+      volMap.set(`${cid}|${it}`, 0);
+      continue;
+    }
     const totalVol = last96h.reduce((s, d) => s + (d.item_count || 0), 0);
     const hoursAvailable = last96h.length;
-    const avgVol = hoursAvailable > 0 ? totalVol / (hoursAvailable / 24) : 0;
+    const avgVol = totalVol / (hoursAvailable / 24);
     volMap.set(`${cid}|${it}`, Math.round(avgVol));
   }
   return volMap;
