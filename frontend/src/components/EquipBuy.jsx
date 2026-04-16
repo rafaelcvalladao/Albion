@@ -294,6 +294,5 @@ const EquipBuy = () => {
     </div>
   );
 };
-};
 
 export default EquipBuy;
