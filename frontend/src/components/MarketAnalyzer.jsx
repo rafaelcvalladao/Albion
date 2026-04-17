@@ -102,6 +102,7 @@ export default function MarketAnalyzer() {
 
     const stream = marketOpportunitiesStream(
       {
+        categoria: 'Todos',
         maxIdadeHoras,
         taxaVenda: '3',
       },
