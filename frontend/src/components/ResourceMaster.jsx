@@ -182,10 +182,11 @@ function StrategyTable({
 
   function getLucro(r) {
     if (kind !== 'foco') return r.lucro;
+    const focoU = r.focoUnidades || 1;
     if (foco) {
-      if (lucroMode === 'opt') return r.lucroPorFocoOpt ?? r.lucroPorFoco;
-      if (lucroMode === 'ot') return r.lucroPorFocoOT ?? r.lucroPorFoco;
-      return r.lucroPorFoco;
+      if (lucroMode === 'opt') return (r.lucroOpt ?? r.lucro) / focoU;
+      if (lucroMode === 'ot') return (r.lucroOT ?? r.lucro) / focoU;
+      return r.lucro / focoU;
     }
     if (lucroMode === 'opt') return r.lucroOpt ?? r.lucro;
     if (lucroMode === 'ot') return r.lucroOT ?? r.lucro;
