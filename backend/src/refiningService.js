@@ -364,10 +364,13 @@ async function estrategiaCompletaRecurso(resource, body) {
   const cfg = RESOURCE_CONFIGS[resource];
   if (!cfg) throw new Error(`Recurso desconhecido: ${resource}`);
 
-  const { taxaNpc: taxaRaw, spec: _spec = {}, buyOrder = false, foco = true } = body;
+  const { taxaNpc: taxaRaw, spec = {}, buyOrder = false, foco = true } = body;
 
   let taxaU = parseFloat(String(taxaRaw ?? '800').trim() || '800');
   if (Number.isNaN(taxaU)) taxaU = 800;
+
+  const spTotal = specTotalPrata(spec);
+  const rrrConFoco = calcularRrrManual(true, true);
 
   const allIds = [];
   const refinedIds = [];
@@ -465,6 +468,7 @@ async function estrategiaCompletaRecurso(resource, body) {
       const rrrFoco = calcularRrrManual(foco, true);
       const rrrFama = calcularRrrManual(false, true);
       const fama = famaRefinoPorCraft(t, idxN);
+      const focoUnidades = (FOCO_BASE[t] ?? 250) * MULT_ENCHANT[idxN] * 0.5 ** (spTotal / 10000);
 
       const lucroLocal = fsT && fsA && fsP
         ? fsP - ((fsT * qt + fsA) * (1 - rrrFoco) + txF)
@@ -479,6 +483,26 @@ async function estrategiaCompletaRecurso(resource, body) {
       const volOpt = optCfg.bestCity ? (volData.get(`${optCfg.bestCity}|${iP}`) ?? 0) : 0;
       const volOT = optRoyal.bestCity ? (royalVolData.get(`${optRoyal.bestCity}|${iP}`) ?? 0) : 0;
 
+      // Lucro/foco: ganho marginal por ponto de foco vs não usar foco
+      const lucroLocalComFoco = fsT && fsA && fsP ? fsP - ((fsT * qt + fsA) * (1 - rrrConFoco) + txF) : null;
+      const lucroLocalSemFoco = fsT && fsA && fsP ? fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF) : null;
+      const lucroPorFoco = lucroLocalComFoco != null && lucroLocalSemFoco != null
+        ? (lucroLocalComFoco - lucroLocalSemFoco) / focoUnidades : null;
+
+      const lucroOptComFoco = optCfg.minR && optCfg.minP && optCfg.maxS
+        ? optCfg.maxS - ((optCfg.minR * qt + optCfg.minP) * (1 - rrrConFoco) + txF) : null;
+      const lucroOptSemFoco = optCfg.minR && optCfg.minP && optCfg.maxS
+        ? optCfg.maxS - ((optCfg.minR * qt + optCfg.minP) * (1 - rrrFama) + txF) : null;
+      const lucroPorFocoOpt = lucroOptComFoco != null && lucroOptSemFoco != null
+        ? (lucroOptComFoco - lucroOptSemFoco) / focoUnidades : null;
+
+      const lucroOTComFoco = optRoyal.minR && optRoyal.minP && optRoyal.maxS
+        ? optRoyal.maxS - ((optRoyal.minR * qt + optRoyal.minP) * (1 - rrrConFoco) + txF) : null;
+      const lucroOTSemFoco = optRoyal.minR && optRoyal.minP && optRoyal.maxS
+        ? optRoyal.maxS - ((optRoyal.minR * qt + optRoyal.minP) * (1 - rrrFama) + txF) : null;
+      const lucroPorFocoOT = lucroOTComFoco != null && lucroOTSemFoco != null
+        ? (lucroOTComFoco - lucroOTSemFoco) / focoUnidades : null;
+
       if (lucroLocal != null || lucroOpt != null || lucroOT != null) {
         fsFoco.push({
           item: `${t}${enc}`,
@@ -488,6 +512,10 @@ async function estrategiaCompletaRecurso(resource, body) {
           volumeOpt: volOpt,
           lucroOT: lucroOT ?? -9e8,
           volumeOT: volOT,
+          focoUnidades,
+          lucroPorFoco: lucroPorFoco ?? -9e8,
+          lucroPorFocoOpt: lucroPorFocoOpt ?? -9e8,
+          lucroPorFocoOT: lucroPorFocoOT ?? -9e8,
         });
         const lucroFamaLocal = fsT && fsA && fsP
           ? fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF)

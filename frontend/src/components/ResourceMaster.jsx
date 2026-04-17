@@ -164,6 +164,7 @@ function StrategyTable({
   refinedAlt,
   refinedPlaceholder,
   lucroMode,
+  foco,
 }) {
   const [sortColumn, setSortColumn] = useState(kind === 'foco' ? 'lucro' : null);
   const [sortAsc, setSortAsc] = useState(kind === 'foco' ? false : true);
@@ -177,10 +178,15 @@ function StrategyTable({
         ? 'strategy-section-title strategy-section-title--fama'
         : 'strategy-section-title';
 
-  const colHeaderLabel = kind === 'foco' ? 'Lucro' : 'Fama por Prata';
+  const colHeaderLabel = kind !== 'foco' ? 'Fama por Prata' : foco ? 'Lucro/Foco' : 'Lucro';
 
   function getLucro(r) {
     if (kind !== 'foco') return r.lucro;
+    if (foco) {
+      if (lucroMode === 'opt') return r.lucroPorFocoOpt ?? r.lucroPorFoco;
+      if (lucroMode === 'ot') return r.lucroPorFocoOT ?? r.lucroPorFoco;
+      return r.lucroPorFoco;
+    }
     if (lucroMode === 'opt') return r.lucroOpt ?? r.lucro;
     if (lucroMode === 'ot') return r.lucroOT ?? r.lucro;
     return r.lucro;
@@ -215,7 +221,7 @@ function StrategyTable({
     if (typeof valA === 'string')
       return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
     return sortAsc ? valA - valB : valB - valA;
-  }), [rows, sortColumn, sortAsc, kind, lucroMode]);
+  }), [rows, sortColumn, sortAsc, kind, lucroMode, foco]);
 
   const ind = (col) => (sortColumn !== col ? '' : sortAsc ? ' ↑' : ' ↓');
 
@@ -258,7 +264,9 @@ function StrategyTable({
                   style={{ fontSize: '1.1rem', fontWeight: 700, textAlign: 'center' }}
                 >
                   {kind === 'foco'
-                    ? Math.round(getLucro(r)).toLocaleString('pt-PT')
+                    ? foco
+                      ? (getLucro(r) > -8e8 ? getLucro(r).toFixed(2) : '—')
+                      : (getLucro(r) > -8e8 ? Math.round(getLucro(r)).toLocaleString('pt-PT') : '—')
                     : (r.famaPerPrata?.toFixed(4).toLocaleString('pt-PT') ?? '—')}
                 </td>
                 <td className="tabular-nums strategy-table-vol">
@@ -777,6 +785,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
               refinedAlt={rc.refinedAlt}
               refinedPlaceholder={rc.refinedPlaceholder}
               lucroMode={lucroMode}
+              foco={cfg.foco}
             />
           )}
         </aside>
