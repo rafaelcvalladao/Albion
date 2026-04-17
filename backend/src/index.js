@@ -153,7 +153,7 @@ app.get('/api/market/opportunities/stream', async (req, res) => {
     enchantment = 'Todos',
     quality = '0',
     maxIdadeHoras = '168',
-    taxaVenda = '6.5',
+    taxaVenda = '3',
   } = req.query;
 
   console.log(

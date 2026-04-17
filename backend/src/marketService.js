@@ -219,8 +219,8 @@ export async function buscarOportunidades({
     const volOrig = dataOrig?.volume || 0;
     const volDest = dataDest?.volume || 0;
     op.volumeDiario = Math.max(volOrig, volDest);
-    // Preço médio na cidade de destino
     op.precoMedioDest = dataDest?.avgPrice || 0;
+    op.desvio = op.precoMedioDest > 0 ? (op.venda / op.precoMedioDest - 1) * 100 : null;
   }
 
   return oportunidadesUnicas;
@@ -305,6 +305,7 @@ export async function buscarOportunidadesStream(
         const dataDest = volumeMap.get(`${op.id}|${op.destino}`);
         op.volumeDiario = dataDest?.volume || 0;
         op.precoMedioDest = dataDest?.avgPrice || 0;
+        op.desvio = op.precoMedioDest > 0 ? (op.venda / op.precoMedioDest - 1) * 100 : null;
       }
 
       totalOportunidades += batchOps.length;

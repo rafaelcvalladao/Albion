@@ -34,6 +34,28 @@ function timeAgo(label) {
   return `${days}d atrás`;
 }
 
+function timeAgoStyle(label) {
+  if (!label) return { color: '#666' };
+  const parts = String(label).split(' ');
+  if (parts.length < 2) return { color: '#666' };
+  const [datePart, timePart] = parts;
+  const [y, m, d] = datePart.split('-').map(Number);
+  const [hh, mm] = timePart.split(':').map(Number);
+  if (!y || !m || !d) return { color: '#666' };
+  const hrs = (Date.now() - new Date(Date.UTC(y, m - 1, d, hh, mm)).getTime()) / 3600000;
+  if (hrs > 6) return { color: '#f44336' };
+  if (hrs > 2) return { color: '#ff9800' };
+  return { color: '#4caf50' };
+}
+
+function desvioInfo(desvio) {
+  if (desvio === null || desvio === undefined) return { label: 'sem hist.', color: '#666' };
+  const pct = (desvio >= 0 ? '+' : '') + desvio.toFixed(1) + '%';
+  if (desvio > 60) return { label: pct, color: '#f44336' };
+  if (desvio > 20) return { label: pct, color: '#ff9800' };
+  return { label: pct, color: '#4caf50' };
+}
+
 export default function MarketAnalyzer() {
   const [categories, setCategories] = useState([]);
   const [categoria, setCategoria] = useState('Todos');
@@ -54,7 +76,9 @@ export default function MarketAnalyzer() {
   const [searchItem, setSearchItem] = useState('');
   const [cidadeOrigem, setCidadeOrigem] = useState('Todos');
   const [cidadeDestino, setCidadeDestino] = useState('Todos');
-  const [comTeleporte, setComTeleporte] = useState(true);
+  const [maxIdadeHoras, setMaxIdadeHoras] = useState('48');
+  const [volMinimo, setVolMinimo] = useState('5');
+  const [maxDesvio, setMaxDesvio] = useState('50');
   const streamRef = useRef(null);
   const scanIdRef = useRef(0);
 
@@ -123,6 +147,8 @@ export default function MarketAnalyzer() {
         tier: tier !== 'Todos' ? tier : undefined,
         enchantment: enchantment !== 'Todos' ? enchantment : undefined,
         quality: quality !== 'Todos' ? quality : '0',
+        maxIdadeHoras,
+        taxaVenda: '3',
       },
       {
         onChunk: (oportunidades) => {
@@ -284,16 +310,39 @@ export default function MarketAnalyzer() {
           </select>
         </div>
 
-        <div className="filter-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.9rem', userSelect: 'none' }}>
-            <input
-              type="checkbox"
-              checked={comTeleporte}
-              onChange={(e) => setComTeleporte(e.target.checked)}
-              style={{ accentColor: '#4caf50' }}
-            />
-            Teleporte
-          </label>
+        <div className="filter-wrapper">
+          <label className="category-label-text">Idade máx. dados</label>
+          <select value={maxIdadeHoras} onChange={(e) => setMaxIdadeHoras(e.target.value)} className="filter-select">
+            <option value="2">2h</option>
+            <option value="6">6h</option>
+            <option value="24">24h</option>
+            <option value="48">48h</option>
+            <option value="168">7 dias</option>
+          </select>
+        </div>
+
+        <div className="max-prata-wrapper">
+          <label className="category-label-text">Vol. mín./dia</label>
+          <input
+            type="number"
+            value={volMinimo}
+            onChange={(e) => { setVolMinimo(e.target.value); setCurrentPage(1); }}
+            placeholder="Ex: 5"
+            min="0"
+            className="max-prata-input"
+          />
+        </div>
+
+        <div className="max-prata-wrapper">
+          <label className="category-label-text">Máx. desvio P. Médio %</label>
+          <input
+            type="number"
+            value={maxDesvio}
+            onChange={(e) => { setMaxDesvio(e.target.value); setCurrentPage(1); }}
+            placeholder="Ex: 50"
+            min="0"
+            className="max-prata-input"
+          />
         </div>
 
         <button
@@ -304,7 +353,7 @@ export default function MarketAnalyzer() {
         >
           {scanning ? 'Escaneando…' : 'Buscar oportunidades'}
         </button>
-        {!scanning && (searchItem || maxPrata || filterInstant || sortCol !== 'lucro' || cidadeOrigem !== 'Todos' || cidadeDestino !== 'Todos') && (
+        {!scanning && (searchItem || maxPrata || filterInstant || sortCol !== 'lucro' || cidadeOrigem !== 'Todos' || cidadeDestino !== 'Todos' || volMinimo !== '5' || maxDesvio !== '50') && (
           <button
             type="button"
             className="btn"
@@ -314,6 +363,8 @@ export default function MarketAnalyzer() {
               setFilterInstant(false);
               setCidadeOrigem('Todos');
               setCidadeDestino('Todos');
+              setVolMinimo('5');
+              setMaxDesvio('50');
               setSortCol('lucro');
               setSortAsc(false);
               setCurrentPage(1);
@@ -376,7 +427,9 @@ export default function MarketAnalyzer() {
                 if (sl && !(op.nomeBase || op.id || '').toLowerCase().includes(sl)) return false;
                 if (cidadeOrigem !== 'Todos' && op.origem !== cidadeOrigem) return false;
                 if (cidadeDestino !== 'Todos' && op.destino !== cidadeDestino) return false;
-                if ((Number(op.volumeDiario) || 0) <= 0) return false;
+                if ((Number(op.volumeDiario) || 0) < (Number(volMinimo) || 0)) return false;
+                const maxDesvioNum = maxDesvio !== '' ? parseFloat(maxDesvio) : null;
+                if (maxDesvioNum !== null && op.precoMedioDest > 0 && (op.desvio ?? 0) > maxDesvioNum) return false;
                 return margem <= 300 && (maxPrataNum === null || op.compra <= maxPrataNum);
               }).length;
             })()
@@ -402,8 +455,9 @@ export default function MarketAnalyzer() {
           }
           if (cidadeOrigem !== 'Todos' && op.origem !== cidadeOrigem) return false;
           if (cidadeDestino !== 'Todos' && op.destino !== cidadeDestino) return false;
-          // Excluir itens com volume 0 (volume já vem inline do backend)
-          if ((Number(op.volumeDiario) || 0) <= 0) return false;
+          if ((Number(op.volumeDiario) || 0) < (Number(volMinimo) || 0)) return false;
+          const maxDesvioNum = maxDesvio !== '' ? parseFloat(maxDesvio) : null;
+          if (maxDesvioNum !== null && op.precoMedioDest > 0 && (op.desvio ?? 0) > maxDesvioNum) return false;
           return margem <= 300 && prataValida;
         });
 
@@ -430,23 +484,22 @@ export default function MarketAnalyzer() {
           ? validRows.filter((op) => op.vendaInstantanea)
           : validRows;
 
-        const getLucro = (op) => comTeleporte ? (Number(op.lucro) || 0) : (Number(op.lucro) || 0) + (Number(op.custoTeleporte) || 0);
-        const getTeleporte = (op) => comTeleporte ? (Number(op.custoTeleporte) || 0) : 0;
+        const getLucro = (op) => Number(op.lucro) || 0;
 
         const sortedRows = [...filteredRows].sort((a, b) => {
           let va, vb;
           if (sortCol === 'instant') {
-            va = (Number(a.buyOrderDestino) || 0) - ((Number(a.compra) || 0) + getTeleporte(a));
-            vb = (Number(b.buyOrderDestino) || 0) - ((Number(b.compra) || 0) + getTeleporte(b));
+            va = (Number(a.buyOrderDestino) || 0) - ((Number(a.compra) || 0) + (Number(a.custoTeleporte) || 0));
+            vb = (Number(b.buyOrderDestino) || 0) - ((Number(b.compra) || 0) + (Number(b.custoTeleporte) || 0));
           } else if (sortCol === 'lucro') {
             va = getLucro(a);
             vb = getLucro(b);
           } else if (sortCol === 'volume') {
             va = Number(a.volumeDiario) || 0;
             vb = Number(b.volumeDiario) || 0;
-          } else if (sortCol === 'precoMedio') {
-            va = Number(a.precoMedioDest) || 0;
-            vb = Number(b.precoMedioDest) || 0;
+          } else if (sortCol === 'desvio') {
+            va = a.desvio ?? 999;
+            vb = b.desvio ?? 999;
           } else {
             va = a.compra > 0 ? a.venda / a.compra : 0;
             vb = b.compra > 0 ? b.venda / b.compra : 0;
@@ -469,6 +522,7 @@ export default function MarketAnalyzer() {
                     <th>#</th>
                     <th style={{ textAlign: 'center' }}>Item</th>
                     <th>Compra Sell Order</th>
+                    <th style={{ textAlign: 'right' }}>Teleporte</th>
                     <th>Venda Sell Order</th>
                     <th>Venda Buy Order</th>
                     <th
@@ -491,10 +545,10 @@ export default function MarketAnalyzer() {
                     </th>
                     <th
                       style={{ cursor: 'pointer', userSelect: 'none' }}
-                      onClick={() => handleSort('precoMedio')}
-                      title="Preço médio de venda na cidade destino"
+                      onClick={() => handleSort('desvio')}
+                      title="Desvio do preço de venda em relação ao preço médio histórico no destino"
                     >
-                      P. Médio{sortIndicator('precoMedio')}
+                      Desvio{sortIndicator('desvio')}
                     </th>
                     <th
                       style={{ cursor: 'pointer', userSelect: 'none' }}
@@ -552,22 +606,31 @@ export default function MarketAnalyzer() {
                           <div style={{ fontWeight: 600 }}>
                             {op.compra?.toLocaleString('pt-PT')}
                           </div>
-                          <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>
-                            {op.origem} · {timeAgo(op.atualizacaoOrig)}
+                          <div style={{ fontSize: '0.8rem' }}>
+                            <span style={{ opacity: 0.7 }}>{op.origem}</span>
+                            {' · '}
+                            <span style={timeAgoStyle(op.atualizacaoOrig)}>{timeAgo(op.atualizacaoOrig)}</span>
                           </div>
+                        </td>
+                        <td style={{ textAlign: 'right', color: op.custoTeleporte > 0 ? '#ff9800' : '#555', fontWeight: 600 }}>
+                          {op.custoTeleporte > 0 ? op.custoTeleporte.toLocaleString('pt-PT') : '—'}
                         </td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{op.venda?.toLocaleString('pt-PT')}</div>
-                          <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>
-                            {op.destino} · {timeAgo(op.atualizacaoDest)}
+                          <div style={{ fontSize: '0.8rem' }}>
+                            <span style={{ opacity: 0.7 }}>{op.destino}</span>
+                            {' · '}
+                            <span style={timeAgoStyle(op.atualizacaoDest)}>{timeAgo(op.atualizacaoDest)}</span>
                           </div>
                         </td>
                         <td>
                           <div style={{ fontWeight: 600 }}>
                             {op.buyOrderDestino?.toLocaleString('pt-PT') || '-'}
                           </div>
-                          <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>
-                            {op.destino} · {timeAgo(op.atualizacaoBuyOrderDest)}
+                          <div style={{ fontSize: '0.8rem' }}>
+                            <span style={{ opacity: 0.7 }}>{op.destino}</span>
+                            {' · '}
+                            <span style={timeAgoStyle(op.atualizacaoBuyOrderDest)}>{timeAgo(op.atualizacaoBuyOrderDest)}</span>
                           </div>
                         </td>
                         <td className={profitClass(getLucro(op))} style={{ fontWeight: 700 }}>
@@ -591,17 +654,27 @@ export default function MarketAnalyzer() {
                               : Number(op.volumeDiario).toLocaleString('pt-PT', { maximumFractionDigits: 1 })
                             : '-'}
                         </td>
-                        <td style={{ textAlign: 'right', color: '#b0b0b0' }}>
-                          {(op.precoMedioDest || 0) > 0
-                            ? op.precoMedioDest.toLocaleString('pt-PT')
-                            : '-'}
+                        <td style={{ textAlign: 'center' }}>
+                          {(() => {
+                            const { label, color } = desvioInfo(op.desvio);
+                            return (
+                              <>
+                                <div style={{ fontWeight: 700, color }}>{label}</div>
+                                {op.precoMedioDest > 0 && (
+                                  <div style={{ fontSize: '0.75rem', color: '#888' }}>
+                                    {op.precoMedioDest.toLocaleString('pt-PT')}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           {op.vendaInstantanea
                             ? filterInstant
                               ? (() => {
                                   const lucroInstant =
-                                    op.buyOrderDestino - (op.compra + getTeleporte(op));
+                                    op.buyOrderDestino - (op.compra + (op.custoTeleporte || 0));
                                   return (
                                     <span className={profitClass(lucroInstant)} style={{ fontWeight: 700 }}>
                                       {lucroInstant.toLocaleString('pt-PT', { maximumFractionDigits: 0 })}
