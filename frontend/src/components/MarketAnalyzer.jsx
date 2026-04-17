@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { marketCategories, marketOpportunitiesStream } from '../api.js';
+import { marketOpportunitiesStream } from '../api.js';
 import { profitClass } from '../utils/profit.js';
-import NestedCategorySelector from './NestedCategorySelector.jsx';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -57,11 +56,6 @@ function desvioInfo(desvio) {
 }
 
 export default function MarketAnalyzer() {
-  const [categories, setCategories] = useState([]);
-  const [categoria, setCategoria] = useState('Todos');
-  const [tier, setTier] = useState('Todos');
-  const [enchantment, setEnchantment] = useState('Todos');
-  const [quality, setQuality] = useState('Todos');
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [err, setErr] = useState(null);
@@ -74,8 +68,6 @@ export default function MarketAnalyzer() {
   const [filterInstant, setFilterInstant] = useState(false);
   const [sortAsc, setSortAsc] = useState(false);
   const [searchItem, setSearchItem] = useState('');
-  const [cidadeOrigem, setCidadeOrigem] = useState('Todos');
-  const [cidadeDestino, setCidadeDestino] = useState('Todos');
   const [maxIdadeHoras, setMaxIdadeHoras] = useState('48');
   const [volMinimo, setVolMinimo] = useState('5');
   const [maxDesvio, setMaxDesvio] = useState('50');
@@ -83,40 +75,7 @@ export default function MarketAnalyzer() {
   const scanIdRef = useRef(0);
 
   useEffect(() => {
-    marketCategories()
-      .then((d) => {
-        const cats = d.categories || [];
-        setCategories(cats);
-        if (cats.length && !cats.includes(categoria)) {
-          setCategoria(cats[0]);
-        }
-      })
-      .catch(() => {
-        setCategories([
-          'Todos',
-          'Armas',
-          'Armaduras',
-          'Elmos',
-          'Botas',
-          'Capas',
-          'Escudos',
-          'Luvas',
-          'Montarias',
-          'Consumíveis',
-          'Artefatos',
-          'Bolsas',
-          'Materiais',
-          'Ferragens',
-          'Outros',
-        ]);
-      });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- runs once on mount
-
-  // Cleanup: abortar stream ao desmontar
-  useEffect(() => {
-    return () => {
-      streamRef.current?.abort();
-    };
+    return () => { streamRef.current?.abort(); };
   }, []);
 
   const buscar = () => {
@@ -143,10 +102,6 @@ export default function MarketAnalyzer() {
 
     const stream = marketOpportunitiesStream(
       {
-        categoria,
-        tier: tier !== 'Todos' ? tier : undefined,
-        enchantment: enchantment !== 'Todos' ? enchantment : undefined,
-        quality: quality !== 'Todos' ? quality : '0',
         maxIdadeHoras,
         taxaVenda: '3',
       },
@@ -194,217 +149,173 @@ export default function MarketAnalyzer() {
     setLoading(false);
   };
 
+  const inputStyle = {
+    background: '#1e1e2a',
+    border: '1px solid #3a3a4a',
+    borderRadius: 6,
+    color: '#fff',
+    padding: '0.5rem 0.75rem',
+    fontSize: '0.9rem',
+    width: '100%',
+    boxSizing: 'border-box',
+  };
+
+  const labelStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.3rem',
+  };
+
+  const labelTextStyle = {
+    fontSize: '0.75rem',
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    fontWeight: 600,
+  };
+
   return (
     <div className="panel">
       <h2>Arbitragem entre cidades seguras</h2>
-      <p className="strategy-hint">
-        Compara preços entre cidades seguras; lucro líquido estimado com todas as taxas incluídas.
-      </p>
 
       {/* Toolbar */}
-      <div className="market-toolbar">
-        <div className="categories-wrapper">
-          <label className="category-label-text">Categoria</label>
-          <NestedCategorySelector
-            categories={categories}
-            selectedCategory={categoria}
-            onCategoryChange={setCategoria}
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '0.75rem',
+        alignItems: 'flex-end',
+        padding: '1rem',
+        background: '#16161f',
+        borderRadius: 8,
+        marginBottom: '1rem',
+        border: '1px solid #2a2a38',
+      }}>
+
+        {/* Pesquisar item — mais largo */}
+        <label style={{ ...labelStyle, flexGrow: 1, minWidth: 160 }}>
+          <span style={labelTextStyle}>Pesquisar item</span>
+          <input
+            type="text"
+            value={searchItem}
+            onChange={(e) => { setSearchItem(e.target.value); setCurrentPage(1); }}
+            placeholder="runa, claymore..."
+            style={inputStyle}
           />
-        </div>
+        </label>
 
-        <div className="filter-wrapper">
-          <label className="category-label-text">Grau</label>
-          <select value={tier} onChange={(e) => setTier(e.target.value)} className="filter-select">
-            <option value="Todos">Todos</option>
-            <option value="T1">T1</option>
-            <option value="T2">T2</option>
-            <option value="T3">T3</option>
-            <option value="T4">T4</option>
-            <option value="T5">T5</option>
-            <option value="T6">T6</option>
-            <option value="T7">T7</option>
-            <option value="T8">T8</option>
-          </select>
-        </div>
-
-        <div className="filter-wrapper">
-          <label className="category-label-text">Encantamento</label>
-          <select
-            value={enchantment}
-            onChange={(e) => setEnchantment(e.target.value)}
-            className="filter-select"
-          >
-            <option value="Todos">Todos</option>
-            <option value="0">.0</option>
-            <option value="1">.1</option>
-            <option value="2">.2</option>
-            <option value="3">.3</option>
-            <option value="4">.4</option>
-          </select>
-        </div>
-
-        <div className="filter-wrapper">
-          <label className="category-label-text">Qualidade</label>
-          <select
-            value={quality}
-            onChange={(e) => setQuality(e.target.value)}
-            className="filter-select"
-          >
-            <option value="Todos">Todos</option>
-            <option value="1">Normal</option>
-            <option value="2">Bom</option>
-            <option value="3">Excepcional</option>
-            <option value="4">Excelente</option>
-            <option value="5">Obra-prima</option>
-          </select>
-        </div>
-
-        <div className="max-prata-wrapper">
-          <label className="category-label-text">Máx. Prata Disponível</label>
+        <label style={{ ...labelStyle, width: 130 }}>
+          <span style={labelTextStyle}>Máx. prata</span>
           <input
             type="number"
             value={maxPrata}
             onChange={(e) => setMaxPrata(e.target.value)}
-            placeholder="Ex: 100000000"
-            className="max-prata-input"
+            placeholder="100000000"
+            style={inputStyle}
           />
-        </div>
+        </label>
 
-        <div className="search-item-wrapper">
-          <label className="category-label-text">Pesquisar Item</label>
-          <input
-            type="text"
-            value={searchItem}
-            onChange={(e) => {
-              setSearchItem(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="Ex: runa, claymore..."
-            className="max-prata-input"
-          />
-        </div>
-
-        <div className="filter-wrapper">
-          <label className="category-label-text">Cidade Origem</label>
-          <select value={cidadeOrigem} onChange={(e) => { setCidadeOrigem(e.target.value); setCurrentPage(1); }} className="filter-select">
-            <option value="Todos">Todas</option>
-            <option value="Bridgewatch">Bridgewatch</option>
-            <option value="Fort Sterling">Fort Sterling</option>
-            <option value="Lymhurst">Lymhurst</option>
-            <option value="Martlock">Martlock</option>
-            <option value="Thetford">Thetford</option>
-            <option value="Brecilien">Brecilien</option>
+        <label style={{ ...labelStyle, width: 100 }}>
+          <span style={labelTextStyle}>Dados</span>
+          <select
+            value={maxIdadeHoras}
+            onChange={(e) => setMaxIdadeHoras(e.target.value)}
+            style={inputStyle}
+          >
+            <option value="2">≤ 2h</option>
+            <option value="6">≤ 6h</option>
+            <option value="24">≤ 24h</option>
+            <option value="48">≤ 48h</option>
+            <option value="168">≤ 7 dias</option>
           </select>
-        </div>
+        </label>
 
-        <div className="filter-wrapper">
-          <label className="category-label-text">Cidade Destino</label>
-          <select value={cidadeDestino} onChange={(e) => { setCidadeDestino(e.target.value); setCurrentPage(1); }} className="filter-select">
-            <option value="Todos">Todas</option>
-            <option value="Bridgewatch">Bridgewatch</option>
-            <option value="Fort Sterling">Fort Sterling</option>
-            <option value="Lymhurst">Lymhurst</option>
-            <option value="Martlock">Martlock</option>
-            <option value="Thetford">Thetford</option>
-            <option value="Brecilien">Brecilien</option>
-          </select>
-        </div>
-
-        <div className="filter-wrapper">
-          <label className="category-label-text">Idade máx. dados</label>
-          <select value={maxIdadeHoras} onChange={(e) => setMaxIdadeHoras(e.target.value)} className="filter-select">
-            <option value="2">2h</option>
-            <option value="6">6h</option>
-            <option value="24">24h</option>
-            <option value="48">48h</option>
-            <option value="168">7 dias</option>
-          </select>
-        </div>
-
-        <div className="max-prata-wrapper">
-          <label className="category-label-text">Vol. mín./dia</label>
+        <label style={{ ...labelStyle, width: 90 }}>
+          <span style={labelTextStyle}>Vol. mín./dia</span>
           <input
             type="number"
             value={volMinimo}
-            onChange={(e) => { setVolMinimo(e.target.value); setCurrentPage(1); }}
-            placeholder="Ex: 5"
             min="0"
-            className="max-prata-input"
+            onChange={(e) => { setVolMinimo(e.target.value); setCurrentPage(1); }}
+            style={inputStyle}
           />
-        </div>
+        </label>
 
-        <div className="max-prata-wrapper">
-          <label className="category-label-text">Máx. desvio P. Médio %</label>
+        <label style={{ ...labelStyle, width: 100 }}>
+          <span style={labelTextStyle}>Desvio máx. %</span>
           <input
             type="number"
             value={maxDesvio}
-            onChange={(e) => { setMaxDesvio(e.target.value); setCurrentPage(1); }}
-            placeholder="Ex: 50"
             min="0"
-            className="max-prata-input"
+            onChange={(e) => { setMaxDesvio(e.target.value); setCurrentPage(1); }}
+            style={inputStyle}
           />
+        </label>
+
+        {/* Ações */}
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={buscar}
+            disabled={loading || scanning}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            {scanning ? 'Escaneando…' : 'Buscar'}
+          </button>
+
+          {scanning && (
+            <button type="button" className="btn" onClick={cancelar} style={{ background: '#c0392b', whiteSpace: 'nowrap' }}>
+              Cancelar
+            </button>
+          )}
+
+          {!scanning && (searchItem || maxPrata || filterInstant || sortCol !== 'lucro' || volMinimo !== '5' || maxDesvio !== '50') && (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setSearchItem('');
+                setMaxPrata('');
+                setFilterInstant(false);
+                setVolMinimo('5');
+                setMaxDesvio('50');
+                setSortCol('lucro');
+                setSortAsc(false);
+                setCurrentPage(1);
+              }}
+              style={{ background: '#2a2a38', whiteSpace: 'nowrap' }}
+            >
+              Limpar
+            </button>
+          )}
         </div>
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={buscar}
-          disabled={loading || scanning}
-        >
-          {scanning ? 'Escaneando…' : 'Buscar oportunidades'}
-        </button>
-        {!scanning && (searchItem || maxPrata || filterInstant || sortCol !== 'lucro' || cidadeOrigem !== 'Todos' || cidadeDestino !== 'Todos' || volMinimo !== '5' || maxDesvio !== '50') && (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              setSearchItem('');
-              setMaxPrata('');
-              setFilterInstant(false);
-              setCidadeOrigem('Todos');
-              setCidadeDestino('Todos');
-              setVolMinimo('5');
-              setMaxDesvio('50');
-              setSortCol('lucro');
-              setSortAsc(false);
-              setCurrentPage(1);
-            }}
-            style={{ marginLeft: '0.5rem', backgroundColor: '#555' }}
-          >
-            Resetar filtros
-          </button>
-        )}
-        {scanning && (
-          <button
-            type="button"
-            className="btn"
-            onClick={cancelar}
-            style={{ marginLeft: '0.5rem', backgroundColor: '#c0392b' }}
-          >
-            Cancelar
-          </button>
-        )}
       </div>
 
-      <div className="market-progress" style={{ marginBottom: '0.75rem' }}>
-        {scanning ? (
-          <span>
-            Escaneando... ({itemsProcessados}
-            {totalItens > 0 ? `/${totalItens}` : ''} itens processados, {rows.length} oportunidades
-            encontradas)
-            {totalItens > 0 && (
-              <span style={{ marginLeft: '0.5rem', color: '#4caf50' }}>
-                [{Math.round((itemsProcessados / totalItens) * 100)}%]
-              </span>
-            )}
-          </span>
-        ) : (
-          <span>
-            Último escaneamento:{' '}
-            {rows.length > 0 ? `Concluído (${rows.length} oportunidades)` : 'Aguardando'}
-          </span>
-        )}
-      </div>
+      {/* Barra de progresso */}
+      {(scanning || rows.length > 0) && (
+        <div style={{ marginBottom: '0.75rem', fontSize: '0.85rem', color: '#888' }}>
+          {scanning ? (
+            <>
+              <span style={{ color: '#ccc' }}>Escaneando</span>
+              {totalItens > 0 && (
+                <>
+                  {' '}— {itemsProcessados}/{totalItens} itens
+                  <span style={{ marginLeft: '0.5rem', color: '#4caf50', fontWeight: 600 }}>
+                    {Math.round((itemsProcessados / totalItens) * 100)}%
+                  </span>
+                </>
+              )}
+              {rows.length > 0 && (
+                <span style={{ marginLeft: '0.75rem', color: '#aaa' }}>
+                  · {rows.length} oportunidades
+                </span>
+              )}
+            </>
+          ) : (
+            <span>{rows.length} oportunidades encontradas</span>
+          )}
+        </div>
+      )}
 
       {rows.length > 0 && (
         <div
@@ -425,8 +336,6 @@ export default function MarketAnalyzer() {
                 const maxPrataNum = maxPrata ? parseInt(maxPrata, 10) : null;
                 const sl = searchItem.trim().toLowerCase();
                 if (sl && !(op.nomeBase || op.id || '').toLowerCase().includes(sl)) return false;
-                if (cidadeOrigem !== 'Todos' && op.origem !== cidadeOrigem) return false;
-                if (cidadeDestino !== 'Todos' && op.destino !== cidadeDestino) return false;
                 if ((Number(op.volumeDiario) || 0) < (Number(volMinimo) || 0)) return false;
                 const maxDesvioNum = maxDesvio !== '' ? parseFloat(maxDesvio) : null;
                 if (maxDesvioNum !== null && op.precoMedioDest > 0 && (op.desvio ?? 0) > maxDesvioNum) return false;
@@ -453,8 +362,6 @@ export default function MarketAnalyzer() {
             const name = (op.nomeBase || op.id || '').toLowerCase();
             if (!name.includes(searchLower)) return false;
           }
-          if (cidadeOrigem !== 'Todos' && op.origem !== cidadeOrigem) return false;
-          if (cidadeDestino !== 'Todos' && op.destino !== cidadeDestino) return false;
           if ((Number(op.volumeDiario) || 0) < (Number(volMinimo) || 0)) return false;
           const maxDesvioNum = maxDesvio !== '' ? parseFloat(maxDesvio) : null;
           if (maxDesvioNum !== null && op.precoMedioDest > 0 && (op.desvio ?? 0) > maxDesvioNum) return false;
