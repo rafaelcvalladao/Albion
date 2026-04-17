@@ -520,12 +520,16 @@ async function estrategiaCompletaRecurso(resource, body) {
         const lucroFamaLocal = fsT && fsA && fsP
           ? fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF)
           : -9e8;
+        const lucroFamaComFoco = lucroLocalComFoco ?? -9e8;
         fsFama.push({
           item: `${t}${enc}`,
           fama,
           famaPerPrata:
             Math.abs(lucroFamaLocal) > 0 ? fama / Math.abs(lucroFamaLocal) : 0,
+          famaPerPrataComFoco:
+            Math.abs(lucroFamaComFoco) > 0 ? fama / Math.abs(lucroFamaComFoco) : 0,
           lucro: lucroFamaLocal,
+          lucroComFoco: lucroFamaComFoco,
           volume: vFs,
         });
       }

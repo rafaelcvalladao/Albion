@@ -281,17 +281,20 @@ function StrategyTable({
   );
 }
 
-function TieredFamaTables({ rows, buildRefinedId, refinedAlt, refinedPlaceholder }) {
+function TieredFamaTables({ rows, buildRefinedId, refinedAlt, refinedPlaceholder, foco }) {
   const [sortBy, setSortBy] = useState('famaPerPrata');
   const [sortAsc, setSortAsc] = useState(false);
   if (!rows?.length) return null;
+
+  const getFamaPerPrata = (r) => foco ? (r.famaPerPrataComFoco ?? 0) : (r.famaPerPrata ?? 0);
+  const getLucroFama = (r) => foco ? r.lucroComFoco : r.lucro;
 
   const grouped = ['T4', 'T5', 'T6', 'T7', 'T8']
     .map((tier) => {
       const tierRows = rows.filter((r) => r.item.startsWith(tier));
       const sorted = [...tierRows].sort((a, b) => {
-        const aVal = sortBy === 'famaPerPrata' ? (a.famaPerPrata ?? 0) : (a.volume ?? 0);
-        const bVal = sortBy === 'famaPerPrata' ? (b.famaPerPrata ?? 0) : (b.volume ?? 0);
+        const aVal = sortBy === 'famaPerPrata' ? getFamaPerPrata(a) : (a.volume ?? 0);
+        const bVal = sortBy === 'famaPerPrata' ? getFamaPerPrata(b) : (b.volume ?? 0);
         return sortAsc ? aVal - bVal : bVal - aVal;
       });
       return { tier, items: sorted };
@@ -344,10 +347,10 @@ function TieredFamaTables({ rows, buildRefinedId, refinedAlt, refinedPlaceholder
                         />
                       </td>
                       <td
-                        className={famaClass(r.lucro)}
+                        className={famaClass(getLucroFama(r))}
                         style={{ fontSize: '1.1rem', fontWeight: 700, textAlign: 'center' }}
                       >
-                        {r.famaPerPrata?.toFixed(4).toLocaleString('pt-PT') ?? '—'}
+                        {getFamaPerPrata(r)?.toFixed(4).toLocaleString('pt-PT') ?? '—'}
                       </td>
                       <td
                         className="tabular-nums strategy-table-vol"
@@ -882,6 +885,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                 buildRefinedId={rc.buildRefinedId}
                 refinedAlt={rc.refinedAlt}
                 refinedPlaceholder={rc.refinedPlaceholder}
+                foco={cfg.foco}
               />
             )}
           </div>
