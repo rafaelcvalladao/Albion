@@ -104,6 +104,21 @@ function buildIdsForTier(tSel, rawSuffix, refinedSuffix) {
   return { tAnt, ids, refinedIds };
 }
 
+function avgPriceMapFromHistory(hist) {
+  const avgMap = new Map();
+  for (const entry of hist) {
+    const key = `${entry.location}|${entry.item_id}`;
+    if (!entry.data || entry.data.length === 0) { avgMap.set(key, 0); continue; }
+    const sorted = [...entry.data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const last96h = sorted.slice(-96);
+    if (last96h.length === 0) { avgMap.set(key, 0); continue; }
+    const totalVol = last96h.reduce((s, d) => s + (d.item_count || 0), 0);
+    const totalSilver = last96h.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
+    avgMap.set(key, totalVol > 0 ? Math.round(totalSilver / totalVol) : 0);
+  }
+  return avgMap;
+}
+
 function volumeMapFromHistory(hist) {
   const volMap = new Map();
   for (const entry of hist) {
@@ -171,6 +186,7 @@ async function processarRecurso(resource, body) {
   const res = await fetchPrices(ids, cfg.locations);
   const hist = await fetchHistory(refinedIds, cfg.locations, 1);
   const volMap = volumeMapFromHistory(hist);
+  const avgMap = avgPriceMapFromHistory(hist);
 
   // Preços de todas as 5 cidades reais para linha "melhor preço"
   const ROYAL_LOCS = ['FortSterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
@@ -180,6 +196,7 @@ async function processarRecurso(resource, body) {
     fetchHistory(refinedIds, ROYAL_LOCS, 1),
   ]);
   const royalVolMap = volumeMapFromHistory(royalHist);
+  const royalAvgMap = avgPriceMapFromHistory(royalHist);
 
   const royalDc = new Map();
   const royalDcDate = new Map();
@@ -284,6 +301,7 @@ async function processarRecurso(resource, body) {
         tauaDate: getDvt(city.name, iP),
         lucro: calcLucro(...cPrices),
         volume24h: getVol(volMap, city.name, iP),
+        avgPreco: avgMap.get(`${city.name}|${iP}`) ?? 0,
       };
     }
 
@@ -341,6 +359,7 @@ async function processarRecurso(resource, body) {
       produto: mpProduto,
       lucro: mpLucro,
       volumeProduto: mpProduto ? (royalVolMap.get(`${mpProduto.cidade}|${iP}`) ?? 0) : 0,
+      avgPreco: mpProduto ? (royalAvgMap.get(`${mpProduto.cidade}|${iP}`) ?? 0) : 0,
     };
 
     if (otimizado > -8e8 && foco) {

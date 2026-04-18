@@ -3,6 +3,15 @@ import { profitClass, famaClass } from '../utils/profit.js';
 
 const ITEM_ICON_URL = (id) => `https://render.albiononline.com/v1/item/${id}.png?quality=1`;
 
+function avgPriceClass(current, avg) {
+  if (!avg || !current) return 'tabular-nums';
+  const dev = Math.abs(current - avg) / avg;
+  if (dev <= 0.10) return 'tabular-nums avg-green';
+  if (dev <= 0.25) return 'tabular-nums avg-yellow';
+  if (dev <= 0.50) return 'tabular-nums avg-orange';
+  return 'tabular-nums avg-red';
+}
+
 // ─── Helpers genéricos ───
 
 function parseTierItem(item) {
@@ -623,7 +632,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                             </th>
                             <th>Lucro</th>
                             <th>Vol. 24h</th>
-                            <th>Fama</th>
+                            <th>Preço Médio</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -678,9 +687,12 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                                       ? cd.volume24h.toLocaleString('pt-PT')
                                       : '—'}
                                   </td>
-                                  <td className="tabular-nums result-table__fama">
-                                    {row.famaRefino != null
-                                      ? row.famaRefino.toLocaleString('pt-PT')
+                                  <td
+                                    className={avgPriceClass(cd?.tabua, cd?.avgPreco)}
+                                    style={{ textAlign: 'center' }}
+                                  >
+                                    {cd?.avgPreco
+                                      ? cd.avgPreco.toLocaleString('pt-PT', { maximumFractionDigits: 0 })
                                       : '—'}
                                   </td>
                                 </tr>
@@ -720,7 +732,14 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                                   ? row.melhorPreco.volumeProduto.toLocaleString('pt-PT')
                                   : '—'}
                               </td>
-                              <td />
+                              <td
+                                className={avgPriceClass(row.melhorPreco.produto?.preco, row.melhorPreco.avgPreco)}
+                                style={{ textAlign: 'center', fontSize: '0.85em' }}
+                              >
+                                {row.melhorPreco.avgPreco
+                                  ? row.melhorPreco.avgPreco.toLocaleString('pt-PT', { maximumFractionDigits: 0 })
+                                  : '—'}
+                              </td>
                             </tr>
                           )}
                         </tbody>

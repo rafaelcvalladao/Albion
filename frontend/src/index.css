@@ -101,3 +101,8 @@ a {
   color: var(--fama-spent);
   font-weight: 600;
 }
+
+.avg-green  { color: #4ade80; }
+.avg-yellow { color: #facc15; }
+.avg-orange { color: #fb923c; }
+.avg-red    { color: #f87171; }
