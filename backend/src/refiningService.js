@@ -344,9 +344,13 @@ async function processarRecurso(resource, body) {
     };
 
     if (otimizado > -8e8 && foco) {
+      const rrrSemFoco = calcularRrrManual(false, true);
+      const otimizadoSemFoco = minRaw && minPrev && maxProd
+        ? maxProd * taxaVendaNota - ((minRaw * qt + minPrev) * (1 - rrrSemFoco) + txF)
+        : 0;
       row.foco = {
         unidades: fReal,
-        prataPorFoco: otimizado / fReal,
+        prataPorFoco: fReal > 0 ? (otimizado - otimizadoSemFoco) / fReal : 0,
       };
     }
     rows.push(row);
