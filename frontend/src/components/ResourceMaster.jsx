@@ -471,8 +471,8 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
     let cancelled = false;
     setStrategyLoading(true);
     strategyFn({
-      taxaNpc: cfg.taxaNpc,
-      taxaVenda: cfg.taxaVenda,
+      taxaNpc: '800',
+      taxaVenda: '6.5',
       spec: cfg.spec,
       buyOrder: cfg.buyOrder,
       foco: cfg.foco,
@@ -807,7 +807,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
             onClick={(e) => e.stopPropagation()}
           >
             <header>
-              <h3 id="config-title">Taxa NPC e Spec</h3>
+              <h3 id="config-title">Especialização</h3>
               <button
                 type="button"
                 className="modal-close"
@@ -818,22 +818,6 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
               </button>
             </header>
             <div className="form-grid">
-              <label>
-                Taxa do NPC (Prata)
-                <input
-                  type="text"
-                  value={cfg.taxaNpc}
-                  onChange={(e) => setCfg({ ...cfg, taxaNpc: e.target.value })}
-                />
-              </label>
-              <label>
-                Taxa de Venda (%) — Premium: 6.5
-                <input
-                  type="text"
-                  value={cfg.taxaVenda}
-                  onChange={(e) => setCfg({ ...cfg, taxaVenda: e.target.value })}
-                />
-              </label>
               {specKeys.map(({ key, label }) => (
                 <label key={key}>
                   {label}
