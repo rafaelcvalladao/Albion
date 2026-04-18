@@ -240,7 +240,8 @@ async function processarRecurso(resource, body) {
   const getDvt = (city, item) => dvt.get(`${city}|${item}`) ?? null;
 
   const rows = [];
-  const spTotal = specTotalPrata(spec);
+  const reducaoGeral = specTotalPrata(spec); // sum(all spec levels) * 30
+  const reducaoTier = (parseInt(String(spec[tSel.toLowerCase()] ?? '0'), 10) || 0) * 250;
 
   for (let idxN = 0; idxN < NIVEIS.length; idxN++) {
     const n = NIVEIS[idxN];
@@ -254,7 +255,7 @@ async function processarRecurso(resource, body) {
 
     const fBase = FOCO_BASE[tSel] ?? 250;
     const multNivel = MULT_ENCHANT[idxN];
-    const fReal = fBase * multNivel * 0.5 ** (spTotal / 10000);
+    const fReal = Math.max(0, fBase * multNivel - reducaoGeral - reducaoTier);
     const famaRefino = famaRefinoPorCraft(tSel, idxN);
 
     const cities = cfg.cities || [{ key: cfg.cityKey, name: cfg.cityName }];
@@ -377,7 +378,7 @@ async function estrategiaCompletaRecurso(resource, body) {
   if (Number.isNaN(taxaVenda)) taxaVenda = 6.5;
   const taxaVendaNota = 1 - taxaVenda / 100;
 
-  const spTotal = specTotalPrata(spec);
+  const reducaoGeral = specTotalPrata(spec); // sum(all spec levels) * 30
   const rrrConFoco = calcularRrrManual(true, true);
 
   const allIds = [];
@@ -476,7 +477,8 @@ async function estrategiaCompletaRecurso(resource, body) {
       const rrrFoco = calcularRrrManual(foco, true);
       const rrrFama = calcularRrrManual(false, true);
       const fama = famaRefinoPorCraft(t, idxN);
-      const focoUnidades = (FOCO_BASE[t] ?? 250) * MULT_ENCHANT[idxN] * 0.5 ** (spTotal / 10000);
+      const reducaoTierSpec = (parseInt(String(spec[t.toLowerCase()] ?? '0'), 10) || 0) * 250;
+      const focoUnidades = Math.max(0, (FOCO_BASE[t] ?? 250) * MULT_ENCHANT[idxN] - reducaoGeral - reducaoTierSpec);
 
       const lucroLocal = fsT && fsA && fsP
         ? fsP * taxaVendaNota - ((fsT * qt + fsA) * (1 - rrrFoco) + txF)
