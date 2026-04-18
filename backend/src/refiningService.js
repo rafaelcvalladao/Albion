@@ -156,10 +156,14 @@ async function processarRecurso(resource, body) {
   const cfg = RESOURCE_CONFIGS[resource];
   if (!cfg) throw new Error(`Recurso desconhecido: ${resource}`);
 
-  const { tier: tSel, taxaNpc: taxaRaw, spec = {}, buyOrder = false, foco = false } = body;
+  const { tier: tSel, taxaNpc: taxaRaw, taxaVenda: taxaVendaRaw, spec = {}, buyOrder = false, foco = false } = body;
 
   let txU = parseFloat(String(taxaRaw ?? '800').trim() || '800');
   if (Number.isNaN(txU)) txU = 800;
+
+  let taxaVenda = parseFloat(String(taxaVendaRaw ?? '6.5').trim() || '6.5');
+  if (Number.isNaN(taxaVenda)) taxaVenda = 6.5;
+  const taxaVendaNota = 1 - taxaVenda / 100;
 
   const rrr = calcularRrrManual(foco, true);
   const { ids, refinedIds } = buildIdsForTier(tSel, cfg.rawSuffix, cfg.refinedSuffix);
@@ -263,7 +267,7 @@ async function processarRecurso(resource, body) {
     };
 
     function calcLucro(t, a, v) {
-      if (t && a && v) return v - ((t * qt + a) * (1 - rrr) + txF);
+      if (t && a && v) return v * taxaVendaNota - ((t * qt + a) * (1 - rrr) + txF);
       return -9e8;
     }
 
@@ -292,7 +296,7 @@ async function processarRecurso(resource, body) {
     const maxProd = prodPrices.length ? Math.max(...prodPrices) : 0;
 
     const otimizado = minRaw && minPrev && maxProd
-      ? maxProd - ((minRaw * qt + minPrev) * (1 - rrr) + txF)
+      ? maxProd * taxaVendaNota - ((minRaw * qt + minPrev) * (1 - rrr) + txF)
       : -9e8;
 
     row.otimizado = otimizado;
@@ -327,7 +331,7 @@ async function processarRecurso(resource, body) {
 
     let mpLucro = -9e8;
     if (mpTronco && mpTabuaAnt && mpProduto) {
-      mpLucro = mpProduto.preco - ((mpTronco.preco * qt + mpTabuaAnt.preco) * (1 - rrr) + txF);
+      mpLucro = mpProduto.preco * taxaVendaNota - ((mpTronco.preco * qt + mpTabuaAnt.preco) * (1 - rrr) + txF);
     }
 
     row.melhorPreco = {
@@ -364,10 +368,14 @@ async function estrategiaCompletaRecurso(resource, body) {
   const cfg = RESOURCE_CONFIGS[resource];
   if (!cfg) throw new Error(`Recurso desconhecido: ${resource}`);
 
-  const { taxaNpc: taxaRaw, spec = {}, buyOrder = false, foco = true } = body;
+  const { taxaNpc: taxaRaw, taxaVenda: taxaVendaRaw, spec = {}, buyOrder = false, foco = true } = body;
 
   let taxaU = parseFloat(String(taxaRaw ?? '800').trim() || '800');
   if (Number.isNaN(taxaU)) taxaU = 800;
+
+  let taxaVenda = parseFloat(String(taxaVendaRaw ?? '6.5').trim() || '6.5');
+  if (Number.isNaN(taxaVenda)) taxaVenda = 6.5;
+  const taxaVendaNota = 1 - taxaVenda / 100;
 
   const spTotal = specTotalPrata(spec);
   const rrrConFoco = calcularRrrManual(true, true);
@@ -471,35 +479,35 @@ async function estrategiaCompletaRecurso(resource, body) {
       const focoUnidades = (FOCO_BASE[t] ?? 250) * MULT_ENCHANT[idxN] * 0.5 ** (spTotal / 10000);
 
       const lucroLocal = fsT && fsA && fsP
-        ? fsP - ((fsT * qt + fsA) * (1 - rrrFoco) + txF)
+        ? fsP * taxaVendaNota - ((fsT * qt + fsA) * (1 - rrrFoco) + txF)
         : null;
       const lucroOpt = optCfg.minR && optCfg.minP && optCfg.maxS
-        ? optCfg.maxS - ((optCfg.minR * qt + optCfg.minP) * (1 - rrrFoco) + txF)
+        ? optCfg.maxS * taxaVendaNota - ((optCfg.minR * qt + optCfg.minP) * (1 - rrrFoco) + txF)
         : null;
       const lucroOT = optRoyal.minR && optRoyal.minP && optRoyal.maxS
-        ? optRoyal.maxS - ((optRoyal.minR * qt + optRoyal.minP) * (1 - rrrFoco) + txF)
+        ? optRoyal.maxS * taxaVendaNota - ((optRoyal.minR * qt + optRoyal.minP) * (1 - rrrFoco) + txF)
         : null;
 
       const volOpt = optCfg.bestCity ? (volData.get(`${optCfg.bestCity}|${iP}`) ?? 0) : 0;
       const volOT = optRoyal.bestCity ? (royalVolData.get(`${optRoyal.bestCity}|${iP}`) ?? 0) : 0;
 
       // Lucro/foco: ganho marginal por ponto de foco vs não usar foco
-      const lucroLocalComFoco = fsT && fsA && fsP ? fsP - ((fsT * qt + fsA) * (1 - rrrConFoco) + txF) : null;
-      const lucroLocalSemFoco = fsT && fsA && fsP ? fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF) : null;
+      const lucroLocalComFoco = fsT && fsA && fsP ? fsP * taxaVendaNota - ((fsT * qt + fsA) * (1 - rrrConFoco) + txF) : null;
+      const lucroLocalSemFoco = fsT && fsA && fsP ? fsP * taxaVendaNota - ((fsT * qt + fsA) * (1 - rrrFama) + txF) : null;
       const lucroPorFoco = lucroLocalComFoco != null && lucroLocalSemFoco != null
         ? (lucroLocalComFoco - lucroLocalSemFoco) / focoUnidades : null;
 
       const lucroOptComFoco = optCfg.minR && optCfg.minP && optCfg.maxS
-        ? optCfg.maxS - ((optCfg.minR * qt + optCfg.minP) * (1 - rrrConFoco) + txF) : null;
+        ? optCfg.maxS * taxaVendaNota - ((optCfg.minR * qt + optCfg.minP) * (1 - rrrConFoco) + txF) : null;
       const lucroOptSemFoco = optCfg.minR && optCfg.minP && optCfg.maxS
-        ? optCfg.maxS - ((optCfg.minR * qt + optCfg.minP) * (1 - rrrFama) + txF) : null;
+        ? optCfg.maxS * taxaVendaNota - ((optCfg.minR * qt + optCfg.minP) * (1 - rrrFama) + txF) : null;
       const lucroPorFocoOpt = lucroOptComFoco != null && lucroOptSemFoco != null
         ? (lucroOptComFoco - lucroOptSemFoco) / focoUnidades : null;
 
       const lucroOTComFoco = optRoyal.minR && optRoyal.minP && optRoyal.maxS
-        ? optRoyal.maxS - ((optRoyal.minR * qt + optRoyal.minP) * (1 - rrrConFoco) + txF) : null;
+        ? optRoyal.maxS * taxaVendaNota - ((optRoyal.minR * qt + optRoyal.minP) * (1 - rrrConFoco) + txF) : null;
       const lucroOTSemFoco = optRoyal.minR && optRoyal.minP && optRoyal.maxS
-        ? optRoyal.maxS - ((optRoyal.minR * qt + optRoyal.minP) * (1 - rrrFama) + txF) : null;
+        ? optRoyal.maxS * taxaVendaNota - ((optRoyal.minR * qt + optRoyal.minP) * (1 - rrrFama) + txF) : null;
       const lucroPorFocoOT = lucroOTComFoco != null && lucroOTSemFoco != null
         ? (lucroOTComFoco - lucroOTSemFoco) / focoUnidades : null;
 
@@ -518,7 +526,7 @@ async function estrategiaCompletaRecurso(resource, body) {
           lucroPorFocoOT: lucroPorFocoOT ?? -9e8,
         });
         const lucroFamaLocal = fsT && fsA && fsP
-          ? fsP - ((fsT * qt + fsA) * (1 - rrrFama) + txF)
+          ? fsP * taxaVendaNota - ((fsT * qt + fsA) * (1 - rrrFama) + txF)
           : -9e8;
         const lucroFamaComFoco = lucroLocalComFoco ?? -9e8;
         fsFama.push({

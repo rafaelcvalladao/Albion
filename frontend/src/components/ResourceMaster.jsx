@@ -129,6 +129,7 @@ function loadConfig(storageKey) {
   }
   return {
     taxaNpc: '800',
+    taxaVenda: '6.5',
     spec: { t4: '0', t5: '0', t6: '0', t7: '0', t8: '0' },
     tier: 'T6',
     buyOrder: false,
@@ -402,6 +403,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
       const data = await calculateFn({
         tier: cfg.tier,
         taxaNpc: cfg.taxaNpc,
+        taxaVenda: cfg.taxaVenda,
         spec: cfg.spec,
         buyOrder: cfg.buyOrder,
         foco: cfg.foco,
@@ -420,6 +422,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
     try {
       const data = await strategyFn({
         taxaNpc: cfg.taxaNpc,
+        taxaVenda: cfg.taxaVenda,
         spec: cfg.spec,
         buyOrder: cfg.buyOrder,
         foco: cfg.foco,
@@ -443,6 +446,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
     calculateFn({
       tier: cfg.tier,
       taxaNpc: cfg.taxaNpc,
+      taxaVenda: cfg.taxaVenda,
       spec: cfg.spec,
       buyOrder: cfg.buyOrder,
       foco: cfg.foco,
@@ -470,6 +474,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
     setStrategyLoading(true);
     strategyFn({
       taxaNpc: cfg.taxaNpc,
+      taxaVenda: cfg.taxaVenda,
       spec: cfg.spec,
       buyOrder: cfg.buyOrder,
       foco: cfg.foco,
@@ -821,6 +826,14 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                   type="text"
                   value={cfg.taxaNpc}
                   onChange={(e) => setCfg({ ...cfg, taxaNpc: e.target.value })}
+                />
+              </label>
+              <label>
+                Taxa de Venda (%) — Premium: 6.5
+                <input
+                  type="text"
+                  value={cfg.taxaVenda}
+                  onChange={(e) => setCfg({ ...cfg, taxaVenda: e.target.value })}
                 />
               </label>
               {specKeys.map(({ key, label }) => (
