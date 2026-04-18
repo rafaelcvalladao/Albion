@@ -255,7 +255,7 @@ async function processarRecurso(resource, body) {
 
     const fBase = FOCO_BASE[tSel] ?? 250;
     const multNivel = MULT_ENCHANT[idxN];
-    const fReal = Math.max(0, fBase * multNivel - reducaoGeral - reducaoTier);
+    const fReal = fBase * multNivel * 0.5 ** ((reducaoGeral + reducaoTier) / 10000);
     const famaRefino = famaRefinoPorCraft(tSel, idxN);
 
     const cities = cfg.cities || [{ key: cfg.cityKey, name: cfg.cityName }];
@@ -478,7 +478,7 @@ async function estrategiaCompletaRecurso(resource, body) {
       const rrrFama = calcularRrrManual(false, true);
       const fama = famaRefinoPorCraft(t, idxN);
       const reducaoTierSpec = (parseInt(String(spec[t.toLowerCase()] ?? '0'), 10) || 0) * 250;
-      const focoUnidades = Math.max(0, (FOCO_BASE[t] ?? 250) * MULT_ENCHANT[idxN] - reducaoGeral - reducaoTierSpec);
+      const focoUnidades = (FOCO_BASE[t] ?? 250) * MULT_ENCHANT[idxN] * 0.5 ** ((reducaoGeral + reducaoTierSpec) / 10000);
 
       const lucroLocal = fsT && fsA && fsP
         ? fsP * taxaVendaNota - ((fsT * qt + fsA) * (1 - rrrFoco) + txF)

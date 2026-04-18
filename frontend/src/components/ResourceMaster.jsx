@@ -128,8 +128,6 @@ function loadConfig(storageKey) {
     /* ignore */
   }
   return {
-    taxaNpc: '800',
-    taxaVenda: '6.5',
     spec: { t4: '0', t5: '0', t6: '0', t7: '0', t8: '0' },
     tier: 'T6',
     buyOrder: false,
@@ -402,8 +400,8 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
     try {
       const data = await calculateFn({
         tier: cfg.tier,
-        taxaNpc: cfg.taxaNpc,
-        taxaVenda: cfg.taxaVenda,
+        taxaNpc: '800',
+        taxaVenda: '6.5',
         spec: cfg.spec,
         buyOrder: cfg.buyOrder,
         foco: cfg.foco,
@@ -421,8 +419,8 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
     setStrategyLoading(true);
     try {
       const data = await strategyFn({
-        taxaNpc: cfg.taxaNpc,
-        taxaVenda: cfg.taxaVenda,
+        taxaNpc: '800',
+        taxaVenda: '6.5',
         spec: cfg.spec,
         buyOrder: cfg.buyOrder,
         foco: cfg.foco,
@@ -445,8 +443,8 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
     setErr(null);
     calculateFn({
       tier: cfg.tier,
-      taxaNpc: cfg.taxaNpc,
-      taxaVenda: cfg.taxaVenda,
+      taxaNpc: '800',
+      taxaVenda: '6.5',
       spec: cfg.spec,
       buyOrder: cfg.buyOrder,
       foco: cfg.foco,
