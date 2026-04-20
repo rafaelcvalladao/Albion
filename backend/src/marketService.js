@@ -214,11 +214,8 @@ export async function buscarOportunidades({
   }
 
   for (const op of oportunidadesUnicas) {
-    const dataOrig = volumeMap.get(`${op.id}|${op.origem}`);
     const dataDest = volumeMap.get(`${op.id}|${op.destino}`);
-    const volOrig = dataOrig?.volume || 0;
-    const volDest = dataDest?.volume || 0;
-    op.volumeDiario = Math.max(volOrig, volDest);
+    op.volumeDiario = dataDest?.volume || 0;
     op.precoMedioDest = dataDest?.avgPrice || 0;
     op.desvio = op.precoMedioDest > 0 ? (op.venda / op.precoMedioDest - 1) * 100 : null;
   }
