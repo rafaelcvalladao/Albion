@@ -1,4 +1,4 @@
-import { buscarEquipamentoPorNomeComTeleporte } from './equipBuyService.js';
+import { buscarEquipamentoPorNivelEfetivo } from './equipBuyService.js';
 import { getEquipmentData } from './equipmentService.js';
 
 import express from 'express';
@@ -208,16 +208,10 @@ app.post(
 app.post(
   '/api/equipbuy/options',
   wrap(async (req) => {
-    const { equipamentoNome, tier, qualidade, cidadeDestino, encantamento } = req.body || {};
-    console.log('[/api/equipbuy/options] Parâmetros:', { equipamentoNome, tier, qualidade, cidadeDestino, encantamento });
-    const resultado = await buscarEquipamentoPorNomeComTeleporte({
-      equipamentoNome,
-      tier,
-      qualidade,
-      cidadeDestino,
-      encantamento,
-    });
-    console.log(`[/api/equipbuy/options] Retornando ${resultado.length} resultados`);
+    const { equipamentoNome, nivelEfetivo, qualidade, cidadeDestino } = req.body || {};
+    console.log('[/api/equipbuy/options] Parâmetros:', { equipamentoNome, nivelEfetivo, qualidade, cidadeDestino });
+    const resultado = await buscarEquipamentoPorNivelEfetivo({ equipamentoNome, nivelEfetivo, qualidade, cidadeDestino });
+    console.log(`[/api/equipbuy/options] direto=${resultado.direto?.length}, encantando=${resultado.encantando?.length}`);
     return resultado;
   }),
 );

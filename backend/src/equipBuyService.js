@@ -103,6 +103,119 @@ async function calcularAlternativasEncantamento({ baseItemIds, tier, encantament
 }
 
 /**
+ * Busca todas as combinações equivalentes para um nível efetivo (4-12).
+ * Nível efetivo = tier_base + enchant. Ex: 7 → T7.0, T6.1, T5.2, T4.3
+ * Retorna: { direto: [...], encantando: [...] } — uma linha por combinação.
+ */
+export async function buscarEquipamentoPorNivelEfetivo({ equipamentoNome, nivelEfetivo, qualidade, cidadeDestino }) {
+  const N = parseInt(nivelEfetivo, 10);
+  if (Number.isNaN(N) || N < 4 || N > 12) return { direto: [], encantando: [] };
+
+  const cidadeDestinoNormalizada = normalizarCidade(cidadeDestino);
+  const qualidadeAPI = (parseInt(qualidade) || 0) + 1;
+  const termoBusca = (equipamentoNome || '').toLowerCase();
+
+  // base_tier ∈ [max(4, N-4), min(8, N)], enchant = N - base
+  const combinations = [];
+  for (let base = Math.max(4, N - 4); base <= Math.min(8, N); base++) {
+    combinations.push({ tier: `T${base}`, enchant: N - base });
+  }
+
+  let todosItens;
+  try {
+    todosItens = await gerarListaItens('Todos');
+  } catch (e) {
+    console.error('[equipBuy] Erro ao gerar lista:', e.message);
+    return { direto: [], encantando: [] };
+  }
+
+  // Para cada combinação, encontrar os IDs base que batem com o nome
+  const combData = [];
+  const allDiretoIds = [];
+
+  for (const { tier, enchant } of combinations) {
+    const tierItems = todosItens.filter(id => {
+      if (!id.split('@')[0].startsWith(tier)) return false;
+      return nomeItemEmPortugues(id).toLowerCase().includes(termoBusca);
+    });
+    const baseIds = [...new Set(tierItems.map(id => id.split('@')[0]))];
+    if (!baseIds.length) continue;
+
+    const directIds = enchant === 0 ? baseIds : baseIds.map(id => `${id}@${enchant}`);
+    combData.push({ tier, enchant, baseIds, directIds });
+    allDiretoIds.push(...directIds);
+  }
+
+  if (!allDiretoIds.length) return { direto: [], encantando: [] };
+
+  // Buscar preços de todos os itens diretos em uma única chamada
+  let precos;
+  try {
+    precos = await fetchPricesMarket([...new Set(allDiretoIds)], TODAS_CIDADES, qualidadeAPI);
+  } catch (e) {
+    console.error('[equipBuy] Erro ao buscar preços:', e.message);
+    return { direto: [], encantando: [] };
+  }
+
+  const precoMap = {};
+  for (const p of precos) {
+    const price = Number(p.sell_price_min) || 0;
+    if (!price) continue;
+    const key = `${p.item_id}|${p.city}`;
+    if (!precoMap[key] || price < precoMap[key].preco) {
+      precoMap[key] = { preco: price, data: p.sell_price_min_date, quality: p.quality };
+    }
+  }
+
+  // Direto: melhor cidade por combinação
+  const direto = [];
+  for (const { tier, enchant, directIds } of combData) {
+    let melhor = null;
+    for (const itemId of directIds) {
+      for (const cidade of TODAS_CIDADES) {
+        const entry = precoMap[`${itemId}|${cidade}`];
+        if (!entry) continue;
+        const cidadeNorm = normalizarCidade(cidade);
+        const teleporte = cidadeNorm === cidadeDestinoNormalizada
+          ? 0 : calcularCustoTeleporte(itemId, cidadeNorm, cidadeDestinoNormalizada);
+        const custoFinal = entry.preco + teleporte;
+        if (!melhor || custoFinal < melhor.custoFinal) {
+          melhor = {
+            itemId, nome: nomeItemEmPortugues(itemId),
+            tier, enchant,
+            cidadeOrigem: cidade, cidadeDestino,
+            preco: entry.preco,
+            custoTeleporte: teleporte,
+            custoFinal,
+            data: String(entry.data || ''),
+            quality: Number(entry.quality || qualidadeAPI),
+          };
+        }
+      }
+    }
+    if (melhor) direto.push(melhor);
+  }
+  direto.sort((a, b) => a.custoFinal - b.custoFinal);
+
+  // Encantando: melhor caminho por combinação (enchant > 0)
+  const encantando = [];
+  for (const { tier, enchant, baseIds } of combData) {
+    if (enchant === 0) continue;
+    const alts = await calcularAlternativasEncantamento({
+      baseItemIds: baseIds,
+      tier,
+      encantamento: enchant,
+      cidadeDestinoNormalizada,
+    });
+    if (alts.length > 0) encantando.push({ ...alts[0], tier, enchant });
+  }
+  encantando.sort((a, b) => a.custoFinal - b.custoFinal);
+
+  console.log(`[equipBuy] nivel=${N} → ${combData.length} combinações, ${direto.length} direto, ${encantando.length} encantando`);
+  return { direto, encantando };
+}
+
+/**
  * Busca um equipamento específico em todas as cidades e calcula o preço final
  * considerando o custo de teleporte para trazer para a cidade selecionada.
  */

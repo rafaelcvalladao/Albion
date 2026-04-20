@@ -142,6 +142,7 @@ function loadConfig(storageKey) {
     buyOrder: false,
     foco: false,
     dailyBonus: 0,
+    taxaNpc: '800',
   };
 }
 
@@ -410,7 +411,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
     try {
       const data = await calculateFn({
         tier: cfg.tier,
-        taxaNpc: '800',
+        taxaNpc: cfg.taxaNpc ?? '800',
         taxaVenda: '6.5',
         spec: cfg.spec,
         buyOrder: cfg.buyOrder,
@@ -430,7 +431,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
     setStrategyLoading(true);
     try {
       const data = await strategyFn({
-        taxaNpc: '800',
+        taxaNpc: cfg.taxaNpc ?? '800',
         taxaVenda: '6.5',
         spec: cfg.spec,
         buyOrder: cfg.buyOrder,
@@ -863,6 +864,16 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
               </button>
             </header>
             <div className="form-grid">
+              <label>
+                Taxa NPC (nutrição)
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={cfg.taxaNpc ?? '800'}
+                  onChange={(e) => setCfg((c) => ({ ...c, taxaNpc: e.target.value }))}
+                />
+              </label>
               {specKeys.map(({ key, label }) => (
                 <label key={key}>
                   {label}
