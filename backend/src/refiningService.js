@@ -165,8 +165,7 @@ function volumeMapFromHistory(hist) {
       continue;
     }
     const totalVol = last96h.reduce((s, d) => s + (d.item_count || 0), 0);
-    const hoursAvailable = last96h.length;
-    const avgVol = totalVol / (hoursAvailable / 24);
+    const avgVol = totalVol / 4; // janela fixa de 96h = 4 dias
     volMap.set(`${cid}|${it}`, Math.round(avgVol));
   }
   return volMap;

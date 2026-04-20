@@ -120,8 +120,7 @@ export async function fetchHistoryMarket(itemIds, locations) {
     }
     const totalCount = last96h.reduce((s, d) => s + (d.item_count || 0), 0);
     const totalSilver = last96h.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
-    const hoursAvailable = last96h.length;
-    const avgVol = totalCount / (hoursAvailable / 24);
+    const avgVol = totalCount / 4; // janela fixa de 96h = 4 dias
     const avgPrice = totalCount > 0 ? Math.round(totalSilver / totalCount) : 0;
 
     const prev = volumeMap.get(key);
