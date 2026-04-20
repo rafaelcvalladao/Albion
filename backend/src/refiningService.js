@@ -125,6 +125,25 @@ function avgPriceMapFromHistory(hist) {
   return avgMap;
 }
 
+// Média semanal: 4 semanas (últimos 4 data-points com timescale=168) → fallback 1 semana
+function weeklyAvgMapFromHistory(hist) {
+  const map = new Map();
+  for (const entry of hist) {
+    if (!entry.data || entry.data.length === 0) continue;
+    const key = `${entry.location}|${entry.item_id}`;
+    const sorted = [...entry.data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const last4w = sorted.slice(-4);
+    const count4w = last4w.reduce((s, d) => s + (d.item_count || 0), 0);
+    const silver4w = last4w.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
+    const avg4w = count4w > 0 ? Math.round(silver4w / count4w) : 0;
+    const last1w = sorted[sorted.length - 1];
+    const avg1w = (last1w?.item_count || 0) > 0 ? Math.round(last1w.avg_price || 0) : 0;
+    const avg = avg4w || avg1w;
+    if (avg > 0) map.set(key, avg);
+  }
+  return map;
+}
+
 function volumeMapFromHistory(hist) {
   const volMap = new Map();
   for (const entry of hist) {
@@ -189,20 +208,22 @@ async function processarRecurso(resource, body) {
   const rrr = calcularRrrManual(foco, true, dailyBonus);
   const { ids, refinedIds } = buildIdsForTier(tSel, cfg.rawSuffix, cfg.refinedSuffix);
 
-  const res = await fetchPrices(ids, cfg.locations);
-  const hist = await fetchHistory(refinedIds, cfg.locations, 1);
-  const volMap = volumeMapFromHistory(hist);
-  const avgMap = avgPriceMapFromHistory(hist);
-
-  // Preços de todas as 5 cidades reais para linha "melhor preço"
   const ROYAL_LOCS = ['FortSterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
   const ROYAL_NAMES = ['Fort Sterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
-  const [royalRes, royalHist] = await Promise.all([
+  const [res, hist, weeklyHist, royalRes, royalHist, royalWeeklyHist] = await Promise.all([
+    fetchPrices(ids, cfg.locations),
+    fetchHistory(refinedIds, cfg.locations, 1),
+    fetchHistory(ids, cfg.locations, 168),
     fetchPrices([...new Set(ids)], ROYAL_LOCS),
     fetchHistory(refinedIds, ROYAL_LOCS, 1),
+    fetchHistory([...new Set(ids)], ROYAL_LOCS, 168),
   ]);
+  const volMap = volumeMapFromHistory(hist);
+  const avgMap = avgPriceMapFromHistory(hist);
+  const weeklyAvg = weeklyAvgMapFromHistory(weeklyHist);
   const royalVolMap = volumeMapFromHistory(royalHist);
   const royalAvgMap = avgPriceMapFromHistory(royalHist);
+  const royalWeeklyAvg = weeklyAvgMapFromHistory(royalWeeklyHist);
 
   const royalDc = new Map();
   const royalDcDate = new Map();
@@ -257,8 +278,8 @@ async function processarRecurso(resource, body) {
     }
   }
 
-  const getDc = (city, item) => dc.get(`${city}|${item}`) ?? 0;
-  const getDv = (city, item) => dv.get(`${city}|${item}`) ?? 0;
+  const getDc = (city, item) => dc.get(`${city}|${item}`) || weeklyAvg.get(`${city}|${item}`) || 0;
+  const getDv = (city, item) => dv.get(`${city}|${item}`) || weeklyAvg.get(`${city}|${item}`) || 0;
   const getDt = (city, item) => dt.get(`${city}|${item}`) ?? null;
   const getDvt = (city, item) => dvt.get(`${city}|${item}`) ?? null;
 
@@ -334,28 +355,28 @@ async function processarRecurso(resource, body) {
     // Melhor preço por material nas 5 cidades reais
     // Materiais: menor preço de compra (sell order ou buy order conforme config)
     // Produto refinado: maior sell order (vender pelo maior valor)
-    function bestRoyalMin(itemId, map, dateMap) {
+    function bestRoyalMin(itemId, map, dateMap, fallback = null) {
       let best = null;
       for (const rc of ROYAL_NAMES) {
-        const p = map.get(`${rc}|${itemId}`) ?? 0;
+        const p = map.get(`${rc}|${itemId}`) || (fallback?.get(`${rc}|${itemId}`) ?? 0);
         if (p > 0 && (!best || p < best.preco)) {
           best = { cidade: rc, preco: p, data: dateMap.get(`${rc}|${itemId}`) ?? null };
         }
       }
       return best;
     }
-    function bestRoyalMax(itemId, map, dateMap) {
+    function bestRoyalMax(itemId, map, dateMap, fallback = null) {
       let best = null;
       for (const rc of ROYAL_NAMES) {
-        const p = map.get(`${rc}|${itemId}`) ?? 0;
+        const p = map.get(`${rc}|${itemId}`) || (fallback?.get(`${rc}|${itemId}`) ?? 0);
         if (p > 0 && (!best || p > best.preco)) {
           best = { cidade: rc, preco: p, data: dateMap.get(`${rc}|${itemId}`) ?? null };
         }
       }
       return best;
     }
-    const mpTronco = bestRoyalMin(iT, royalDc, royalDcDate);
-    const mpTabuaAnt = bestRoyalMin(iA, royalDc, royalDcDate);
+    const mpTronco = bestRoyalMin(iT, royalDc, royalDcDate, royalWeeklyAvg);
+    const mpTabuaAnt = bestRoyalMin(iA, royalDc, royalDcDate, royalWeeklyAvg);
     // Produto: quando dailyBonus > 0 usa melhor preço médio entre cidades reais
     let mpProduto;
     if (dailyBonus > 0) {
@@ -368,7 +389,7 @@ async function processarRecurso(resource, body) {
       }
       mpProduto = bestAvgProduto;
     } else {
-      mpProduto = bestRoyalMax(iP, royalSell, royalSellDate);
+      mpProduto = bestRoyalMax(iP, royalSell, royalSellDate, royalWeeklyAvg);
     }
 
     let mpLucro = -9e8;
@@ -441,20 +462,24 @@ async function estrategiaCompletaRecurso(resource, body) {
     }
   }
 
-  const res = await fetchPrices([...new Set(allIds)], cfg.locations);
-  const hist = await fetchHistory([...new Set(refinedIds)], cfg.locations, 1);
-  const volData = volumeMapFromHistory(hist);
-  const avgData = avgPriceMapFromHistory(hist);
-
-  // Preços e volume das 5 cidades reais (para Lucro OT)
+  const uniqueAllIds = [...new Set(allIds)];
+  const uniqueRefinedIds = [...new Set(refinedIds)];
   const ROYAL_LOCS = ['FortSterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
   const ROYAL_NAMES = ['Fort Sterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
-  const [royalRes, royalHist] = await Promise.all([
-    fetchPrices([...new Set(allIds)], ROYAL_LOCS),
-    fetchHistory([...new Set(refinedIds)], ROYAL_LOCS, 1),
+  const [res, hist, weeklyHist, royalRes, royalHist, royalWeeklyHist] = await Promise.all([
+    fetchPrices(uniqueAllIds, cfg.locations),
+    fetchHistory(uniqueRefinedIds, cfg.locations, 1),
+    fetchHistory(uniqueAllIds, cfg.locations, 168),
+    fetchPrices(uniqueAllIds, ROYAL_LOCS),
+    fetchHistory(uniqueRefinedIds, ROYAL_LOCS, 1),
+    fetchHistory(uniqueAllIds, ROYAL_LOCS, 168),
   ]);
+  const volData = volumeMapFromHistory(hist);
+  const avgData = avgPriceMapFromHistory(hist);
+  const weeklyAvg = weeklyAvgMapFromHistory(weeklyHist);
   const royalVolData = volumeMapFromHistory(royalHist);
   const royalAvgData = avgPriceMapFromHistory(royalHist);
+  const royalWeeklyAvg = weeklyAvgMapFromHistory(royalWeeklyHist);
 
   const dc = new Map();
   const dv = new Map();
@@ -474,10 +499,10 @@ async function estrategiaCompletaRecurso(resource, body) {
     if (p.sell_price_min > 0) royalDv.set(key, p.sell_price_min);
   }
 
-  const getDc = (c, it) => dc.get(`${c}|${it}`) ?? 0;
-  const getDv = (c, it) => dv.get(`${c}|${it}`) ?? 0;
-  const getRoyalDc = (c, it) => royalDc.get(`${c}|${it}`) ?? 0;
-  const getRoyalDv = (c, it) => royalDv.get(`${c}|${it}`) ?? 0;
+  const getDc = (c, it) => dc.get(`${c}|${it}`) || weeklyAvg.get(`${c}|${it}`) || 0;
+  const getDv = (c, it) => dv.get(`${c}|${it}`) || weeklyAvg.get(`${c}|${it}`) || 0;
+  const getRoyalDc = (c, it) => royalDc.get(`${c}|${it}`) || royalWeeklyAvg.get(`${c}|${it}`) || 0;
+  const getRoyalDv = (c, it) => royalDv.get(`${c}|${it}`) || royalWeeklyAvg.get(`${c}|${it}`) || 0;
   const getProdLocal = (c, it) => dailyBonus > 0 ? (avgData.get(`${c}|${it}`) ?? 0) : getDv(c, it);
   const getProdRoyal = (c, it) => dailyBonus > 0 ? (royalAvgData.get(`${c}|${it}`) ?? 0) : getRoyalDv(c, it);
   const cityName = cfg.cityName;
