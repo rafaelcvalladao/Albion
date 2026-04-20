@@ -45,17 +45,42 @@ async function calcularAlternativasEncantamento({ baseItemIds, tier, encantament
       continue;
     }
 
-    // city → itemId → min price
-    const cityPrices = {};
+    // city → itemId → min price (para item base)
+    // globalMin → itemId → min price entre todas as cidades (para materiais)
+    const cityItemPrices = {};   // cidade → id → preço (apenas item base)
+    const globalMatMin = {};     // id → menor preço em qualquer cidade
+
     for (const p of precos) {
       const price = Number(p.sell_price_min);
       if (!price) continue;
-      if (!cityPrices[p.city]) cityPrices[p.city] = {};
-      const curr = cityPrices[p.city][p.item_id];
-      if (!curr || price < curr) cityPrices[p.city][p.item_id] = price;
+      const { city, item_id } = p;
+
+      // Rastrear preço global mínimo de cada material
+      if (materialIds.includes(item_id)) {
+        if (!globalMatMin[item_id] || price < globalMatMin[item_id]) {
+          globalMatMin[item_id] = price;
+        }
+      }
+
+      // Rastrear preço do item base por cidade
+      if (levelItemIds.includes(item_id)) {
+        if (!cityItemPrices[city]) cityItemPrices[city] = {};
+        const curr = cityItemPrices[city][item_id];
+        if (!curr || price < curr) cityItemPrices[city][item_id] = price;
+      }
     }
 
-    for (const [city, items] of Object.entries(cityPrices)) {
+    // Verificar se todos os materiais têm preço em alguma cidade
+    const custoMateriais = materialIds.reduce((sum, id) => sum + (globalMatMin[id] || 0) * qty, 0);
+    if (materialIds.some(id => !globalMatMin[id])) continue;
+
+    const matNomes = materialIds.map(id => {
+      const tipo = MATERIAL_NOME[id.split('_')[1]] || id.split('_')[1];
+      return `${tipo} ${tier.slice(1)}`;
+    });
+    const pathDesc = `.${fromLevel} + ${matNomes.join(' + ')} ×${qty}`;
+
+    for (const [city, items] of Object.entries(cityItemPrices)) {
       let melhorItemId = null;
       let melhorItemPreco = 0;
       for (const id of levelItemIds) {
@@ -67,28 +92,15 @@ async function calcularAlternativasEncantamento({ baseItemIds, tier, encantament
       }
       if (!melhorItemPreco) continue;
 
-      let custoMateriais = 0;
-      let allOk = true;
-      for (const matId of materialIds) {
-        const p = items[matId] || 0;
-        if (!p) { allOk = false; break; }
-        custoMateriais += p * qty;
-      }
-      if (!allOk) continue;
-
       const cidadeNorm = normalizarCidade(city);
       const teleporte = cidadeNorm === cidadeDestinoNormalizada ? 0
         : calcularCustoTeleporte(melhorItemId, cidadeNorm, cidadeDestinoNormalizada);
       const custoFinal = melhorItemPreco + custoMateriais + teleporte;
 
       if (!melhorPorCidade[city] || custoFinal < melhorPorCidade[city].custoFinal) {
-        const matNomes = materialIds.map(id => {
-          const tipo = MATERIAL_NOME[id.split('_')[1]] || id.split('_')[1];
-          return `${tipo} ${tier.slice(1)}`;
-        });
         melhorPorCidade[city] = {
           cidadeOrigem: city,
-          pathDesc: `.${fromLevel} + ${matNomes.join(' + ')} ×${qty}`,
+          pathDesc,
           fromLevel,
           custoItem: melhorItemPreco,
           custoMateriais,
