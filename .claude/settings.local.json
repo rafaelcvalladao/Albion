@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /c/Users/rafae/Desktop/Github/Radar/server/photon)",
+      "Bash(mkdir -p /c/Users/rafae/Desktop/Github/Radar/frontend/src/components)",
+      "Bash(mkdir -p /c/Users/rafae/Desktop/Github/Radar/frontend/src/hooks)",
+      "Bash(pip install *)",
+      "Bash(npm install *)",
+      "Bash(python -m uvicorn main:app --port 8000)",
+      "Bash(curl -s http://localhost:8000/debug/event-codes)",
+      "Bash(taskkill /PID 19448 /F)",
+      "Bash(netstat -ano)",
+      "Bash(awk '{print $5}')",
+      "Bash(kill 19448)",
+      "Bash(cmd /c \"taskkill /F /PID 19448\")",
+      "Bash(cmd /c \"taskkill /F /IM python.exe\")",
+      "Bash(cmd /c \"sc query npcap 2>&1\")",
+      "Bash(cmd /c \"sc query npf 2>&1 & reg query HKLM\\\\\\\\SOFTWARE\\\\\\\\Npcap 2>&1 & reg query \\\\\"HKLM\\\\\\\\SOFTWARE\\\\\\\\WOW6432Node\\\\\\\\Npcap\\\\\" 2>&1\")",
+      "Bash(python -c \"from scapy.all import get_if_list; print\\('\\\\n'.join\\(get_if_list\\(\\)\\)\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(cmd /c \"netstat -ano | findstr Albion\")",
+      "Bash(cmd /c \"tasklist | findstr -i alb\")",
+      "Bash(cmd /c \"tasklist /FI \\\\\"IMAGENAME eq Albion*\\\\\" 2>&1 & tasklist /FI \\\\\"IMAGENAME eq albion*\\\\\" 2>&1\")",
+      "Bash(cmd /c \"powershell -Command \\\\\"Get-NetUDPEndpoint | Select-Object LocalPort, OwningProcess | Sort-Object LocalPort | Format-Table -AutoSize\\\\\"\")",
+      "WebFetch(domain:www.albion-online-data.com)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\rafae\\Desktop\\Github\\Radar\\frontend\\src\\hooks",
+      "C:\\Users\\rafae\\Desktop\\Github\\Radar\\frontend\\src\\components",
+      "C:\\Users\\rafae\\Desktop\\Github\\Radar\\frontend\\src",
+      "C:\\Users\\rafae\\Desktop\\Github\\Radar\\frontend",
+      "C:\\Users\\rafae\\Desktop\\Github\\Radar"
+    ]
+  }
+}

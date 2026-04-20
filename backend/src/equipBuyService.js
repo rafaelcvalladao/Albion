@@ -1,6 +1,7 @@
 import { fetchPricesMarket } from './marketPrices.js';
 import { nomeItemEmPortugues, calcularCustoTeleporte } from './marketConstants.js';
 import { gerarListaItens } from './marketItems.js';
+import { getEnchantResourceId, getEnchantQtyBySlot } from './enchantUtils.js';
 
 const TODAS_CIDADES = [
   'Bridgewatch',
@@ -17,6 +18,88 @@ function normalizarCidade(cidade) {
     .split(' ')
     .map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
     .join('');
+}
+
+const MATERIAL_NOME = { RUNE: 'Runa', SOUL: 'Alma', RELIC: 'Relíquia', SHARD: 'Fragmento' };
+
+async function calcularAlternativasEncantamento({ baseItemIds, tier, encantamento, cidadeDestinoNormalizada }) {
+  if (encantamento <= 0 || !baseItemIds.length) return [];
+
+  const qty = getEnchantQtyBySlot(baseItemIds[0]);
+  const melhorPorCidade = {};
+
+  for (let fromLevel = 0; fromLevel < encantamento; fromLevel++) {
+    const levelItemIds = fromLevel === 0
+      ? baseItemIds
+      : baseItemIds.map(id => `${id}@${fromLevel}`);
+
+    const materialIds = [];
+    for (let lvl = fromLevel + 1; lvl <= encantamento; lvl++) {
+      materialIds.push(getEnchantResourceId(tier, lvl));
+    }
+
+    let precos;
+    try {
+      precos = await fetchPricesMarket([...levelItemIds, ...materialIds], TODAS_CIDADES);
+    } catch {
+      continue;
+    }
+
+    // city → itemId → min price
+    const cityPrices = {};
+    for (const p of precos) {
+      const price = Number(p.sell_price_min);
+      if (!price) continue;
+      if (!cityPrices[p.city]) cityPrices[p.city] = {};
+      const curr = cityPrices[p.city][p.item_id];
+      if (!curr || price < curr) cityPrices[p.city][p.item_id] = price;
+    }
+
+    for (const [city, items] of Object.entries(cityPrices)) {
+      let melhorItemId = null;
+      let melhorItemPreco = 0;
+      for (const id of levelItemIds) {
+        const p = items[id] || 0;
+        if (p > 0 && (!melhorItemPreco || p < melhorItemPreco)) {
+          melhorItemPreco = p;
+          melhorItemId = id;
+        }
+      }
+      if (!melhorItemPreco) continue;
+
+      let custoMateriais = 0;
+      let allOk = true;
+      for (const matId of materialIds) {
+        const p = items[matId] || 0;
+        if (!p) { allOk = false; break; }
+        custoMateriais += p * qty;
+      }
+      if (!allOk) continue;
+
+      const cidadeNorm = normalizarCidade(city);
+      const teleporte = cidadeNorm === cidadeDestinoNormalizada ? 0
+        : calcularCustoTeleporte(melhorItemId, cidadeNorm, cidadeDestinoNormalizada);
+      const custoFinal = melhorItemPreco + custoMateriais + teleporte;
+
+      if (!melhorPorCidade[city] || custoFinal < melhorPorCidade[city].custoFinal) {
+        const matNomes = materialIds.map(id => {
+          const tipo = MATERIAL_NOME[id.split('_')[1]] || id.split('_')[1];
+          return `${tipo} ${tier.slice(1)}`;
+        });
+        melhorPorCidade[city] = {
+          cidadeOrigem: city,
+          pathDesc: `.${fromLevel} + ${matNomes.join(' + ')} ×${qty}`,
+          fromLevel,
+          custoItem: melhorItemPreco,
+          custoMateriais,
+          custoTeleporte: teleporte,
+          custoFinal,
+        };
+      }
+    }
+  }
+
+  return Object.values(melhorPorCidade).sort((a, b) => a.custoFinal - b.custoFinal);
 }
 
 /**
@@ -126,7 +209,16 @@ export async function buscarEquipamentoPorNomeComTeleporte({
     return a.enchant - b.enchant;
   });
 
-  console.log(`[equipBuy] ${resultados.length} resultados retornados`);
+  const encNivel = parseInt(encantamento, 10) || 0;
+  const baseItemIds = [...new Set(itensFiltrados.map(id => id.split('@')[0]))];
+  const encantando = await calcularAlternativasEncantamento({
+    baseItemIds,
+    tier,
+    encantamento: encNivel,
+    cidadeDestinoNormalizada,
+  });
 
-  return resultados;
+  console.log(`[equipBuy] ${resultados.length} direto, ${encantando.length} encantando`);
+
+  return { direto: resultados, encantando };
 }

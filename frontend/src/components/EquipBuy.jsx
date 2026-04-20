@@ -23,7 +23,8 @@ const EquipBuy = () => {
   const [qualidade, setQualidade] = useState("1");
   const [tierEnchant, setTierEnchant] = useState("7.0");
   const [cidade, setCidade] = useState("Fort Sterling");
-  const [resultados, setResultados] = useState([]);
+  const [resultadosDireto, setResultadosDireto] = useState([]);
+  const [resultadosEncantando, setResultadosEncantando] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
   const [sugestoesVisivel, setSugestoesVisivel] = useState(false);
@@ -85,7 +86,8 @@ const EquipBuy = () => {
     }
     setLoading(true);
     setErro(null);
-    setResultados([]);
+    setResultadosDireto([]);
+    setResultadosEncantando([]);
     try {
       const res = await equipBuyOptions({
         equipamentoNome: itemSelecionado,
@@ -94,7 +96,8 @@ const EquipBuy = () => {
         cidadeDestino: cidade,
         encantamento: parsed.encantamento,
       });
-      setResultados(res);
+      setResultadosDireto(res?.direto ?? []);
+      setResultadosEncantando(res?.encantando ?? []);
     } catch (err) {
       setErro(err.message || 'Erro ao buscar opções');
     } finally {
@@ -102,13 +105,23 @@ const EquipBuy = () => {
     }
   };
 
-  // Uma linha por cidade, a de menor custo total (resultados já vêm ordenados pelo backend)
   const resultadosPorCidade = Object.values(
-    resultados.reduce((acc, r) => {
+    resultadosDireto.reduce((acc, r) => {
       if (!acc[r.cidadeOrigem]) acc[r.cidadeOrigem] = r;
       return acc;
     }, {})
   ).sort((a, b) => a.custoFinal - b.custoFinal);
+
+  const encPorCidade = Object.values(
+    resultadosEncantando.reduce((acc, r) => {
+      if (!acc[r.cidadeOrigem]) acc[r.cidadeOrigem] = r;
+      return acc;
+    }, {})
+  ).sort((a, b) => a.custoFinal - b.custoFinal);
+
+  const melhorDireto = resultadosPorCidade[0]?.custoFinal ?? Infinity;
+  const melhorEncantando = encPorCidade[0]?.custoFinal ?? Infinity;
+  const encantarEMaisBarato = melhorEncantando < melhorDireto;
 
   const formatarMoeda = (valor) => {
     if (!valor && valor !== 0) return '-';
@@ -316,26 +329,24 @@ const EquipBuy = () => {
             ⚠️ {erro}
           </div>
         )}
-        {resultadosPorCidade.length === 0 && !loading && (
+        {resultadosPorCidade.length === 0 && encPorCidade.length === 0 && !loading && (
           <div style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>
             Nenhum resultado ainda. Selecione um item e clique em "Buscar".
           </div>
         )}
+
+        {/* Tabela: Comprar pronto */}
         {resultadosPorCidade.length > 0 && (
-          <div>
-            <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(76,175,80,0.15)', borderRadius: 8, borderLeft: '3px solid #4caf50' }}>
-              <div style={{ color: '#4caf50', fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.3rem' }}>
-                ✓ {resultadosPorCidade.length} cidades encontradas
+          <div style={{ marginBottom: '2rem' }}>
+            <div style={{ marginBottom: '1rem', padding: '1rem', background: encantarEMaisBarato ? 'rgba(255,183,77,0.08)' : 'rgba(76,175,80,0.15)', borderRadius: 8, borderLeft: `3px solid ${encantarEMaisBarato ? '#ffb74d' : '#4caf50'}` }}>
+              <div style={{ color: encantarEMaisBarato ? '#ffb74d' : '#4caf50', fontWeight: 600, fontSize: '1rem', marginBottom: '0.3rem' }}>
+                Comprar pronto {encantarEMaisBarato ? '(mais caro)' : '★ (mais barato)'}
               </div>
-              <div style={{ color: '#8bc34a', fontSize: '0.95rem' }}>
-                Melhor preço: <span style={{ fontWeight: 'bold', color: '#4caf50' }}>{formatarMoeda(resultadosPorCidade[0]?.custoFinal)} prata</span>
-                {' '}em <span style={{ fontWeight: 'bold', color: '#fff' }}>{resultadosPorCidade[0]?.cidadeOrigem}</span>
-                {resultadosPorCidade[0]?.custoTeleporte > 0 && (
-                  <span style={{ color: '#aaa', fontSize: '0.88rem' }}>{' '}(item: {formatarMoeda(resultadosPorCidade[0]?.preco)} + teleporte: {formatarMoeda(resultadosPorCidade[0]?.custoTeleporte)})</span>
-                )}
+              <div style={{ color: '#ccc', fontSize: '0.95rem' }}>
+                Melhor: <span style={{ fontWeight: 'bold', color: '#fff' }}>{formatarMoeda(resultadosPorCidade[0]?.custoFinal)} prata</span>
+                {' '}em <span style={{ color: '#aaa' }}>{resultadosPorCidade[0]?.cidadeOrigem}</span>
               </div>
             </div>
-
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', background: '#181820', borderRadius: 8, overflow: 'hidden' }}>
                 <thead>
@@ -367,26 +378,79 @@ const EquipBuy = () => {
                       <td style={{ padding: '0.9rem 1rem', textAlign: 'right', color: '#ddd' }}>
                         {formatarMoeda(r.preco)}
                       </td>
-                      <td style={{
-                        padding: '0.9rem 1rem',
-                        textAlign: 'right',
-                        color: r.custoTeleporte === 0 ? '#888' : '#ffb74d',
-                        fontWeight: r.custoTeleporte === 0 ? 'normal' : 'bold',
-                      }}>
+                      <td style={{ padding: '0.9rem 1rem', textAlign: 'right', color: r.custoTeleporte === 0 ? '#888' : '#ffb74d', fontWeight: r.custoTeleporte === 0 ? 'normal' : 'bold' }}>
                         {r.custoTeleporte === 0 ? '—' : formatarMoeda(r.custoTeleporte)}
                       </td>
-                      <td style={{
-                        padding: '0.9rem 1rem',
-                        textAlign: 'right',
-                        fontWeight: 'bold',
-                        color: '#4caf50',
-                        backgroundColor: i === 0 ? 'rgba(76,175,80,0.15)' : 'transparent',
-                        fontSize: '1rem',
-                      }}>
+                      <td style={{ padding: '0.9rem 1rem', textAlign: 'right', fontWeight: 'bold', color: '#4caf50', backgroundColor: i === 0 ? 'rgba(76,175,80,0.15)' : 'transparent', fontSize: '1rem' }}>
                         {formatarMoeda(r.custoFinal)}
                       </td>
                       <td style={{ padding: '0.9rem 1rem', textAlign: 'center', fontSize: '0.8rem', color: '#666' }}>
                         {formatarData(r.data)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Tabela: Comprar base + encantar */}
+        {encPorCidade.length > 0 && (
+          <div>
+            <div style={{ marginBottom: '1rem', padding: '1rem', background: encantarEMaisBarato ? 'rgba(76,175,80,0.15)' : 'rgba(255,183,77,0.08)', borderRadius: 8, borderLeft: `3px solid ${encantarEMaisBarato ? '#4caf50' : '#ffb74d'}` }}>
+              <div style={{ color: encantarEMaisBarato ? '#4caf50' : '#ffb74d', fontWeight: 600, fontSize: '1rem', marginBottom: '0.3rem' }}>
+                Comprar base + encantar {encantarEMaisBarato ? '★ (mais barato)' : '(mais caro)'}
+              </div>
+              <div style={{ color: '#ccc', fontSize: '0.95rem' }}>
+                Melhor: <span style={{ fontWeight: 'bold', color: '#fff' }}>{formatarMoeda(encPorCidade[0]?.custoFinal)} prata</span>
+                {' '}em <span style={{ color: '#aaa' }}>{encPorCidade[0]?.cidadeOrigem}</span>
+                {melhorDireto !== Infinity && encantarEMaisBarato && (
+                  <span style={{ color: '#4caf50', fontWeight: 'bold', marginLeft: '0.8rem' }}>
+                    ({formatarMoeda(melhorDireto - melhorEncantando)} mais barato)
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', background: '#181820', borderRadius: 8, overflow: 'hidden' }}>
+                <thead>
+                  <tr style={{ background: '#23232e', color: '#fff' }}>
+                    <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #444', fontWeight: 700 }}>Cidade</th>
+                    <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #444', fontWeight: 700 }}>Estratégia</th>
+                    <th style={{ padding: '1rem', textAlign: 'right', borderBottom: '2px solid #444', fontWeight: 700 }}>Item Base</th>
+                    <th style={{ padding: '1rem', textAlign: 'right', borderBottom: '2px solid #444', fontWeight: 700 }}>Materiais</th>
+                    <th style={{ padding: '1rem', textAlign: 'right', borderBottom: '2px solid #444', fontWeight: 700 }}>Teleporte</th>
+                    <th style={{ padding: '1rem', textAlign: 'right', borderBottom: '2px solid #444', fontWeight: 700, color: '#4caf50', backgroundColor: 'rgba(76,175,80,0.1)' }}>TOTAL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {encPorCidade.map((r, i) => (
+                    <tr
+                      key={r.cidadeOrigem}
+                      style={{
+                        background: i === 0 ? 'rgba(76,175,80,0.08)' : i % 2 === 0 ? '#23232e' : '#1a1a22',
+                        color: '#fff',
+                        borderBottom: '1px solid #333',
+                      }}
+                    >
+                      <td style={{ padding: '0.9rem 1rem', fontWeight: i === 0 ? 700 : 400, color: i === 0 ? '#4caf50' : '#bbb' }}>
+                        {i === 0 && '★ '}{r.cidadeOrigem || 'N/A'}
+                      </td>
+                      <td style={{ padding: '0.9rem 1rem', fontSize: '0.85rem', color: '#aaa', fontFamily: 'monospace' }}>
+                        {r.pathDesc}
+                      </td>
+                      <td style={{ padding: '0.9rem 1rem', textAlign: 'right', color: '#ddd' }}>
+                        {formatarMoeda(r.custoItem)}
+                      </td>
+                      <td style={{ padding: '0.9rem 1rem', textAlign: 'right', color: '#ce93d8' }}>
+                        {formatarMoeda(r.custoMateriais)}
+                      </td>
+                      <td style={{ padding: '0.9rem 1rem', textAlign: 'right', color: r.custoTeleporte === 0 ? '#888' : '#ffb74d', fontWeight: r.custoTeleporte === 0 ? 'normal' : 'bold' }}>
+                        {r.custoTeleporte === 0 ? '—' : formatarMoeda(r.custoTeleporte)}
+                      </td>
+                      <td style={{ padding: '0.9rem 1rem', textAlign: 'right', fontWeight: 'bold', color: '#4caf50', backgroundColor: i === 0 ? 'rgba(76,175,80,0.15)' : 'transparent', fontSize: '1rem' }}>
+                        {formatarMoeda(r.custoFinal)}
                       </td>
                     </tr>
                   ))}

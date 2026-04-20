@@ -1,5 +1,13 @@
 import { fetchPricesMarket } from './marketPrices.js';
 
+// Quantidade de materiais de encantamento por slot de equipamento
+export function getEnchantQtyBySlot(itemId) {
+  const upper = (itemId || '').split('@')[0].toUpperCase();
+  if (upper.includes('_MAIN_') || upper.includes('_2H_') || upper.includes('_OFF_')) return 384;
+  if (upper.includes('_BODY_')) return 192;
+  return 96; // HEAD, FEET, CAPE
+}
+
 // Quantidade de recursos para encantar por tier/nível
 // Exemplo: { 'T4': { 1: 16, 2: 8, 3: 4, 4: 1 }, ... }
 export const ENCHANT_RESOURCE_AMOUNTS = {
