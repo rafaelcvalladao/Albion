@@ -65,9 +65,15 @@ function famaRefinoPorCraft(tSel, idxN) {
   return Math.round(base * mult);
 }
 
-export function calcularRrrManual(foco, bonusCity) {
-  if (bonusCity) return foco ? 0.539 : 0.367;
-  return foco ? 0.435 : 0.152;
+export function calcularRrrManual(foco, bonusCity, dailyBonus = 0) {
+  if (bonusCity) {
+    if (dailyBonus === 20) return foco ? 0.578 : 0.438;
+    if (dailyBonus === 10) return foco ? 0.559 : 0.405;
+    return foco ? 0.539 : 0.367;
+  }
+  if (dailyBonus === 20) return foco ? 0.492 : 0.275;
+  if (dailyBonus === 10) return foco ? 0.465 : 0.219;
+  return foco ? 0.435 : 0.153;
 }
 
 export function obterParametrosTabela(t, enc) {
@@ -171,7 +177,7 @@ async function processarRecurso(resource, body) {
   const cfg = RESOURCE_CONFIGS[resource];
   if (!cfg) throw new Error(`Recurso desconhecido: ${resource}`);
 
-  const { tier: tSel, taxaNpc: taxaRaw, taxaVenda: taxaVendaRaw, spec = {}, buyOrder = false, foco = false } = body;
+  const { tier: tSel, taxaNpc: taxaRaw, taxaVenda: taxaVendaRaw, spec = {}, buyOrder = false, foco = false, dailyBonus = 0 } = body;
 
   let txU = parseFloat(String(taxaRaw ?? '800').trim() || '800');
   if (Number.isNaN(txU)) txU = 800;
@@ -180,7 +186,7 @@ async function processarRecurso(resource, body) {
   if (Number.isNaN(taxaVenda)) taxaVenda = 6.5;
   const taxaVendaNota = 1 - taxaVenda / 100;
 
-  const rrr = calcularRrrManual(foco, true);
+  const rrr = calcularRrrManual(foco, true, dailyBonus);
   const { ids, refinedIds } = buildIdsForTier(tSel, cfg.rawSuffix, cfg.refinedSuffix);
 
   const res = await fetchPrices(ids, cfg.locations);
@@ -284,6 +290,9 @@ async function processarRecurso(resource, body) {
       famaRefino,
     };
 
+    const getProdPreco = (cityName, itemId) =>
+      dailyBonus > 0 ? (avgMap.get(`${cityName}|${itemId}`) ?? 0) : getDv(cityName, itemId);
+
     function calcLucro(t, a, v) {
       if (t && a && v) return v * taxaVendaNota - ((t * qt + a) * (1 - rrr) + txF);
       return -9e8;
@@ -291,13 +300,14 @@ async function processarRecurso(resource, body) {
 
     // Per-city data
     for (const city of cities) {
-      const cPrices = [getDc(city.name, iT), getDc(city.name, iA), getDv(city.name, iP)];
+      const prodPreco = getProdPreco(city.name, iP);
+      const cPrices = [getDc(city.name, iT), getDc(city.name, iA), prodPreco];
       row[city.key] = {
         tronco: cPrices[0],
         troncoDate: getDt(city.name, iT),
         tabuaAnt: cPrices[1],
         tabuaAntDate: getDt(city.name, iA),
-        tabua: cPrices[2],
+        tabua: getDv(city.name, iP),
         tauaDate: getDvt(city.name, iP),
         lucro: calcLucro(...cPrices),
         volume24h: getVol(volMap, city.name, iP),
@@ -305,10 +315,10 @@ async function processarRecurso(resource, body) {
       };
     }
 
-    // Otimizado: min cost across cities for materials, max sell order for product
+    // Otimizado: min cost across cities for materials, best product price
     const rawPrices = cities.map((c) => getDc(c.name, iT)).filter((v) => v > 0);
     const prevPrices = cities.map((c) => getDc(c.name, iA)).filter((v) => v > 0);
-    const prodPrices = cities.map((c) => getDv(c.name, iP)).filter((v) => v > 0);
+    const prodPrices = cities.map((c) => getProdPreco(c.name, iP)).filter((v) => v > 0);
 
     const minRaw = rawPrices.length ? Math.min(...rawPrices) : 0;
     const minPrev = prevPrices.length ? Math.min(...prevPrices) : 0;
@@ -346,7 +356,20 @@ async function processarRecurso(resource, body) {
     }
     const mpTronco = bestRoyalMin(iT, royalDc, royalDcDate);
     const mpTabuaAnt = bestRoyalMin(iA, royalDc, royalDcDate);
-    const mpProduto = bestRoyalMax(iP, royalSell, royalSellDate);
+    // Produto: quando dailyBonus > 0 usa melhor preço médio entre cidades reais
+    let mpProduto;
+    if (dailyBonus > 0) {
+      let bestAvgProduto = null;
+      for (const rc of ROYAL_NAMES) {
+        const p = royalAvgMap.get(`${rc}|${iP}`) ?? 0;
+        if (p > 0 && (!bestAvgProduto || p > bestAvgProduto.preco)) {
+          bestAvgProduto = { cidade: rc, preco: p, data: royalSellDate.get(`${rc}|${iP}`) ?? null };
+        }
+      }
+      mpProduto = bestAvgProduto;
+    } else {
+      mpProduto = bestRoyalMax(iP, royalSell, royalSellDate);
+    }
 
     let mpLucro = -9e8;
     if (mpTronco && mpTabuaAnt && mpProduto) {
@@ -363,7 +386,7 @@ async function processarRecurso(resource, body) {
     };
 
     if (otimizado > -8e8 && foco) {
-      const rrrSemFoco = calcularRrrManual(false, true);
+      const rrrSemFoco = calcularRrrManual(false, true, dailyBonus);
       const otimizadoSemFoco = minRaw && minPrev && maxProd
         ? maxProd * taxaVendaNota - ((minRaw * qt + minPrev) * (1 - rrrSemFoco) + txF)
         : 0;
@@ -392,7 +415,7 @@ async function estrategiaCompletaRecurso(resource, body) {
   const cfg = RESOURCE_CONFIGS[resource];
   if (!cfg) throw new Error(`Recurso desconhecido: ${resource}`);
 
-  const { taxaNpc: taxaRaw, taxaVenda: taxaVendaRaw, spec = {}, buyOrder = false, foco = true } = body;
+  const { taxaNpc: taxaRaw, taxaVenda: taxaVendaRaw, spec = {}, buyOrder = false, foco = true, dailyBonus = 0 } = body;
 
   let taxaU = parseFloat(String(taxaRaw ?? '800').trim() || '800');
   if (Number.isNaN(taxaU)) taxaU = 800;
@@ -402,7 +425,7 @@ async function estrategiaCompletaRecurso(resource, body) {
   const taxaVendaNota = 1 - taxaVenda / 100;
 
   const reducaoGeral = specTotalPrata(spec); // sum(all spec levels) * 30
-  const rrrConFoco = calcularRrrManual(true, true);
+  const rrrConFoco = calcularRrrManual(true, true, dailyBonus);
 
   const allIds = [];
   const refinedIds = [];
@@ -421,6 +444,7 @@ async function estrategiaCompletaRecurso(resource, body) {
   const res = await fetchPrices([...new Set(allIds)], cfg.locations);
   const hist = await fetchHistory([...new Set(refinedIds)], cfg.locations, 1);
   const volData = volumeMapFromHistory(hist);
+  const avgData = avgPriceMapFromHistory(hist);
 
   // Preços e volume das 5 cidades reais (para Lucro OT)
   const ROYAL_LOCS = ['FortSterling', 'Lymhurst', 'Bridgewatch', 'Martlock', 'Thetford'];
@@ -430,6 +454,7 @@ async function estrategiaCompletaRecurso(resource, body) {
     fetchHistory([...new Set(refinedIds)], ROYAL_LOCS, 1),
   ]);
   const royalVolData = volumeMapFromHistory(royalHist);
+  const royalAvgData = avgPriceMapFromHistory(royalHist);
 
   const dc = new Map();
   const dv = new Map();
@@ -453,6 +478,8 @@ async function estrategiaCompletaRecurso(resource, body) {
   const getDv = (c, it) => dv.get(`${c}|${it}`) ?? 0;
   const getRoyalDc = (c, it) => royalDc.get(`${c}|${it}`) ?? 0;
   const getRoyalDv = (c, it) => royalDv.get(`${c}|${it}`) ?? 0;
+  const getProdLocal = (c, it) => dailyBonus > 0 ? (avgData.get(`${c}|${it}`) ?? 0) : getDv(c, it);
+  const getProdRoyal = (c, it) => dailyBonus > 0 ? (royalAvgData.get(`${c}|${it}`) ?? 0) : getRoyalDv(c, it);
   const cityName = cfg.cityName;
   const cfgCities = cfg.cities || [{ name: cfg.cityName }];
   const cfgCityNames = cfgCities.map((c) => c.name);
@@ -475,30 +502,29 @@ async function estrategiaCompletaRecurso(resource, body) {
       // Lucro local (cidade principal)
       const fsT = getDc(cityName, iT);
       const fsA = getDc(cityName, iA);
-      const fsP = getDv(cityName, iP);
+      const fsP = getProdLocal(cityName, iP);
       const vFs = getVol(volData, cityName, iP);
 
       // Lucro otimizado cfg cities (FS-LH para madeira)
-      function bestOpt(cities, dcFn, dvFn) {
+      function bestOpt(cities, dcFn, prodFn) {
         const raws = cities.map((c) => dcFn(c, iT)).filter((v) => v > 0);
         const prevs = cities.map((c) => dcFn(c, iA)).filter((v) => v > 0);
-        const prods = cities.map((c) => dvFn(c, iP)).filter((v) => v > 0);
+        const prods = cities.map((c) => prodFn(c, iP)).filter((v) => v > 0);
         const minR = raws.length ? Math.min(...raws) : 0;
         const minP = prevs.length ? Math.min(...prevs) : 0;
         const maxS = prods.length ? Math.max(...prods) : 0;
-        // Encontrar cidade com max sell para volume
         let bestCity = null;
         for (const c of cities) {
-          if (dvFn(c, iP) === maxS) { bestCity = c; break; }
+          if (prodFn(c, iP) === maxS) { bestCity = c; break; }
         }
         return { minR, minP, maxS, bestCity };
       }
 
-      const optCfg = bestOpt(cfgCityNames, getDc, getDv);
-      const optRoyal = bestOpt(ROYAL_NAMES, getRoyalDc, getRoyalDv);
+      const optCfg = bestOpt(cfgCityNames, getDc, getProdLocal);
+      const optRoyal = bestOpt(ROYAL_NAMES, getRoyalDc, getProdRoyal);
 
-      const rrrFoco = calcularRrrManual(foco, true);
-      const rrrFama = calcularRrrManual(false, true);
+      const rrrFoco = calcularRrrManual(foco, true, dailyBonus);
+      const rrrFama = calcularRrrManual(false, true, dailyBonus);
       const fama = famaRefinoPorCraft(t, idxN);
       const reducaoTierSpec = (parseInt(String(spec[t.toLowerCase()] ?? '0'), 10) || 0) * 250;
       const focoUnidades = (FOCO_BASE[t] ?? 250) * MULT_ENCHANT[idxN] * 0.5 ** ((reducaoGeral + reducaoTierSpec) / 10000);
@@ -519,6 +545,7 @@ async function estrategiaCompletaRecurso(resource, body) {
       // Lucro/foco: ganho marginal por ponto de foco vs não usar foco
       const lucroLocalComFoco = fsT && fsA && fsP ? fsP * taxaVendaNota - ((fsT * qt + fsA) * (1 - rrrConFoco) + txF) : null;
       const lucroLocalSemFoco = fsT && fsA && fsP ? fsP * taxaVendaNota - ((fsT * qt + fsA) * (1 - rrrFama) + txF) : null;
+
       const lucroPorFoco = lucroLocalComFoco != null && lucroLocalSemFoco != null
         ? (lucroLocalComFoco - lucroLocalSemFoco) / focoUnidades : null;
 

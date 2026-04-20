@@ -141,6 +141,7 @@ function loadConfig(storageKey) {
     tier: 'T6',
     buyOrder: false,
     foco: false,
+    dailyBonus: 0,
   };
 }
 
@@ -414,6 +415,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
         spec: cfg.spec,
         buyOrder: cfg.buyOrder,
         foco: cfg.foco,
+        dailyBonus: cfg.dailyBonus ?? 0,
       });
       setResult(data);
     } catch (e) {
@@ -433,6 +435,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
         spec: cfg.spec,
         buyOrder: cfg.buyOrder,
         foco: cfg.foco,
+        dailyBonus: cfg.dailyBonus ?? 0,
       });
       setStrategy(data);
     } catch (e) {
@@ -457,6 +460,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
       spec: cfg.spec,
       buyOrder: cfg.buyOrder,
       foco: cfg.foco,
+      dailyBonus: cfg.dailyBonus ?? 0,
     })
       .then((data) => {
         if (!cancelled) setResult(data);
@@ -474,7 +478,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cfg.tier, cfg.buyOrder, cfg.foco]);
+  }, [cfg.tier, cfg.buyOrder, cfg.foco, cfg.dailyBonus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -485,6 +489,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
       spec: cfg.spec,
       buyOrder: cfg.buyOrder,
       foco: cfg.foco,
+      dailyBonus: cfg.dailyBonus ?? 0,
     })
       .then((data) => {
         if (!cancelled) setStrategy(data);
@@ -499,7 +504,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cfg.buyOrder, cfg.foco]);
+  }, [cfg.buyOrder, cfg.foco, cfg.dailyBonus]);
 
   return (
     <div className="wood-layout">
@@ -549,7 +554,28 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
               />
               Usar foco
             </label>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={cfg.dailyBonus === 10}
+                onChange={() => setCfg({ ...cfg, dailyBonus: cfg.dailyBonus === 10 ? 0 : 10 })}
+              />
+              Bônus diário 10%
+            </label>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={cfg.dailyBonus === 20}
+                onChange={() => setCfg({ ...cfg, dailyBonus: cfg.dailyBonus === 20 ? 0 : 20 })}
+              />
+              Bônus diário 20%
+            </label>
           </div>
+          {cfg.dailyBonus > 0 && (
+            <div style={{ fontSize: '0.8rem', color: '#ffb74d', marginTop: '-0.5rem', padding: '0.4rem 0.5rem', background: 'rgba(255,183,77,0.08)', borderRadius: '4px', border: '1px solid rgba(255,183,77,0.3)' }}>
+              Bônus {cfg.dailyBonus}% ativo — lucro calculado pelo preço médio da tábua
+            </div>
+          )}
           <button
             type="button"
             className="btn btn-primary"
