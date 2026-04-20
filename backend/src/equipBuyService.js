@@ -1,4 +1,5 @@
 import { fetchPricesMarket } from './marketPrices.js';
+import { fetchHistory } from './albionClient.js';
 import { nomeItemEmPortugues, calcularCustoTeleporte } from './marketConstants.js';
 import { gerarListaItens } from './marketItems.js';
 import { getEnchantResourceId, getEnchantQtyBySlot } from './enchantUtils.js';
@@ -20,59 +21,120 @@ function normalizarCidade(cidade) {
     .join('');
 }
 
+// Normaliza nomes de cidade para chave consistente (ex.: "Fort Sterling" e "FortSterling" → "fortsterling")
+function cityKey(name) {
+  return (name || '').toLowerCase().replace(/\s+/g, '');
+}
+
 const MATERIAL_NOME = { RUNE: 'Runa', SOUL: 'Alma', RELIC: 'Relíquia', SHARD: 'Fragmento' };
+
+/**
+ * Constrói mapa de preços médios históricos por item+cidade.
+ * Fallback priority: avg 4 semanas → avg 1 semana.
+ * Usa timescale=168 (semanal), últimos 4 datapoints.
+ */
+function buildAvgMap(hist) {
+  const map = new Map();
+  for (const entry of hist) {
+    if (!entry.data || !Array.isArray(entry.data) || entry.data.length === 0) continue;
+    const key = `${entry.item_id}|${cityKey(entry.location)}`;
+    const sorted = [...entry.data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const last4w = sorted.slice(-4);
+
+    const total4wCount = last4w.reduce((s, d) => s + (d.item_count || 0), 0);
+    const total4wSilver = last4w.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
+    const avg4w = total4wCount > 0 ? Math.round(total4wSilver / total4wCount) : 0;
+
+    const last1w = sorted[sorted.length - 1];
+    const avg1w = (last1w?.item_count || 0) > 0 ? Math.round(last1w.avg_price || 0) : 0;
+
+    if (avg4w > 0 || avg1w > 0) map.set(key, { avg4w, avg1w });
+  }
+  return map;
+}
+
+/**
+ * Retorna o melhor preço disponível para um item numa cidade:
+ * 1. sell_price_min atual
+ * 2. média 4 semanas
+ * 3. média 1 semana
+ */
+function getPrice(itemId, city, priceByItemCity, avgMap) {
+  const k = `${itemId}|${cityKey(city)}`;
+  const sell = priceByItemCity.get(k);
+  if (sell) return sell;
+  const avg = avgMap.get(k);
+  return avg?.avg4w || avg?.avg1w || 0;
+}
 
 async function calcularAlternativasEncantamento({ baseItemIds, tier, encantamento, cidadeDestinoNormalizada }) {
   if (encantamento <= 0 || !baseItemIds.length) return [];
 
   const qty = getEnchantQtyBySlot(baseItemIds[0]);
-  const melhorPorCidade = {};
+
+  // Coletar todos os IDs necessários para todas as iterações de uma vez
+  const allItemIds = new Set();
+  const levelItemsByFrom = [];
+  const materialsByFrom = [];
 
   for (let fromLevel = 0; fromLevel < encantamento; fromLevel++) {
     const levelItemIds = fromLevel === 0
       ? baseItemIds
       : baseItemIds.map(id => `${id}@${fromLevel}`);
-
     const materialIds = [];
     for (let lvl = fromLevel + 1; lvl <= encantamento; lvl++) {
       materialIds.push(getEnchantResourceId(tier, lvl));
     }
+    levelItemIds.forEach(id => allItemIds.add(id));
+    materialIds.forEach(id => allItemIds.add(id));
+    levelItemsByFrom.push(levelItemIds);
+    materialsByFrom.push(materialIds);
+  }
 
-    let precos;
-    try {
-      precos = await fetchPricesMarket([...levelItemIds, ...materialIds], TODAS_CIDADES);
-    } catch {
-      continue;
+  const allIds = [...allItemIds];
+  let precos = [];
+  let hist = [];
+  try {
+    [precos, hist] = await Promise.all([
+      fetchPricesMarket(allIds, TODAS_CIDADES),
+      fetchHistory(allIds, TODAS_CIDADES, 168),
+    ]);
+  } catch {
+    return [];
+  }
+
+  // sell_price_min por item+cidade (normalizado)
+  const priceByItemCity = new Map();
+  for (const p of precos) {
+    const price = Number(p.sell_price_min) || 0;
+    if (!price) continue;
+    const k = `${p.item_id}|${cityKey(p.city)}`;
+    const curr = priceByItemCity.get(k);
+    if (!curr || price < curr) priceByItemCity.set(k, price);
+  }
+
+  const avgMap = buildAvgMap(hist);
+
+  const melhorPorCidade = {};
+
+  for (let fromLevel = 0; fromLevel < encantamento; fromLevel++) {
+    const levelItemIds = levelItemsByFrom[fromLevel];
+    const materialIds = materialsByFrom[fromLevel];
+
+    // Preço global mínimo de cada material (sell ou avg, qualquer cidade)
+    const globalMatMin = {};
+    for (const id of materialIds) {
+      let min = 0;
+      for (const city of TODAS_CIDADES) {
+        const p = getPrice(id, city, priceByItemCity, avgMap);
+        if (p > 0 && (!min || p < min)) min = p;
+      }
+      globalMatMin[id] = min;
     }
 
-    // city → itemId → min price (para item base)
-    // globalMin → itemId → min price entre todas as cidades (para materiais)
-    const cityItemPrices = {};   // cidade → id → preço (apenas item base)
-    const globalMatMin = {};     // id → menor preço em qualquer cidade
-
-    for (const p of precos) {
-      const price = Number(p.sell_price_min);
-      if (!price) continue;
-      const { city, item_id } = p;
-
-      // Rastrear preço global mínimo de cada material
-      if (materialIds.includes(item_id)) {
-        if (!globalMatMin[item_id] || price < globalMatMin[item_id]) {
-          globalMatMin[item_id] = price;
-        }
-      }
-
-      // Rastrear preço do item base por cidade
-      if (levelItemIds.includes(item_id)) {
-        if (!cityItemPrices[city]) cityItemPrices[city] = {};
-        const curr = cityItemPrices[city][item_id];
-        if (!curr || price < curr) cityItemPrices[city][item_id] = price;
-      }
-    }
-
-    // Verificar se todos os materiais têm preço em alguma cidade
-    const custoMateriais = materialIds.reduce((sum, id) => sum + (globalMatMin[id] || 0) * qty, 0);
     if (materialIds.some(id => !globalMatMin[id])) continue;
+
+    const custoMateriais = materialIds.reduce((sum, id) => sum + globalMatMin[id] * qty, 0);
 
     const matNomes = materialIds.map(id => {
       const tipo = MATERIAL_NOME[id.split('_')[1]] || id.split('_')[1];
@@ -80,11 +142,11 @@ async function calcularAlternativasEncantamento({ baseItemIds, tier, encantament
     });
     const pathDesc = `.${fromLevel} + ${matNomes.join(' + ')} ×${qty}`;
 
-    for (const [city, items] of Object.entries(cityItemPrices)) {
+    for (const city of TODAS_CIDADES) {
       let melhorItemId = null;
       let melhorItemPreco = 0;
       for (const id of levelItemIds) {
-        const p = items[id] || 0;
+        const p = getPrice(id, city, priceByItemCity, avgMap);
         if (p > 0 && (!melhorItemPreco || p < melhorItemPreco)) {
           melhorItemPreco = p;
           melhorItemId = id;
@@ -127,7 +189,6 @@ export async function buscarEquipamentoPorNivelEfetivo({ equipamentoNome, nivelE
   const qualidadeAPI = (parseInt(qualidade) || 0) + 1;
   const termoBusca = (equipamentoNome || '').toLowerCase();
 
-  // base_tier ∈ [max(4, N-4), min(8, N)], enchant = N - base
   const combinations = [];
   for (let base = Math.max(4, N - 4); base <= Math.min(8, N); base++) {
     combinations.push({ tier: `T${base}`, enchant: N - base });
@@ -141,7 +202,6 @@ export async function buscarEquipamentoPorNivelEfetivo({ equipamentoNome, nivelE
     return { direto: [], encantando: [] };
   }
 
-  // Para cada combinação, encontrar os IDs base que batem com o nome
   const combData = [];
   const allDiretoIds = [];
 
@@ -160,15 +220,20 @@ export async function buscarEquipamentoPorNivelEfetivo({ equipamentoNome, nivelE
 
   if (!allDiretoIds.length) return { direto: [], encantando: [] };
 
-  // Buscar preços de todos os itens diretos em uma única chamada
-  let precos;
+  const uniqueDiretoIds = [...new Set(allDiretoIds)];
+  let precos = [];
+  let histDireto = [];
   try {
-    precos = await fetchPricesMarket([...new Set(allDiretoIds)], TODAS_CIDADES, qualidadeAPI);
+    [precos, histDireto] = await Promise.all([
+      fetchPricesMarket(uniqueDiretoIds, TODAS_CIDADES, qualidadeAPI),
+      fetchHistory(uniqueDiretoIds, TODAS_CIDADES, 168),
+    ]);
   } catch (e) {
     console.error('[equipBuy] Erro ao buscar preços:', e.message);
     return { direto: [], encantando: [] };
   }
 
+  // sell_price_min por item+cidade
   const precoMap = {};
   for (const p of precos) {
     const price = Number(p.sell_price_min) || 0;
@@ -179,13 +244,25 @@ export async function buscarEquipamentoPorNivelEfetivo({ equipamentoNome, nivelE
     }
   }
 
+  const avgMapDireto = buildAvgMap(histDireto);
+
+  // Retorna entry com preço (sell ou avg fallback) para um item+cidade
+  const getEntryDireto = (itemId, city) => {
+    const sellKey = `${itemId}|${city}`;
+    if (precoMap[sellKey]) return precoMap[sellKey];
+    const avg = avgMapDireto.get(`${itemId}|${cityKey(city)}`);
+    const avgPreco = avg?.avg4w || avg?.avg1w || 0;
+    if (!avgPreco) return null;
+    return { preco: avgPreco, data: '', quality: qualidadeAPI };
+  };
+
   // Direto: melhor cidade por combinação
   const direto = [];
   for (const { tier, enchant, directIds } of combData) {
     let melhor = null;
     for (const itemId of directIds) {
       for (const cidade of TODAS_CIDADES) {
-        const entry = precoMap[`${itemId}|${cidade}`];
+        const entry = getEntryDireto(itemId, cidade);
         if (!entry) continue;
         const cidadeNorm = normalizarCidade(cidade);
         const teleporte = cidadeNorm === cidadeDestinoNormalizada
@@ -248,7 +325,6 @@ export async function buscarEquipamentoPorNomeComTeleporte({
     return [];
   }
 
-  // Filtrar por nome e tier
   const termoBusca = equipamentoNome.toLowerCase();
   let itensFiltrados = todosItens.filter(itemId => {
     const base = itemId.split('@')[0];
@@ -262,7 +338,6 @@ export async function buscarEquipamentoPorNomeComTeleporte({
     return [];
   }
 
-  // Filtrar por encantamento se especificado
   const encStr = String(encantamento ?? '');
   if (encStr !== '' && encStr !== 'Todos') {
     const nivel = parseInt(encStr, 10);
@@ -278,9 +353,6 @@ export async function buscarEquipamentoPorNomeComTeleporte({
     return [];
   }
 
-  console.log(`[equipBuy] ${itensFiltrados.length} itens para: ${equipamentoNome} (${tier}) enc=${encantamento}`);
-
-  // Qualidade: frontend usa 0-based (0=Normal,1=Bom...), API usa 1-based (1=Normal,2=Bom...)
   const qualidadeAPI = (parseInt(qualidade) || 0) + 1;
 
   let precos = [];
@@ -291,17 +363,14 @@ export async function buscarEquipamentoPorNomeComTeleporte({
     return [];
   }
 
-  if (!precos || precos.length === 0) {
-    return [];
-  }
+  if (!precos || precos.length === 0) return [];
 
   const resultados = [];
 
   for (const p of precos) {
     const { item_id, city, sell_price_min, sell_price_min_date, quality } = p;
-
     const precoNumero = Number(sell_price_min) || 0;
-    if (precoNumero === 0) continue; // sem ordens de mercado
+    if (precoNumero === 0) continue;
 
     const cidadeNormalizada = normalizarCidade(city);
     const eMesmaCidade = cidadeNormalizada === cidadeDestinoNormalizada;
@@ -323,7 +392,7 @@ export async function buscarEquipamentoPorNomeComTeleporte({
       enchant: Number(enchant) || 0,
       preco: precoNumero,
       custoTeleporte: custoTeleporteNumero,
-      custoFinal: custoFinal,
+      custoFinal,
       data: String(sell_price_min_date || ''),
       quality: Number(quality || qualidadeAPI),
     });
@@ -344,6 +413,5 @@ export async function buscarEquipamentoPorNomeComTeleporte({
   });
 
   console.log(`[equipBuy] ${resultados.length} direto, ${encantando.length} encantando`);
-
   return { direto: resultados, encantando };
 }
