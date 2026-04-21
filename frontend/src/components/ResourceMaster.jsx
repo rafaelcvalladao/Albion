@@ -208,6 +208,23 @@ function StrategyTable({
     if (lucroMode === 'ot') return r.volumeOT ?? r.volume;
     return r.volume;
   }
+  function getAbsLucro(r) {
+    if (lucroMode === 'opt') return r.lucroOpt ?? r.lucro;
+    if (lucroMode === 'ot') return r.lucroOT ?? r.lucro;
+    return r.lucro;
+  }
+  function getCusto(r) {
+    if (lucroMode === 'opt') return r.custoOpt ?? r.custoLocal;
+    if (lucroMode === 'ot') return r.custoOT ?? r.custoLocal;
+    return r.custoLocal;
+  }
+  function getMargem(r) {
+    if (kind !== 'foco') return null;
+    const custo = getCusto(r);
+    const lucro = getAbsLucro(r);
+    if (!custo || custo <= 0 || lucro <= -8e8) return null;
+    return (lucro / custo) * 100;
+  }
 
   const handleHeaderClick = (column) => {
     if (sortColumn === column) setSortAsc(!sortAsc);
@@ -225,6 +242,9 @@ function StrategyTable({
     } else if (sortColumn === 'volume') {
       valA = getVol(a) ?? 0;
       valB = getVol(b) ?? 0;
+    } else if (sortColumn === 'margem') {
+      valA = getMargem(a) ?? -Infinity;
+      valB = getMargem(b) ?? -Infinity;
     } else {
       valA = a.item;
       valB = b.item;
@@ -252,6 +272,11 @@ function StrategyTable({
                 {colHeaderLabel}
                 {ind('lucro')}
               </th>
+              {kind === 'foco' && (
+                <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('margem')}>
+                  %{ind('margem')}
+                </th>
+              )}
               <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('volume')}>
                 Vol. 24h{ind('volume')}
               </th>
@@ -280,6 +305,17 @@ function StrategyTable({
                       : (getLucro(r) > -8e8 ? Math.round(getLucro(r)).toLocaleString('pt-PT') : '—')
                     : (r.famaPerPrata?.toFixed(4).toLocaleString('pt-PT') ?? '—')}
                 </td>
+                {kind === 'foco' && (() => {
+                  const m = getMargem(r);
+                  return (
+                    <td
+                      className={m != null ? profitClass(m) : ''}
+                      style={{ fontSize: '1rem', fontWeight: 700, textAlign: 'center' }}
+                    >
+                      {m != null ? `${m.toFixed(1)}%` : '—'}
+                    </td>
+                  );
+                })()}
                 <td className="tabular-nums strategy-table-vol">
                   {getVol(r)?.toLocaleString('pt-PT') ?? '—'}
                 </td>

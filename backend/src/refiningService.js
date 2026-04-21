@@ -556,14 +556,18 @@ async function estrategiaCompletaRecurso(resource, body) {
       const reducaoTierSpec = (parseInt(String(spec[t.toLowerCase()] ?? '0'), 10) || 0) * 250;
       const focoUnidades = (FOCO_BASE[t] ?? 250) * MULT_ENCHANT[idxN] * 0.5 ** ((reducaoGeral + reducaoTierSpec) / 10000);
 
+      const custoLocal = fsT && fsA ? (fsT * qt + fsA) * (1 - rrrFoco) + txF : null;
+      const custoOpt = optCfg.minR && optCfg.minP ? (optCfg.minR * qt + optCfg.minP) * (1 - rrrFoco) + txF : null;
+      const custoOT = optRoyal.minR && optRoyal.minP ? (optRoyal.minR * qt + optRoyal.minP) * (1 - rrrFoco) + txF : null;
+
       const lucroLocal = fsT && fsA && fsP
-        ? fsP * taxaVendaNota - ((fsT * qt + fsA) * (1 - rrrFoco) + txF)
+        ? fsP * taxaVendaNota - custoLocal
         : null;
       const lucroOpt = optCfg.minR && optCfg.minP && optCfg.maxS
-        ? optCfg.maxS * taxaVendaNota - ((optCfg.minR * qt + optCfg.minP) * (1 - rrrFoco) + txF)
+        ? optCfg.maxS * taxaVendaNota - custoOpt
         : null;
       const lucroOT = optRoyal.minR && optRoyal.minP && optRoyal.maxS
-        ? optRoyal.maxS * taxaVendaNota - ((optRoyal.minR * qt + optRoyal.minP) * (1 - rrrFoco) + txF)
+        ? optRoyal.maxS * taxaVendaNota - custoOT
         : null;
 
       const volOpt = optCfg.bestCity ? (volData.get(`${cityKey(optCfg.bestCity)}|${iP}`) ?? 0) : 0;
@@ -603,6 +607,9 @@ async function estrategiaCompletaRecurso(resource, body) {
           lucroPorFoco: lucroPorFoco ?? -9e8,
           lucroPorFocoOpt: lucroPorFocoOpt ?? -9e8,
           lucroPorFocoOT: lucroPorFocoOT ?? -9e8,
+          custoLocal: custoLocal ?? null,
+          custoOpt: custoOpt ?? null,
+          custoOT: custoOT ?? null,
         });
         const lucroFamaLocal = fsT && fsA && fsP
           ? fsP * taxaVendaNota - ((fsT * qt + fsA) * (1 - rrrFama) + txF)
