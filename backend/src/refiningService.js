@@ -59,6 +59,9 @@ const RESOURCE_CONFIGS = {
 
 // ─── Funções utilitárias (compartilhadas) ───
 
+// Normaliza nomes de cidade para chave consistente entre APIs de preço ("Fort Sterling") e histórico ("FortSterling")
+const cityKey = (name) => (name || '').toLowerCase().replace(/\s+/g, '');
+
 function famaRefinoPorCraft(tSel, idxN) {
   const base = FAMA_BASE[tSel] ?? 22;
   const mult = MULT_ENCHANT[idxN] ?? 1;
@@ -113,7 +116,7 @@ function buildIdsForTier(tSel, rawSuffix, refinedSuffix) {
 function avgPriceMapFromHistory(hist) {
   const avgMap = new Map();
   for (const entry of hist) {
-    const key = `${entry.location}|${entry.item_id}`;
+    const key = `${cityKey(entry.location)}|${entry.item_id}`;
     if (!entry.data || entry.data.length === 0) { avgMap.set(key, 0); continue; }
     const sorted = [...entry.data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     const last96h = sorted.slice(-96);
@@ -130,7 +133,7 @@ function weeklyAvgMapFromHistory(hist) {
   const map = new Map();
   for (const entry of hist) {
     if (!entry.data || entry.data.length === 0) continue;
-    const key = `${entry.location}|${entry.item_id}`;
+    const key = `${cityKey(entry.location)}|${entry.item_id}`;
     const sorted = [...entry.data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     const last4w = sorted.slice(-4);
     const count4w = last4w.reduce((s, d) => s + (d.item_count || 0), 0);
@@ -147,25 +150,22 @@ function weeklyAvgMapFromHistory(hist) {
 function volumeMapFromHistory(hist) {
   const volMap = new Map();
   for (const entry of hist) {
-    const cid = entry.location;
+    const cid = cityKey(entry.location);
     const it = entry.item_id;
     if (!entry.data || entry.data.length === 0) {
       volMap.set(`${cid}|${it}`, 0);
       continue;
     }
-    // Ordenar por timestamp (data hourária com time-scale=1)
     const sorted = [...entry.data].sort(
       (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
     );
-    
-    // Usar últimas 96 horas (96 pontos de dados com time-scale=1)
     const last96h = sorted.slice(-96);
     if (last96h.length === 0) {
       volMap.set(`${cid}|${it}`, 0);
       continue;
     }
     const totalVol = last96h.reduce((s, d) => s + (d.item_count || 0), 0);
-    const avgVol = totalVol / 4; // janela fixa de 96h = 4 dias
+    const avgVol = totalVol / 4;
     volMap.set(`${cid}|${it}`, Math.round(avgVol));
   }
   return volMap;
@@ -186,7 +186,7 @@ function convertToUTC3(isoDate) {
 }
 
 function getVol(volMap, city, itemId) {
-  return volMap.get(`${city}|${itemId}`) ?? 0;
+  return volMap.get(`${cityKey(city)}|${itemId}`) ?? 0;
 }
 
 // ─── Função genérica: processar refino de recurso ───
@@ -229,7 +229,7 @@ async function processarRecurso(resource, body) {
   const royalSell = new Map();
   const royalSellDate = new Map();
   for (const p of royalRes) {
-    const key = `${p.city}|${p.item_id}`;
+    const key = `${cityKey(p.city)}|${p.item_id}`;
     const valBuy = p.buy_price_max;
     const valSell = p.sell_price_min;
     if (valSell > 0) {
@@ -258,7 +258,7 @@ async function processarRecurso(resource, body) {
   const dvt = new Map();
 
   for (const p of res) {
-    const key = `${p.city}|${p.item_id}`;
+    const key = `${cityKey(p.city)}|${p.item_id}`;
     const valBuy = p.buy_price_max;
     const valSell = p.sell_price_min;
     if (valSell > 0) {
@@ -277,10 +277,10 @@ async function processarRecurso(resource, body) {
     }
   }
 
-  const getDc = (city, item) => dc.get(`${city}|${item}`) || weeklyAvg.get(`${city}|${item}`) || 0;
-  const getDv = (city, item) => dv.get(`${city}|${item}`) || weeklyAvg.get(`${city}|${item}`) || 0;
-  const getDt = (city, item) => dt.get(`${city}|${item}`) ?? null;
-  const getDvt = (city, item) => dvt.get(`${city}|${item}`) ?? null;
+  const getDc = (city, item) => dc.get(`${cityKey(city)}|${item}`) || weeklyAvg.get(`${cityKey(city)}|${item}`) || 0;
+  const getDv = (city, item) => dv.get(`${cityKey(city)}|${item}`) || weeklyAvg.get(`${cityKey(city)}|${item}`) || 0;
+  const getDt = (city, item) => dt.get(`${cityKey(city)}|${item}`) ?? null;
+  const getDvt = (city, item) => dvt.get(`${cityKey(city)}|${item}`) ?? null;
 
   const rows = [];
   const reducaoGeral = specTotalPrata(spec); // sum(all spec levels) * 30
@@ -311,7 +311,7 @@ async function processarRecurso(resource, body) {
     };
 
     const getProdPreco = (cityName, itemId) =>
-      dailyBonus > 0 ? (avgMap.get(`${cityName}|${itemId}`) ?? 0) : getDv(cityName, itemId);
+      dailyBonus > 0 ? (avgMap.get(`${cityKey(cityName)}|${itemId}`) ?? 0) : getDv(cityName, itemId);
 
     function calcLucro(t, a, v) {
       if (t && a && v) return v * taxaVendaNota - ((t * qt + a) * (1 - rrr) + txF);
@@ -331,7 +331,7 @@ async function processarRecurso(resource, body) {
         tauaDate: getDvt(city.name, iP),
         lucro: calcLucro(...cPrices),
         volume24h: getVol(volMap, city.name, iP),
-        avgPreco: avgMap.get(`${city.name}|${iP}`) ?? 0,
+        avgPreco: avgMap.get(`${cityKey(city.name)}|${iP}`) ?? 0,
       };
     }
 
@@ -357,9 +357,10 @@ async function processarRecurso(resource, body) {
     function bestRoyalMin(itemId, map, dateMap, fallback = null) {
       let best = null;
       for (const rc of ROYAL_NAMES) {
-        const p = map.get(`${rc}|${itemId}`) || (fallback?.get(`${rc}|${itemId}`) ?? 0);
+        const k = `${cityKey(rc)}|${itemId}`;
+        const p = map.get(k) || (fallback?.get(k) ?? 0);
         if (p > 0 && (!best || p < best.preco)) {
-          best = { cidade: rc, preco: p, data: dateMap.get(`${rc}|${itemId}`) ?? null };
+          best = { cidade: rc, preco: p, data: dateMap.get(k) ?? null };
         }
       }
       return best;
@@ -367,9 +368,10 @@ async function processarRecurso(resource, body) {
     function bestRoyalMax(itemId, map, dateMap, fallback = null) {
       let best = null;
       for (const rc of ROYAL_NAMES) {
-        const p = map.get(`${rc}|${itemId}`) || (fallback?.get(`${rc}|${itemId}`) ?? 0);
+        const k = `${cityKey(rc)}|${itemId}`;
+        const p = map.get(k) || (fallback?.get(k) ?? 0);
         if (p > 0 && (!best || p > best.preco)) {
-          best = { cidade: rc, preco: p, data: dateMap.get(`${rc}|${itemId}`) ?? null };
+          best = { cidade: rc, preco: p, data: dateMap.get(k) ?? null };
         }
       }
       return best;
@@ -381,9 +383,10 @@ async function processarRecurso(resource, body) {
     if (dailyBonus > 0) {
       let bestAvgProduto = null;
       for (const rc of ROYAL_NAMES) {
-        const p = royalAvgMap.get(`${rc}|${iP}`) ?? 0;
+        const k = `${cityKey(rc)}|${iP}`;
+        const p = royalAvgMap.get(k) ?? 0;
         if (p > 0 && (!bestAvgProduto || p > bestAvgProduto.preco)) {
-          bestAvgProduto = { cidade: rc, preco: p, data: royalSellDate.get(`${rc}|${iP}`) ?? null };
+          bestAvgProduto = { cidade: rc, preco: p, data: royalSellDate.get(k) ?? null };
         }
       }
       mpProduto = bestAvgProduto;
@@ -401,8 +404,8 @@ async function processarRecurso(resource, body) {
       tabuaAnt: mpTabuaAnt,
       produto: mpProduto,
       lucro: mpLucro,
-      volumeProduto: mpProduto ? (royalVolMap.get(`${mpProduto.cidade}|${iP}`) ?? 0) : 0,
-      avgPreco: mpProduto ? (royalAvgMap.get(`${mpProduto.cidade}|${iP}`) ?? 0) : 0,
+      volumeProduto: mpProduto ? (royalVolMap.get(`${cityKey(mpProduto.cidade)}|${iP}`) ?? 0) : 0,
+      avgPreco: mpProduto ? (royalAvgMap.get(`${cityKey(mpProduto.cidade)}|${iP}`) ?? 0) : 0,
     };
 
     if (otimizado > -8e8 && foco) {
@@ -483,7 +486,7 @@ async function estrategiaCompletaRecurso(resource, body) {
   const dc = new Map();
   const dv = new Map();
   for (const p of res) {
-    const key = `${p.city}|${p.item_id}`;
+    const key = `${cityKey(p.city)}|${p.item_id}`;
     const val = buyOrder && p.buy_price_max > 0 ? p.buy_price_max : p.sell_price_min;
     if (val > 0) dc.set(key, val);
     if (p.sell_price_min > 0) dv.set(key, p.sell_price_min);
@@ -492,18 +495,18 @@ async function estrategiaCompletaRecurso(resource, body) {
   const royalDc = new Map();
   const royalDv = new Map();
   for (const p of royalRes) {
-    const key = `${p.city}|${p.item_id}`;
+    const key = `${cityKey(p.city)}|${p.item_id}`;
     const val = buyOrder && p.buy_price_max > 0 ? p.buy_price_max : p.sell_price_min;
     if (val > 0) royalDc.set(key, val);
     if (p.sell_price_min > 0) royalDv.set(key, p.sell_price_min);
   }
 
-  const getDc = (c, it) => dc.get(`${c}|${it}`) || weeklyAvg.get(`${c}|${it}`) || 0;
-  const getDv = (c, it) => dv.get(`${c}|${it}`) || weeklyAvg.get(`${c}|${it}`) || 0;
-  const getRoyalDc = (c, it) => royalDc.get(`${c}|${it}`) || royalWeeklyAvg.get(`${c}|${it}`) || 0;
-  const getRoyalDv = (c, it) => royalDv.get(`${c}|${it}`) || royalWeeklyAvg.get(`${c}|${it}`) || 0;
-  const getProdLocal = (c, it) => dailyBonus > 0 ? (avgData.get(`${c}|${it}`) ?? 0) : getDv(c, it);
-  const getProdRoyal = (c, it) => dailyBonus > 0 ? (royalAvgData.get(`${c}|${it}`) ?? 0) : getRoyalDv(c, it);
+  const getDc = (c, it) => dc.get(`${cityKey(c)}|${it}`) || weeklyAvg.get(`${cityKey(c)}|${it}`) || 0;
+  const getDv = (c, it) => dv.get(`${cityKey(c)}|${it}`) || weeklyAvg.get(`${cityKey(c)}|${it}`) || 0;
+  const getRoyalDc = (c, it) => royalDc.get(`${cityKey(c)}|${it}`) || royalWeeklyAvg.get(`${cityKey(c)}|${it}`) || 0;
+  const getRoyalDv = (c, it) => royalDv.get(`${cityKey(c)}|${it}`) || royalWeeklyAvg.get(`${cityKey(c)}|${it}`) || 0;
+  const getProdLocal = (c, it) => dailyBonus > 0 ? (avgData.get(`${cityKey(c)}|${it}`) ?? 0) : getDv(c, it);
+  const getProdRoyal = (c, it) => dailyBonus > 0 ? (royalAvgData.get(`${cityKey(c)}|${it}`) ?? 0) : getRoyalDv(c, it);
   const cityName = cfg.cityName;
   const cfgCities = cfg.cities || [{ name: cfg.cityName }];
   const cfgCityNames = cfgCities.map((c) => c.name);
@@ -563,8 +566,8 @@ async function estrategiaCompletaRecurso(resource, body) {
         ? optRoyal.maxS * taxaVendaNota - ((optRoyal.minR * qt + optRoyal.minP) * (1 - rrrFoco) + txF)
         : null;
 
-      const volOpt = optCfg.bestCity ? (volData.get(`${optCfg.bestCity}|${iP}`) ?? 0) : 0;
-      const volOT = optRoyal.bestCity ? (royalVolData.get(`${optRoyal.bestCity}|${iP}`) ?? 0) : 0;
+      const volOpt = optCfg.bestCity ? (volData.get(`${cityKey(optCfg.bestCity)}|${iP}`) ?? 0) : 0;
+      const volOT = optRoyal.bestCity ? (royalVolData.get(`${cityKey(optRoyal.bestCity)}|${iP}`) ?? 0) : 0;
 
       // Lucro/foco: ganho marginal por ponto de foco vs não usar foco
       const lucroLocalComFoco = fsT && fsA && fsP ? fsP * taxaVendaNota - ((fsT * qt + fsA) * (1 - rrrConFoco) + txF) : null;
