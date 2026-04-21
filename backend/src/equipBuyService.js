@@ -256,35 +256,53 @@ export async function buscarEquipamentoPorNivelEfetivo({ equipamentoNome, nivelE
     return { preco: avgPreco, data: '', quality: qualidadeAPI };
   };
 
-  // Direto: melhor cidade por combinação
+  // Direto: uma linha por cidade por combinação
   const direto = [];
   for (const { tier, enchant, directIds } of combData) {
-    let melhor = null;
+    const melhorPorCidade = {};
     for (const itemId of directIds) {
       for (const cidade of TODAS_CIDADES) {
         const entry = getEntryDireto(itemId, cidade);
-        if (!entry) continue;
         const cidadeNorm = normalizarCidade(cidade);
-        const teleporte = cidadeNorm === cidadeDestinoNormalizada
-          ? 0 : calcularCustoTeleporte(itemId, cidadeNorm, cidadeDestinoNormalizada);
-        const custoFinal = entry.preco + teleporte;
-        if (!melhor || custoFinal < melhor.custoFinal) {
-          melhor = {
+        const preco = entry?.preco ?? 0;
+        const teleporte = preco > 0 && cidadeNorm !== cidadeDestinoNormalizada
+          ? calcularCustoTeleporte(itemId, cidadeNorm, cidadeDestinoNormalizada)
+          : 0;
+        const custoFinal = preco > 0 ? preco + teleporte : 0;
+        if (!melhorPorCidade[cidade] || (custoFinal > 0 && custoFinal < melhorPorCidade[cidade].custoFinal)) {
+          melhorPorCidade[cidade] = {
             itemId, nome: nomeItemEmPortugues(itemId),
             tier, enchant,
             cidadeOrigem: cidade, cidadeDestino,
-            preco: entry.preco,
+            preco,
             custoTeleporte: teleporte,
             custoFinal,
-            data: String(entry.data || ''),
-            quality: Number(entry.quality || qualidadeAPI),
+            data: String(entry?.data || ''),
+            quality: Number(entry?.quality || qualidadeAPI),
           };
         }
       }
     }
-    if (melhor) direto.push(melhor);
+    // Garantir que todas as 6 cidades apareçam, mesmo sem preço
+    for (const cidade of TODAS_CIDADES) {
+      if (!melhorPorCidade[cidade]) {
+        melhorPorCidade[cidade] = {
+          itemId: null, nome: null,
+          tier, enchant,
+          cidadeOrigem: cidade, cidadeDestino,
+          preco: 0, custoTeleporte: 0, custoFinal: 0, data: '', quality: qualidadeAPI,
+        };
+      }
+      direto.push(melhorPorCidade[cidade]);
+    }
   }
-  direto.sort((a, b) => a.custoFinal - b.custoFinal);
+  direto.sort((a, b) => {
+    if (a.tier !== b.tier) return b.tier.localeCompare(a.tier);
+    if (a.enchant !== b.enchant) return a.enchant - b.enchant;
+    if (a.custoFinal === 0 && b.custoFinal !== 0) return 1;
+    if (b.custoFinal === 0 && a.custoFinal !== 0) return -1;
+    return a.custoFinal - b.custoFinal;
+  });
 
   // Encantando: melhor caminho por combinação (enchant > 0)
   const encantando = [];

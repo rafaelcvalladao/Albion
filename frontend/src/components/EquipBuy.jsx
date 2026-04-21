@@ -100,7 +100,7 @@ const EquipBuy = () => {
     }
   };
 
-  const melhorDireto = resultadosDireto[0]?.custoFinal ?? Infinity;
+  const melhorDireto = resultadosDireto.find(r => r.custoFinal > 0)?.custoFinal ?? Infinity;
   const melhorEncantando = resultadosEncantando[0]?.custoFinal ?? Infinity;
   const encantarEMaisBarato = melhorEncantando < melhorDireto;
   const temResultados = resultadosDireto.length > 0 || resultadosEncantando.length > 0;
@@ -249,7 +249,7 @@ const EquipBuy = () => {
                   {!encantarEMaisBarato && <span style={{ fontSize: '0.8rem', marginLeft: '0.5rem' }}>★ mais barato</span>}
                 </div>
                 <div style={{ color: '#666', fontSize: '0.8rem' }}>
-                  {resultadosDireto[0]?.tier}.{resultadosDireto[0]?.enchant} em {resultadosDireto[0]?.cidadeOrigem}
+                  {(() => { const m = resultadosDireto.find(r => r.custoFinal > 0); return m ? `${m.tier}.${m.enchant} em ${m.cidadeOrigem}` : ''; })()}
                 </div>
               </div>
             )}
@@ -295,26 +295,30 @@ const EquipBuy = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {resultadosDireto.map((r, i) => (
-                    <tr key={`${r.tier}.${r.enchant}`} style={{ background: i === 0 ? 'rgba(76,175,80,0.07)' : i % 2 === 0 ? '#23232e' : '#1a1a22', color: '#fff' }}>
-                      <td style={tdStyle}>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: i === 0 ? '#4caf50' : '#e0e0e0' }}>
-                          {i === 0 && '★ '}{r.tier}.{r.enchant}
-                        </span>
-                      </td>
-                      <td style={{ ...tdStyle, color: '#bbb' }}>{r.cidadeOrigem}</td>
-                      <td style={{ ...tdR, color: '#ddd' }}>{formatarMoeda(r.preco)}</td>
-                      <td style={{ ...tdR, color: r.custoTeleporte === 0 ? '#555' : '#ffb74d', fontWeight: r.custoTeleporte > 0 ? 'bold' : 'normal' }}>
-                        {r.custoTeleporte === 0 ? '—' : formatarMoeda(r.custoTeleporte)}
-                      </td>
-                      <td style={{ ...tdR, fontWeight: 'bold', color: '#4caf50', backgroundColor: i === 0 ? 'rgba(76,175,80,0.12)' : 'transparent' }}>
-                        {formatarMoeda(r.custoFinal)}
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: 'center', fontSize: '0.78rem', color: '#555' }}>
-                        {formatarData(r.data)}
-                      </td>
-                    </tr>
-                  ))}
+                  {resultadosDireto.map((r, i) => {
+                    const semPreco = !r.custoFinal || r.custoFinal === 0;
+                    const eMelhor = !semPreco && r.custoFinal === melhorDireto;
+                    return (
+                      <tr key={`${r.tier}.${r.enchant}-${r.cidadeOrigem}`} style={{ background: eMelhor ? 'rgba(76,175,80,0.07)' : i % 2 === 0 ? '#23232e' : '#1a1a22', color: semPreco ? '#444' : '#fff', opacity: semPreco ? 0.5 : 1 }}>
+                        <td style={tdStyle}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: eMelhor ? '#4caf50' : semPreco ? '#555' : '#e0e0e0' }}>
+                            {eMelhor && '★ '}{r.tier}.{r.enchant}
+                          </span>
+                        </td>
+                        <td style={{ ...tdStyle, color: semPreco ? '#555' : '#bbb' }}>{r.cidadeOrigem}</td>
+                        <td style={{ ...tdR, color: semPreco ? '#555' : '#ddd' }}>{semPreco ? '—' : formatarMoeda(r.preco)}</td>
+                        <td style={{ ...tdR, color: r.custoTeleporte === 0 ? '#555' : '#ffb74d', fontWeight: r.custoTeleporte > 0 ? 'bold' : 'normal' }}>
+                          {r.custoTeleporte === 0 ? '—' : formatarMoeda(r.custoTeleporte)}
+                        </td>
+                        <td style={{ ...tdR, fontWeight: 'bold', color: semPreco ? '#555' : '#4caf50', backgroundColor: eMelhor ? 'rgba(76,175,80,0.12)' : 'transparent' }}>
+                          {semPreco ? '—' : formatarMoeda(r.custoFinal)}
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: 'center', fontSize: '0.78rem', color: '#555' }}>
+                          {semPreco ? '—' : formatarData(r.data)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
