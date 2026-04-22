@@ -634,7 +634,7 @@ const EquipBuy = () => {
           {conjuntoLoading ? (
             <div style={{ color: '#666', padding: '1.5rem', textAlign: 'center', fontSize: '0.9rem' }}>Buscando preços…</div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '0.65rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.65rem' }}>
               {SLOTS.map(slot => (
                 <SlotResultCard key={slot.key} slot={slot} slotData={conjuntoResultados[slot.key]} cidade={conjuntoAtivoData?.cidade ?? ''} />
               ))}
