@@ -343,7 +343,7 @@ export async function buscarEquipamentoPorNivelEfetivo({ equipamentoNome, nivelE
       encantamento: enchant,
       cidadeDestinoNormalizada,
     });
-    if (alts.length > 0) encantando.push({ ...alts[0], tier, enchant });
+    alts.forEach(a => encantando.push({ ...a, tier, enchant }));
   }
   encantando.sort((a, b) => a.custoFinal - b.custoFinal);
 
