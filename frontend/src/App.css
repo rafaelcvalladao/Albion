@@ -515,25 +515,34 @@ table.result-table {
 
 .wood-strategy-panel .strategy-block--compact .result-table th,
 .wood-strategy-panel .strategy-block--compact .result-table td {
-  padding: 0.4rem 0.32rem;
+  padding: 0.4rem 0.3rem;
   word-break: break-word;
+  text-align: center;
 }
 
 .wood-strategy-panel .strategy-block--compact .result-table th:nth-child(1),
 .wood-strategy-panel .strategy-block--compact .result-table td:nth-child(1) {
-  width: 22%;
+  width: 17%;
+  text-align: left;
 }
 
 .wood-strategy-panel .strategy-block--compact .result-table th:nth-child(2),
 .wood-strategy-panel .strategy-block--compact .result-table td:nth-child(2) {
-  width: 39%;
-  text-align: right;
+  width: 33%;
+  text-align: center;
 }
 
 .wood-strategy-panel .strategy-block--compact .result-table th:nth-child(3),
 .wood-strategy-panel .strategy-block--compact .result-table td:nth-child(3) {
-  width: 39%;
-  text-align: right;
+  width: 18%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.wood-strategy-panel .strategy-block--compact .result-table th:nth-child(4),
+.wood-strategy-panel .strategy-block--compact .result-table td:nth-child(4) {
+  width: 32%;
+  text-align: center;
   white-space: nowrap;
 }
 
