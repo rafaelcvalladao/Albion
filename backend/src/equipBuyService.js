@@ -53,11 +53,22 @@ function buildAvgMap(hist) {
   return map;
 }
 
+function isPriceStale(dateStr, maxHours = 6) {
+  if (!dateStr || dateStr.startsWith('0001')) return true;
+  try {
+    const then = new Date(dateStr.includes('Z') || dateStr.includes('+') ? dateStr : dateStr + 'Z');
+    if (isNaN(then.getTime())) return true;
+    return (Date.now() - then.getTime()) > maxHours * 3_600_000;
+  } catch {
+    return true;
+  }
+}
+
 /**
  * Retorna o melhor preço disponível para um item numa cidade:
- * 1. sell_price_min atual
- * 2. média 4 semanas
- * 3. média 1 semana
+ * 1. sell_price_min atual (≤ 6 h)
+ * 2. média histórica (4 semanas ou 1 semana)
+ * 3. sell_price_min desatualizado (> 6 h) como último recurso
  */
 function getPrice(itemId, city, priceByItemCity, avgMap) {
   const k = `${itemId}|${cityKey(city)}`;
@@ -103,28 +114,31 @@ async function calcularAlternativasEncantamento({ baseItemIds, tier, encantament
     return [];
   }
 
-  // Preços ao vivo por item+cidade
+  // Preços ao vivo por item+cidade (guarda preço + data para checar staleness)
   const priceByItemCity = new Map();
   for (const p of precos) {
     const price = Number(p.sell_price_min) || 0;
     if (!price) continue;
     const k = `${p.item_id}|${cityKey(p.city)}`;
     const curr = priceByItemCity.get(k);
-    if (!curr || price < curr) priceByItemCity.set(k, price);
+    if (!curr || price < curr.price) priceByItemCity.set(k, { price, date: p.sell_price_min_date });
   }
 
   // Médias históricas para fallback do item base
   const avgMapEnc = buildAvgMap(hist);
 
+  // Materiais: somente preço ao vivo (sem fallback de média)
   const getLivePrice = (itemId, city) =>
-    priceByItemCity.get(`${itemId}|${cityKey(city)}`) || 0;
+    priceByItemCity.get(`${itemId}|${cityKey(city)}`)?.price || 0;
 
-  // Item base: live primeiro, depois média histórica
+  // Item base: sell fresco (≤6h) → média histórica → sell desatualizado
   const getItemPrice = (itemId, city) => {
-    const live = getLivePrice(itemId, city);
-    if (live > 0) return live;
+    const entry = priceByItemCity.get(`${itemId}|${cityKey(city)}`);
     const avg = avgMapEnc.get(`${itemId}|${cityKey(city)}`);
-    return avg?.avg4w || avg?.avg1w || 0;
+    const avgPreco = avg?.avg4w || avg?.avg1w || 0;
+    if (entry && !isPriceStale(entry.date)) return entry.price;
+    if (avgPreco > 0) return avgPreco;
+    return entry?.price || 0;
   };
 
   const melhorPorCidade = {};
@@ -258,14 +272,17 @@ export async function buscarEquipamentoPorNivelEfetivo({ equipamentoNome, nivelE
 
   const avgMapDireto = buildAvgMap(histDireto);
 
-  // Retorna entry com preço (sell ou avg fallback) para um item+cidade
+  // Retorna entry com preço para um item+cidade.
+  // Prioridade: sell fresco (≤6h) → média histórica → sell desatualizado
   const getEntryDireto = (itemId, city) => {
     const sellKey = `${itemId}|${city}`;
-    if (precoMap[sellKey]) return precoMap[sellKey];
+    const entry = precoMap[sellKey] ?? null;
     const avg = avgMapDireto.get(`${itemId}|${cityKey(city)}`);
     const avgPreco = avg?.avg4w || avg?.avg1w || 0;
-    if (!avgPreco) return null;
-    return { preco: avgPreco, data: '', quality: qualidadeAPI };
+
+    if (entry && !isPriceStale(entry.data)) return entry;
+    if (avgPreco > 0) return { preco: avgPreco, data: '', quality: qualidadeAPI };
+    return entry ?? null; // sell desatualizado como último recurso
   };
 
   // Direto: uma linha por cidade por combinação
