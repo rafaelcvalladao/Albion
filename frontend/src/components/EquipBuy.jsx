@@ -7,7 +7,8 @@ const CIDADES = [
 ];
 
 const SLOTS = [
-  { key: 'topo',  label: 'Topo',  sub: 'Capacete', hierKey: 'Topo'     },
+  { key: 'arma',  label: 'Arma',  sub: 'Arma',      hierKey: 'Arma'     },
+  { key: 'topo',  label: 'Topo',  sub: 'Capacete',  hierKey: 'Topo'     },
   { key: 'meio',  label: 'Meio',  sub: 'Peitoral',  hierKey: 'Armadura' },
   { key: 'baixo', label: 'Baixo', sub: 'Sapatos',   hierKey: 'Bota'     },
   { key: 'capa',  label: 'Capa',  sub: 'Capa',      hierKey: 'Capa'     },
@@ -141,7 +142,7 @@ const EMPTY_SLOT_DATA = () => ({ item: '', nivel: '8', qualidade: '1' });
 const EMPTY_FORM = () => ({
   name: '',
   cidade: 'Fort Sterling',
-  slots: { topo: EMPTY_SLOT_DATA(), meio: EMPTY_SLOT_DATA(), baixo: EMPTY_SLOT_DATA(), capa: EMPTY_SLOT_DATA() },
+  slots: Object.fromEntries(SLOTS.map(s => [s.key, EMPTY_SLOT_DATA()])),
 });
 
 function GerenciarModal({ conjuntos, setConjuntos, itensPorSlot, onClose }) {

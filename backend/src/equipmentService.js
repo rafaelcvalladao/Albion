@@ -92,6 +92,7 @@ export function extractEquipmentHierarchy() {
           subtype = extractMaterialType(uniqueName, localizedName);
           break;
         case 'CAPE':
+        case 'CAPEITEM':
           category = 'Capa';
           subtype = 'Normal';
           break;

@@ -62,7 +62,25 @@ export const EQUIPMENT_HIERARCHY_FALLBACK = {
   Capa: {
     label: 'Capa',
     types: {
-      Normal: ['Capa Simples', 'Capa de Viajante', 'Capa Elemental'],
+      Cidade: [
+        'Capa de Bridgewatch',
+        'Capa de Caerleon',
+        'Capa de Fort Sterling',
+        'Capa de Lymhurst',
+        'Capa de Martlock',
+        'Capa de Thetford',
+        'Capa de Brecilien',
+      ],
+      Facção: [
+        'Capa dos Hereges',
+        'Capa dos Mortos-vivos',
+        'Capa dos Protetores',
+        'Capa de Morgana',
+        'Capa Avaloniana',
+        'Capa do Demônio',
+        'Capa do Contrabandista',
+      ],
+      Normal: ['Capa'],
     }
   }
 };
