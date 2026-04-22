@@ -4,8 +4,8 @@ import { fetchPricesMarket } from './marketPrices.js';
 export function getEnchantQtyBySlot(itemId) {
   const upper = (itemId || '').split('@')[0].toUpperCase();
   if (upper.includes('_MAIN_') || upper.includes('_2H_') || upper.includes('_OFF_')) return 384;
-  if (upper.includes('_BODY_')) return 192;
-  return 96; // HEAD, FEET, CAPE
+  if (upper.includes('_BODY_') || upper.includes('_CAPE')) return 192; // peitoral e capas
+  return 96; // HEAD, FEET
 }
 
 // Quantidade de recursos para encantar por tier/nível

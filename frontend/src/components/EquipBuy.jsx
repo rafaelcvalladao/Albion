@@ -484,16 +484,29 @@ const EquipBuy = () => {
   const temResultados = resultadosDireto.length > 0 || resultadosEncantando.length > 0;
 
   const conjuntoAtivoData = conjuntos.find(c => c.name === conjuntoAtivo);
-  const totalConjunto = conjuntoResultados
-    ? SLOTS.reduce((sum, slot) => {
-        const d = conjuntoResultados[slot.key];
-        if (!d || d.erro) return sum;
-        const custoDireto = d.direto.find(r => r.custoFinal > 0)?.custoFinal ?? Infinity;
-        const custoEnc = d.encantando.find(r => r.custoFinal > 0)?.custoFinal ?? Infinity;
-        const melhor = Math.min(custoDireto, custoEnc);
-        return melhor === Infinity ? sum : sum + melhor;
-      }, 0)
-    : null;
+
+  const calcTotalConjunto = (filtrarPorCidade = false) => {
+    if (!conjuntoResultados) return null;
+    const cidNorm = filtrarPorCidade ? normalCity(conjuntoAtivoData?.cidade ?? '') : null;
+    let total = 0;
+    let algumSlot = false;
+    for (const slot of SLOTS) {
+      const d = conjuntoResultados[slot.key];
+      if (!d || d.erro) continue;
+      const melhorDireto = filtrarPorCidade
+        ? d.direto.find(r => normalCity(r.cidadeOrigem) === cidNorm && r.custoFinal > 0)?.custoFinal ?? Infinity
+        : d.direto.find(r => r.custoFinal > 0)?.custoFinal ?? Infinity;
+      const melhorEnc = filtrarPorCidade
+        ? d.encantando.find(r => normalCity(r.cidadeOrigem) === cidNorm && r.custoFinal > 0)?.custoFinal ?? Infinity
+        : d.encantando.find(r => r.custoFinal > 0)?.custoFinal ?? Infinity;
+      const melhor = Math.min(melhorDireto, melhorEnc);
+      if (melhor !== Infinity) { total += melhor; algumSlot = true; }
+    }
+    return algumSlot ? total : null;
+  };
+
+  const totalConjunto = calcTotalConjunto(false);
+  const totalConjuntoCidade = calcTotalConjunto(true);
 
   const thStyle = { padding: '0.85rem 1rem', textAlign: 'left', borderBottom: '2px solid #333', fontWeight: 700, fontSize: '0.82rem', color: '#888' };
   const thR = { ...thStyle, textAlign: 'right' };
@@ -601,10 +614,20 @@ const EquipBuy = () => {
                 </span>
               )}
             </div>
-            {totalConjunto > 0 && (
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.72rem', color: '#666' }}>Total mínimo estimado</div>
-                <div style={{ color: '#4caf50', fontWeight: 700, fontSize: '1.05rem' }}>{formatarMoeda(totalConjunto)} prata</div>
+            {(totalConjunto > 0 || totalConjuntoCidade > 0) && (
+              <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-end', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                {totalConjuntoCidade > 0 && (
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#888' }}>Custo {conjuntoAtivoData?.cidade ?? ''}</div>
+                    <div style={{ color: '#ffb74d', fontWeight: 700, fontSize: '1rem' }}>{formatarMoeda(totalConjuntoCidade)} prata</div>
+                  </div>
+                )}
+                {totalConjunto > 0 && (
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#666' }}>Custo total otimizado</div>
+                    <div style={{ color: '#4caf50', fontWeight: 700, fontSize: '1.05rem' }}>{formatarMoeda(totalConjunto)} prata</div>
+                  </div>
+                )}
               </div>
             )}
           </div>
