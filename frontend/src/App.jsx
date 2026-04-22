@@ -1,8 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import ResourceMaster from './components/ResourceMaster.jsx';
-import MarketAnalyzer from './components/MarketAnalyzer.jsx';
 import LoginGate from './components/LoginGate.jsx';
-import EquipBuy from './components/EquipBuy.jsx';
 import { loadEquipmentHierarchy } from './data/equipmentHierarchy.js';
 import {
   calculateWood,
@@ -17,6 +15,9 @@ import {
   strategyStone,
 } from './api.js';
 import './App.css';
+
+const MarketAnalyzer = lazy(() => import('./components/MarketAnalyzer.jsx'));
+const EquipBuy = lazy(() => import('./components/EquipBuy.jsx'));
 
 export default function App() {
   const [tab, setTab] = useState('wood');
@@ -133,13 +134,19 @@ export default function App() {
             strategyFn={strategyStone}
           />
         )}
-        {tab === 'market' && <MarketAnalyzer />}
+        {tab === 'market' && (
+          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando...</div>}>
+            <MarketAnalyzer />
+          </Suspense>
+        )}
         {tab === 'equipbuy' && (
           equipmentReady ? (
-            <EquipBuy />
+            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando...</div>}>
+              <EquipBuy />
+            </Suspense>
           ) : (
             <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
-              ⏳ Carregando base de dados de equipamentos...
+              Carregando base de dados de equipamentos...
             </div>
           )
         )}

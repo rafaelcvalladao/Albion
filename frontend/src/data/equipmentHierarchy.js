@@ -88,35 +88,60 @@ export const EQUIPMENT_HIERARCHY_FALLBACK = {
 // Será preenchido dinamicamente ao carregar
 export let EQUIPMENT_HIERARCHY = { ...EQUIPMENT_HIERARCHY_FALLBACK };
 
+const LS_KEY = 'albion-equipment-hierarchy-v1';
+const LS_TTL = 60 * 60 * 1000; // 1 hora
+
+function loadFromCache() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts < LS_TTL) return data;
+    localStorage.removeItem(LS_KEY);
+  } catch { /* ignore */ }
+  return null;
+}
+
+function saveToCache(data) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ ts: Date.now(), data })); } catch { /* ignore */ }
+}
+
 /**
- * Carrega hierarquia de equipamentos do backend
+ * Carrega hierarquia de equipamentos do backend (com cache localStorage de 1h)
  * Chamado ao inicializar a aplicação no App.jsx
  */
 export async function loadEquipmentHierarchy() {
+  const cached = loadFromCache();
+  if (cached) {
+    EQUIPMENT_HIERARCHY = cached;
+    console.log('✓ Hierarquia de equipamentos carregada do cache local');
+    return EQUIPMENT_HIERARCHY;
+  }
+
   try {
     const raw = import.meta.env.VITE_API_BASE;
     const base = raw == null || raw === '' ? '' : String(raw).trim().replace(/\/+$/, '');
     const response = await fetch(`${base}/api/equipment/hierarchy`);
-    
+
     if (!response.ok) {
       console.warn(`⚠️  Erro ao carregar hierarquia (${response.status}), usando fallback`);
       return EQUIPMENT_HIERARCHY;
     }
-    
+
     const data = await response.json();
-    
+
     if (data.equipment && typeof data.equipment === 'object') {
       EQUIPMENT_HIERARCHY = data.equipment;
+      saveToCache(data.equipment);
       console.log('✓ Hierarquia de equipamentos carregada do backend');
     } else {
       console.warn('⚠️  Formato inválido de resposta, usando fallback');
     }
-    
+
     return EQUIPMENT_HIERARCHY;
-    
+
   } catch (error) {
     console.error('❌ Erro ao carregar hierarquia:', error);
-    console.log('📌 Usando dados fallback');
     return EQUIPMENT_HIERARCHY;
   }
 }

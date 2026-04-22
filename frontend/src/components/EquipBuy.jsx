@@ -375,6 +375,12 @@ function SlotResultCard({ slot, slotData, cidade }) {
   );
 }
 
+// ─── Estilos de tabela (constantes de módulo) ───
+const thStyle = { padding: '0.85rem 1rem', textAlign: 'left', borderBottom: '2px solid #333', fontWeight: 700, fontSize: '0.82rem', color: '#888' };
+const thR = { ...thStyle, textAlign: 'right' };
+const tdStyle = { padding: '0.7rem 1rem', borderBottom: '1px solid #23232e' };
+const tdR = { ...tdStyle, textAlign: 'right' };
+
 // ─── Componente principal ───
 const EquipBuy = () => {
   const [searchText, setSearchText] = useState("");
@@ -483,35 +489,36 @@ const EquipBuy = () => {
   const encantarEMaisBarato = melhorEncantando < melhorDireto;
   const temResultados = resultadosDireto.length > 0 || resultadosEncantando.length > 0;
 
-  const conjuntoAtivoData = conjuntos.find(c => c.name === conjuntoAtivo);
+  const conjuntoAtivoData = useMemo(() => conjuntos.find(c => c.name === conjuntoAtivo), [conjuntos, conjuntoAtivo]);
 
-  const calcTotalConjunto = (filtrarPorCidade = false) => {
+  const totalConjunto = useMemo(() => {
     if (!conjuntoResultados) return null;
-    const cidNorm = filtrarPorCidade ? normalCity(conjuntoAtivoData?.cidade ?? '') : null;
-    let total = 0;
-    let algumSlot = false;
+    let total = 0; let algumSlot = false;
     for (const slot of SLOTS) {
       const d = conjuntoResultados[slot.key];
       if (!d || d.erro) continue;
-      const melhorDireto = filtrarPorCidade
-        ? d.direto.find(r => normalCity(r.cidadeOrigem) === cidNorm && r.custoFinal > 0)?.custoFinal ?? Infinity
-        : d.direto.find(r => r.custoFinal > 0)?.custoFinal ?? Infinity;
-      const melhorEnc = filtrarPorCidade
-        ? d.encantando.find(r => normalCity(r.cidadeOrigem) === cidNorm && r.custoFinal > 0)?.custoFinal ?? Infinity
-        : d.encantando.find(r => r.custoFinal > 0)?.custoFinal ?? Infinity;
-      const melhor = Math.min(melhorDireto, melhorEnc);
-      if (melhor !== Infinity) { total += melhor; algumSlot = true; }
+      const mD = d.direto.find(r => r.custoFinal > 0)?.custoFinal ?? Infinity;
+      const mE = d.encantando.find(r => r.custoFinal > 0)?.custoFinal ?? Infinity;
+      const m = Math.min(mD, mE);
+      if (m !== Infinity) { total += m; algumSlot = true; }
     }
     return algumSlot ? total : null;
-  };
+  }, [conjuntoResultados]);
 
-  const totalConjunto = calcTotalConjunto(false);
-  const totalConjuntoCidade = calcTotalConjunto(true);
-
-  const thStyle = { padding: '0.85rem 1rem', textAlign: 'left', borderBottom: '2px solid #333', fontWeight: 700, fontSize: '0.82rem', color: '#888' };
-  const thR = { ...thStyle, textAlign: 'right' };
-  const tdStyle = { padding: '0.7rem 1rem', borderBottom: '1px solid #23232e' };
-  const tdR = { ...tdStyle, textAlign: 'right' };
+  const totalConjuntoCidade = useMemo(() => {
+    if (!conjuntoResultados) return null;
+    const cidNorm = normalCity(conjuntoAtivoData?.cidade ?? '');
+    let total = 0; let algumSlot = false;
+    for (const slot of SLOTS) {
+      const d = conjuntoResultados[slot.key];
+      if (!d || d.erro) continue;
+      const mD = d.direto.find(r => normalCity(r.cidadeOrigem) === cidNorm && r.custoFinal > 0)?.custoFinal ?? Infinity;
+      const mE = d.encantando.find(r => normalCity(r.cidadeOrigem) === cidNorm && r.custoFinal > 0)?.custoFinal ?? Infinity;
+      const m = Math.min(mD, mE);
+      if (m !== Infinity) { total += m; algumSlot = true; }
+    }
+    return algumSlot ? total : null;
+  }, [conjuntoResultados, conjuntoAtivoData]);
 
   return (
     <div className="equip-buy-container" style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1rem' }}>

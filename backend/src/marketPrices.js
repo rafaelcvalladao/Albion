@@ -2,6 +2,7 @@
 const PRICE_CACHE = new Map();
 const PRICE_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 const PRICE_CACHE_MAX_SIZE = 500;
+const PRICE_PENDING = new Map(); // deduplicação: evita chamar a API duas vezes para o mesmo key
 
 const PRICE_CHUNK_SIZE = 100;
 const PRICE_CONCURRENCY = 5;
@@ -52,13 +53,15 @@ export async function fetchPricesMarket(itemIds, locations, quality = 0) {
       const cacheKey = getPriceCacheKey(part, loc, quality);
       const cached = getCachedPrices(cacheKey);
       if (cached) return cached;
+      if (PRICE_PENDING.has(cacheKey)) return PRICE_PENDING.get(cacheKey);
 
       const url = `https://www.albion-online-data.com/api/v2/stats/prices/${part.join(',')}?locations=${encodeURIComponent(loc)}${qualitiesParam}`;
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!res.ok) throw new Error(`Albion prices HTTP ${res.status}`);
-      const data = await res.json();
-      setCachedPrices(cacheKey, data);
-      return data;
+      const promise = fetch(url, { headers: { Accept: 'application/json' } })
+        .then(res => { if (!res.ok) throw new Error(`Albion prices HTTP ${res.status}`); return res.json(); })
+        .then(data => { setCachedPrices(cacheKey, data); return data; })
+        .finally(() => PRICE_PENDING.delete(cacheKey));
+      PRICE_PENDING.set(cacheKey, promise);
+      return promise;
     });
 
     const results = await Promise.allSettled(calls);

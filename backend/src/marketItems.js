@@ -6,6 +6,7 @@ const ITEM_RAW_SOURCE_URL =
   'https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/items.json';
 let ALL_ITEM_IDS_CACHE = null;
 let CATEGORIES_CACHE = null;
+let SORTED_CATS_CACHE = null;
 
 // ─── Regras de classificação por família de arma ───
 const WEAPON_FAMILY_RULES = [
@@ -456,10 +457,13 @@ export async function gerarListaItens(categoria) {
 export async function obterCategoriasDinamicas() {
   await carregarItensDoJogo();
 
+  if (SORTED_CATS_CACHE) return SORTED_CATS_CACHE;
+
   if (CATEGORIES_CACHE && Object.keys(CATEGORIES_CACHE).length > 0) {
-    const cats = Object.keys(CATEGORIES_CACHE).sort();
-    console.log(`[Categories] ✓ Retornando ${cats.length} categorias dinâmicas`);
-    return cats;
+    // construirMapaCategorias já insere em ordem; Object.keys preserva insertion order no V8
+    SORTED_CATS_CACHE = Object.keys(CATEGORIES_CACHE);
+    console.log(`[Categories] ✓ Retornando ${SORTED_CATS_CACHE.length} categorias dinâmicas`);
+    return SORTED_CATS_CACHE;
   }
 
   console.log(`[Categories] ⚠️ Usando fallback para categorias estáticas`);

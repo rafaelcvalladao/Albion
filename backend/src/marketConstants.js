@@ -218,19 +218,10 @@ export function extrairInfoItem(itemId) {
   return { tier, encanto };
 }
 
-// Padrões de item IDs que são recursos ou journals (modificador ×2.25 no teleporte)
-const RESOURCE_PATTERNS = [
-  '_ORE', '_WOOD', '_HIDE', '_FIBER', '_ROCK',           // raw
-  '_PLANKS', '_METALBAR', '_CLOTH', '_LEATHER', '_STONEBLOCK', // refined
-];
+const RESOURCE_OR_JOURNAL_RE = /JOURNAL_|_ORE|_WOOD|_HIDE|_FIBER|_ROCK|_PLANKS|_METALBAR|_CLOTH|_LEATHER|_STONEBLOCK/;
 
 function isResourceOrJournal(itemId) {
-  const upper = itemId.toUpperCase();
-  if (upper.includes('JOURNAL_')) return true;
-  for (const pat of RESOURCE_PATTERNS) {
-    if (upper.includes(pat)) return true;
-  }
-  return false;
+  return RESOURCE_OR_JOURNAL_RE.test(itemId.toUpperCase());
 }
 
 export function calcularCustoTeleporte(itemId, cidadeOrigem, cidadeDestino) {

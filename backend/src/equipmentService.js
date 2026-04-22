@@ -141,33 +141,10 @@ export function extractEquipmentHierarchy() {
  * Ex: "Robe de Clérigo do Adepto" → "Robe de Clérigo"
  * Ex: "Traje do Cavouqueiro Adepto" → "Traje do Cavouqueiro"
  */
+const TIER_SUFFIX_RE = / (?:do )?(?:Adepto|Curandeiro|Perito|Experiente|Mestre|Grão-mestre|Ancião|Encantador)$/;
+
 function extractBaseName(localizedName) {
-  // Prefixos de tier em português para remover (com ou sem "do" antes)
-  const tierPrefixes = [
-    / do Adepto$/,      // Tier 4 com "do"
-    / do Curandeiro$/,  // Tier 5 com "do"
-    / do Perito$/,      // Tier 5 com "do"
-    / do Experiente$/,  // Tier 5 com "do"
-    / do Mestre$/,      // Tier 6 com "do"
-    / do Grão-mestre$/, // Tier 7 com "do"
-    / do Ancião$/,      // Tier 8 com "do"
-    / do Encantador$/,  // Tier 8 com "do"
-    / Adepto$/,         // Tier 4 sem "do"
-    / Curandeiro$/,     // Tier 5 sem "do"
-    / Perito$/,         // Tier 5 sem "do"
-    / Experiente$/,     // Tier 5 sem "do"
-    / Mestre$/,         // Tier 6 sem "do"
-    / Grão-mestre$/,    // Tier 7 sem "do"
-    / Ancião$/,         // Tier 8 sem "do"
-    / Encantador$/,     // Tier 8 sem "do"
-  ];
-  
-  let baseName = localizedName;
-  for (const pattern of tierPrefixes) {
-    baseName = baseName.replace(pattern, '');
-  }
-  
-  return baseName.trim();
+  return localizedName.replace(TIER_SUFFIX_RE, '').trim();
 }
 
 /**
