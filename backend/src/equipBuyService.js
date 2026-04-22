@@ -75,6 +75,7 @@ async function calcularAlternativasEncantamento({ baseItemIds, tier, encantament
   const allItemIds = new Set();
   const levelItemsByFrom = [];
   const materialsByFrom = [];
+  const allLevelItemIds = new Set();
 
   for (let fromLevel = 0; fromLevel < encantamento; fromLevel++) {
     const levelItemIds = fromLevel === 0
@@ -84,7 +85,7 @@ async function calcularAlternativasEncantamento({ baseItemIds, tier, encantament
     for (let lvl = fromLevel + 1; lvl <= encantamento; lvl++) {
       materialIds.push(getEnchantResourceId(tier, lvl));
     }
-    levelItemIds.forEach(id => allItemIds.add(id));
+    levelItemIds.forEach(id => { allItemIds.add(id); allLevelItemIds.add(id); });
     materialIds.forEach(id => allItemIds.add(id));
     levelItemsByFrom.push(levelItemIds);
     materialsByFrom.push(materialIds);
@@ -92,13 +93,17 @@ async function calcularAlternativasEncantamento({ baseItemIds, tier, encantament
 
   const allIds = [...allItemIds];
   let precos = [];
+  let hist = [];
   try {
-    precos = await fetchPricesMarket(allIds, TODAS_CIDADES);
+    [precos, hist] = await Promise.all([
+      fetchPricesMarket(allIds, TODAS_CIDADES),
+      fetchHistory([...allLevelItemIds], TODAS_CIDADES, 168),
+    ]);
   } catch {
     return [];
   }
 
-  // Apenas preços ao vivo (sell_price_min) — sem fallback de histórico
+  // Preços ao vivo por item+cidade
   const priceByItemCity = new Map();
   for (const p of precos) {
     const price = Number(p.sell_price_min) || 0;
@@ -108,8 +113,19 @@ async function calcularAlternativasEncantamento({ baseItemIds, tier, encantament
     if (!curr || price < curr) priceByItemCity.set(k, price);
   }
 
+  // Médias históricas para fallback do item base
+  const avgMapEnc = buildAvgMap(hist);
+
   const getLivePrice = (itemId, city) =>
     priceByItemCity.get(`${itemId}|${cityKey(city)}`) || 0;
+
+  // Item base: live primeiro, depois média histórica
+  const getItemPrice = (itemId, city) => {
+    const live = getLivePrice(itemId, city);
+    if (live > 0) return live;
+    const avg = avgMapEnc.get(`${itemId}|${cityKey(city)}`);
+    return avg?.avg4w || avg?.avg1w || 0;
+  };
 
   const melhorPorCidade = {};
 
@@ -117,7 +133,7 @@ async function calcularAlternativasEncantamento({ baseItemIds, tier, encantament
     const levelItemIds = levelItemsByFrom[fromLevel];
     const materialIds = materialsByFrom[fromLevel];
 
-    // Preço global mínimo de cada material (somente ordens ativas)
+    // Materiais: somente ordens ativas (não usar média para material de encantamento)
     const globalMatMin = {};
     for (const id of materialIds) {
       let min = 0;
@@ -128,7 +144,6 @@ async function calcularAlternativasEncantamento({ baseItemIds, tier, encantament
       globalMatMin[id] = min;
     }
 
-    // Pula este caminho se algum material não tem preço ativo
     if (materialIds.some(id => !globalMatMin[id])) continue;
 
     const custoMateriais = materialIds.reduce((sum, id) => sum + globalMatMin[id] * qty, 0);
@@ -143,7 +158,7 @@ async function calcularAlternativasEncantamento({ baseItemIds, tier, encantament
       let melhorItemId = null;
       let melhorItemPreco = 0;
       for (const id of levelItemIds) {
-        const p = getLivePrice(id, city);
+        const p = getItemPrice(id, city);
         if (p > 0 && (!melhorItemPreco || p < melhorItemPreco)) {
           melhorItemPreco = p;
           melhorItemId = id;

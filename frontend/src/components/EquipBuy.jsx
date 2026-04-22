@@ -73,6 +73,11 @@ function filtrarSugestoes(texto, lista, limite = 15) {
   return lista.filter(item => palavras.every(p => item.toLowerCase().includes(p))).slice(0, limite);
 }
 
+// Backend retorna cidades sem espaço (ex: 'FortSterling') — normalizar antes de comparar
+function normalCity(name) {
+  return (name || '').toLowerCase().replace(/\s+/g, '');
+}
+
 function migrarConjunto(c) {
   const slots = {};
   for (const { key } of SLOTS) {
@@ -294,14 +299,15 @@ function SlotResultCard({ slot, slotData, cidade }) {
   const usarEncGeral = (melhorEnc?.custoFinal ?? Infinity) < (melhorDireto?.custoFinal ?? Infinity);
   const melhorGeral = usarEncGeral ? melhorEnc : melhorDireto;
 
-  // Melhor da cidade selecionada
-  const melhorDiretoCidade = direto.find(r => r.cidadeOrigem === cidade && r.custoFinal > 0) ?? null;
-  const melhorEncCidade = encantando.find(r => r.cidadeOrigem === cidade && r.custoFinal > 0) ?? null;
+  // Melhor da cidade selecionada (normalizar para comparar 'FortSterling' === 'Fort Sterling')
+  const cidadeNorm = normalCity(cidade);
+  const melhorDiretoCidade = direto.find(r => normalCity(r.cidadeOrigem) === cidadeNorm && r.custoFinal > 0) ?? null;
+  const melhorEncCidade = encantando.find(r => normalCity(r.cidadeOrigem) === cidadeNorm && r.custoFinal > 0) ?? null;
   const usarEncCidade = (melhorEncCidade?.custoFinal ?? Infinity) < (melhorDiretoCidade?.custoFinal ?? Infinity);
   const melhorCidade = usarEncCidade ? melhorEncCidade : melhorDiretoCidade;
 
   // Se a melhor geral já é da cidade, não mostramos o bloco da cidade separado
-  const cidadeEMelhor = melhorGeral?.cidadeOrigem === cidade;
+  const cidadeEMelhor = normalCity(melhorGeral?.cidadeOrigem) === cidadeNorm;
 
   const nivelLabel = slotData.nivel ? `Nv ${slotData.nivel}` : '';
 
@@ -682,7 +688,7 @@ const EquipBuy = () => {
                   {resultadosDireto.map((r, i) => {
                     const semPreco = !r.custoFinal || r.custoFinal === 0;
                     const eMelhor = !semPreco && r.custoFinal === melhorDireto;
-                    const eCidade = r.cidadeOrigem === cidade;
+                    const eCidade = normalCity(r.cidadeOrigem) === normalCity(cidade);
                     return (
                       <tr key={`${r.tier}.${r.enchant}-${r.cidadeOrigem}`}
                         style={{ background: eMelhor ? 'rgba(76,175,80,0.06)' : eCidade ? 'rgba(255,183,77,0.04)' : i % 2 === 0 ? '#23232e' : '#1a1a22', opacity: semPreco ? 0.4 : 1 }}>
@@ -723,7 +729,7 @@ const EquipBuy = () => {
                 </thead>
                 <tbody>
                   {resultadosEncantando.map((r, i) => {
-                    const eCidade = r.cidadeOrigem === cidade;
+                    const eCidade = normalCity(r.cidadeOrigem) === normalCity(cidade);
                     return (
                       <tr key={`${r.tier}.${r.enchant}-enc-${i}`}
                         style={{ background: i === 0 ? 'rgba(76,175,80,0.06)' : eCidade ? 'rgba(255,183,77,0.04)' : i % 2 === 0 ? '#23232e' : '#1a1a22', color: '#e0e0e0' }}>
