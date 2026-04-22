@@ -117,13 +117,11 @@ const CONFIGS = {
     cityKey: 'bridgewatch',
     cityDisplay: 'Bridgewatch',
     rawAlt: 'pedra',
-    refinedAlt: 'pedra',
-    rawPlaceholder: 'stone',
-    refinedPlaceholder: 'stone',
-    buildRawId: (tier, level) =>
-      level === '0' ? `${tier}_ORE` : `${tier}_ORE_LEVEL${level}@${level}`,
-    buildRefinedId: (tier, level) =>
-      level === '0' ? `${tier}_STONEBLOCK` : `${tier}_STONEBLOCK@${level}`,
+    refinedAlt: 'bloco',
+    rawPlaceholder: 'rock',
+    refinedPlaceholder: 'stoneblock',
+    buildRawId: stdBuildId('_ROCK'),
+    buildRefinedId: stdBuildId('_STONEBLOCK'),
   },
 };
 
