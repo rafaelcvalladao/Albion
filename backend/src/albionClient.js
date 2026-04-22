@@ -6,6 +6,22 @@ function chunk(arr, size) {
   return out;
 }
 
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function fetchWithRetry(url, options = {}, maxRetries = 4) {
+  let delay = 2000;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(url, { headers: { Accept: 'application/json' }, ...options });
+    if (res.status !== 429) return res;
+    const retryAfter = parseInt(res.headers.get('Retry-After') || '0', 10);
+    const wait = retryAfter > 0 ? retryAfter * 1000 : delay;
+    await sleep(wait);
+    delay = Math.min(delay * 2, 15000);
+  }
+  // Última tentativa sem retry
+  return fetch(url, { headers: { Accept: 'application/json' }, ...options });
+}
+
 /**
  * Junta pedidos à API em chunks para evitar URI demasiado longa.
  */
@@ -15,7 +31,7 @@ export async function fetchPrices(itemIds, locations) {
   const merged = [];
   for (const part of chunk(unique, 80)) {
     const url = `${BASE}/prices/${part.join(',')}?locations=${encodeURIComponent(loc)}`;
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    const res = await fetchWithRetry(url);
     if (!res.ok) throw new Error(`Albion prices HTTP ${res.status}`);
     merged.push(...(await res.json()));
   }
@@ -26,9 +42,11 @@ export async function fetchHistory(itemIds, locations, timescale = 24) {
   const unique = [...new Set(itemIds.filter(Boolean))];
   const loc = Array.isArray(locations) ? locations.join(',') : locations;
   const merged = [];
-  for (const part of chunk(unique, 40)) {
-    const url = `${BASE}/history/${part.join(',')}?locations=${encodeURIComponent(loc)}&timescale=${timescale}`;
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+  const parts = chunk(unique, 40);
+  for (let i = 0; i < parts.length; i++) {
+    if (i > 0) await sleep(300);
+    const url = `${BASE}/history/${parts[i].join(',')}?locations=${encodeURIComponent(loc)}&timescale=${timescale}`;
+    const res = await fetchWithRetry(url);
     if (!res.ok) throw new Error(`Albion history HTTP ${res.status}`);
     merged.push(...(await res.json()));
   }
