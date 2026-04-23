@@ -381,11 +381,11 @@ async function processarRecurso(resource, body) {
       mpProduto = bestRoyalMax(iP, royalSell, royalSellDate, royalWeeklyAvg);
     }
 
-    // 2. Materiais: preço na cidade de destino (onde o refino ocorre)
+    // 2. Materiais: preço na cidade com bônus de refino do recurso (cfg.cityName)
+    const cidadeRefino = cfg.cityName;
     let mpTronco = null;
     let mpTabuaAnt = null;
-    if (mpProduto) {
-      const cidadeRefino = mpProduto.cidade;
+    {
       const kT = `${cityKey(cidadeRefino)}|${iT}`;
       const kA = `${cityKey(cidadeRefino)}|${iA}`;
       const pT = royalDc.get(kT) || (royalWeeklyAvg?.get(kT) ?? 0);
