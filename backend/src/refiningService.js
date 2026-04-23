@@ -351,20 +351,8 @@ async function processarRecurso(resource, body) {
     row.otimizado = otimizado;
     row.melhorLucro = otimizado;
 
-    // Melhor preço por material nas 5 cidades reais
-    // Materiais: menor preço de compra (sell order ou buy order conforme config)
-    // Produto refinado: maior sell order (vender pelo maior valor)
-    function bestRoyalMin(itemId, map, dateMap, fallback = null) {
-      let best = null;
-      for (const rc of ROYAL_NAMES) {
-        const k = `${cityKey(rc)}|${itemId}`;
-        const p = map.get(k) || (fallback?.get(k) ?? 0);
-        if (p > 0 && (!best || p < best.preco)) {
-          best = { cidade: rc, preco: p, data: dateMap.get(k) ?? null };
-        }
-      }
-      return best;
-    }
+    // Melhor preço nas 5 cidades reais:
+    // Produto: cidade com maior sell order min; Materiais: comprados na mesma cidade de destino
     function bestRoyalMax(itemId, map, dateMap, fallback = null) {
       let best = null;
       for (const rc of ROYAL_NAMES) {
@@ -376,9 +364,8 @@ async function processarRecurso(resource, body) {
       }
       return best;
     }
-    const mpTronco = bestRoyalMin(iT, royalDc, royalDcDate, royalWeeklyAvg);
-    const mpTabuaAnt = bestRoyalMin(iA, royalDc, royalDcDate, royalWeeklyAvg);
-    // Produto: quando dailyBonus > 0 usa melhor preço médio entre cidades reais
+
+    // 1. Encontra a cidade de destino com maior sell order min do produto
     let mpProduto;
     if (dailyBonus > 0) {
       let bestAvgProduto = null;
@@ -392,6 +379,19 @@ async function processarRecurso(resource, body) {
       mpProduto = bestAvgProduto;
     } else {
       mpProduto = bestRoyalMax(iP, royalSell, royalSellDate, royalWeeklyAvg);
+    }
+
+    // 2. Materiais: preço na cidade de destino (onde o refino ocorre)
+    let mpTronco = null;
+    let mpTabuaAnt = null;
+    if (mpProduto) {
+      const cidadeRefino = mpProduto.cidade;
+      const kT = `${cityKey(cidadeRefino)}|${iT}`;
+      const kA = `${cityKey(cidadeRefino)}|${iA}`;
+      const pT = royalDc.get(kT) || (royalWeeklyAvg?.get(kT) ?? 0);
+      const pA = royalDc.get(kA) || (royalWeeklyAvg?.get(kA) ?? 0);
+      if (pT > 0) mpTronco = { cidade: cidadeRefino, preco: pT, data: royalDcDate.get(kT) ?? null };
+      if (pA > 0) mpTabuaAnt = { cidade: cidadeRefino, preco: pA, data: royalDcDate.get(kA) ?? null };
     }
 
     let mpLucro = -9e8;
