@@ -119,29 +119,39 @@ function avgPriceMapFromHistory(hist) {
     const key = `${cityKey(entry.location)}|${entry.item_id}`;
     if (!entry.data || entry.data.length === 0) { avgMap.set(key, 0); continue; }
     const sorted = [...entry.data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    const last96h = sorted.slice(-96);
-    if (last96h.length === 0) { avgMap.set(key, 0); continue; }
-    const totalVol = last96h.reduce((s, d) => s + (d.item_count || 0), 0);
-    const totalSilver = last96h.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
-    avgMap.set(key, totalVol > 0 ? Math.round(totalSilver / totalVol) : 0);
+
+    // Preço médio: média simples dos avg_price nas horas com vendas
+    // Janelas progressivas: 72h → 7d (168h) → 14d (336h)
+    let avgPrice = 0;
+    for (const windowSize of [72, 168, 336]) {
+      const salesHours = sorted.slice(-windowSize).filter(d => (d.item_count || 0) > 0);
+      if (salesHours.length > 0) {
+        avgPrice = Math.round(salesHours.reduce((s, d) => s + (d.avg_price || 0), 0) / salesHours.length);
+        break;
+      }
+    }
+    avgMap.set(key, avgPrice);
   }
   return avgMap;
 }
 
-// Média semanal: 4 semanas (últimos 4 data-points com timescale=168) → fallback 1 semana
+// Média semanal: janela progressiva 1sem → 2sem → todas, excluindo semanas sem vendas
 function weeklyAvgMapFromHistory(hist) {
   const map = new Map();
   for (const entry of hist) {
     if (!entry.data || entry.data.length === 0) continue;
     const key = `${cityKey(entry.location)}|${entry.item_id}`;
     const sorted = [...entry.data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    const last4w = sorted.slice(-4);
-    const count4w = last4w.reduce((s, d) => s + (d.item_count || 0), 0);
-    const silver4w = last4w.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
-    const avg4w = count4w > 0 ? Math.round(silver4w / count4w) : 0;
-    const last1w = sorted[sorted.length - 1];
-    const avg1w = (last1w?.item_count || 0) > 0 ? Math.round(last1w.avg_price || 0) : 0;
-    const avg = avg4w || avg1w;
+
+    let avg = 0;
+    const maxWindows = [1, 2, sorted.length];
+    for (const w of maxWindows) {
+      const salesWeeks = sorted.slice(-w).filter(d => (d.item_count || 0) > 0);
+      if (salesWeeks.length > 0) {
+        avg = Math.round(salesWeeks.reduce((s, d) => s + (d.avg_price || 0), 0) / salesWeeks.length);
+        break;
+      }
+    }
     if (avg > 0) map.set(key, avg);
   }
   return map;
@@ -159,13 +169,13 @@ function volumeMapFromHistory(hist) {
     const sorted = [...entry.data].sort(
       (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
     );
-    const last96h = sorted.slice(-96);
-    if (last96h.length === 0) {
+    const last72h = sorted.slice(-72);
+    if (last72h.length === 0) {
       volMap.set(`${cid}|${it}`, 0);
       continue;
     }
-    const totalVol = last96h.reduce((s, d) => s + (d.item_count || 0), 0);
-    const avgVol = totalVol / 4;
+    const totalVol = last72h.reduce((s, d) => s + (d.item_count || 0), 0);
+    const avgVol = totalVol / 3;
     volMap.set(`${cid}|${it}`, Math.round(avgVol));
   }
   return volMap;

@@ -83,7 +83,7 @@ export async function fetchHistoryMarket(itemIds, locations) {
   const allChunks = chunk(unique, HISTORY_CHUNK_SIZE);
   const concurrency = HISTORY_CONCURRENCY;
 
-  // --- Fase 1: buscar histórico horário (96 horas, time-scale=1) ---
+  // Buscar histórico horário (time-scale=1)
   const merged = [];
   for (let i = 0; i < allChunks.length; i += concurrency) {
     const batch = allChunks.slice(i, i + concurrency);
@@ -114,79 +114,26 @@ export async function fetchHistoryMarket(itemIds, locations) {
     const sorted = [...entry.data].sort(
       (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
     );
-    const complete = sorted;
-    
-    // Usar últimas 96 horas (96 pontos de dados com time-scale=1)
-    const last96h = complete.slice(-96);
-    if (last96h.length === 0) {
-      continue;
+
+    // Vol.24h: soma das últimas 72h / 3
+    const last72h = sorted.slice(-72);
+    const totalCount72 = last72h.reduce((s, d) => s + (d.item_count || 0), 0);
+    const avgVol = totalCount72 / 3;
+
+    // Preço médio: média simples dos avg_price nas horas com vendas
+    // Janelas progressivas: 72h → 7d (168h) → 14d (336h)
+    let avgPrice = 0;
+    for (const windowSize of [72, 168, 336]) {
+      const salesHours = sorted.slice(-windowSize).filter(d => (d.item_count || 0) > 0);
+      if (salesHours.length > 0) {
+        avgPrice = Math.round(salesHours.reduce((s, d) => s + (d.avg_price || 0), 0) / salesHours.length);
+        break;
+      }
     }
-    const totalCount = last96h.reduce((s, d) => s + (d.item_count || 0), 0);
-    const totalSilver = last96h.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
-    const avgVol = totalCount / 4; // janela fixa de 96h = 4 dias
-    const avgPrice = totalCount > 0 ? Math.round(totalSilver / totalCount) : 0;
 
     const prev = volumeMap.get(key);
     if (!prev || avgVol > prev.volume) {
       volumeMap.set(key, { volume: avgVol, avgPrice });
-    }
-  }
-
-  // --- Fase 2: fallback semanal (4 semanas) para itens com volume 0 ---
-  const zeroVolumeIds = new Set();
-  for (const id of unique) {
-    // Checar se alguma localização retornou volume > 0
-    let hasVolume = false;
-    for (const [k, v] of volumeMap) {
-      if (k.startsWith(`${id}|`) && v.volume > 0) { hasVolume = true; break; }
-    }
-    if (!hasVolume) zeroVolumeIds.add(id);
-  }
-
-  if (zeroVolumeIds.size > 0) {
-    const fallbackIds = [...zeroVolumeIds];
-    const fallbackChunks = chunk(fallbackIds, HISTORY_CHUNK_SIZE);
-    const fallbackMerged = [];
-
-    for (let i = 0; i < fallbackChunks.length; i += concurrency) {
-      const batch = fallbackChunks.slice(i, i + concurrency);
-      const calls = batch.map(async (part) => {
-        const url = `https://www.albion-online-data.com/api/v2/stats/history/${part.join(',')}?locations=${encodeURIComponent(loc)}&time-scale=168`;
-        const res = await fetch(url, { headers: { Accept: 'application/json' } });
-        if (!res.ok) return [];
-        return res.json();
-      });
-
-      const results = await Promise.allSettled(calls);
-      for (const r of results) {
-        if (r.status === 'fulfilled' && Array.isArray(r.value)) fallbackMerged.push(...r.value);
-      }
-
-      if (i + concurrency < fallbackChunks.length) {
-        await new Promise((resolve) => setTimeout(resolve, HISTORY_THROTTLE_MS));
-      }
-    }
-
-    for (const entry of fallbackMerged) {
-      if (!entry.data || !Array.isArray(entry.data)) continue;
-      const key = `${entry.item_id}|${entry.location}`;
-
-      const sorted = [...entry.data].sort(
-        (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
-      );
-      // Cada data-point = 1 semana; remover o mais recente (parcial)
-      const complete = sorted.length > 1 ? sorted.slice(0, -1) : sorted;
-      const totalCount = complete.reduce((s, d) => s + (d.item_count || 0), 0);
-      const totalSilver = complete.reduce((s, d) => s + (d.avg_price || 0) * (d.item_count || 0), 0);
-      const weeks = complete.length || 1;
-      // Converter volume semanal para diário
-      const avgVol = totalCount / (weeks * 7);
-      const avgPrice = totalCount > 0 ? Math.round(totalSilver / totalCount) : 0;
-
-      const prev = volumeMap.get(key);
-      if (!prev || avgVol > prev.volume) {
-        volumeMap.set(key, { volume: avgVol, avgPrice });
-      }
     }
   }
 
