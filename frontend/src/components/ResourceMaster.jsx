@@ -51,6 +51,10 @@ function stdBuildId(suffix) {
   return (tier, level) => (level === '0' ? `${tier}${suffix}` : `${tier}${suffix}_LEVEL${level}`);
 }
 
+function encBuildId(suffix) {
+  return (tier, level) => (level === '0' ? `${tier}${suffix}` : `${tier}${suffix}@${level}`);
+}
+
 // ─── Configurações por recurso ───
 
 const CONFIGS = {
@@ -69,7 +73,7 @@ const CONFIGS = {
     rawPlaceholder: 'wood',
     refinedPlaceholder: 'plank',
     buildRawId: stdBuildId('_WOOD'),
-    buildRefinedId: stdBuildId('_PLANKS'),
+    buildRefinedId: encBuildId('_PLANKS'),
   },
   fiber: {
     specLabels: ['Fibra (T4)', 'Fibra (T5)', 'Fibra (T6)', 'Fibra (T7)', 'Fibra (T8)'],
@@ -82,7 +86,7 @@ const CONFIGS = {
     rawPlaceholder: 'fiber',
     refinedPlaceholder: 'cloth',
     buildRawId: stdBuildId('_FIBER'),
-    buildRefinedId: stdBuildId('_CLOTH'),
+    buildRefinedId: encBuildId('_CLOTH'),
   },
   leather: {
     specLabels: ['Couro (T4)', 'Couro (T5)', 'Couro (T6)', 'Couro (T7)', 'Couro (T8)'],
@@ -95,7 +99,7 @@ const CONFIGS = {
     rawPlaceholder: 'leather',
     refinedPlaceholder: 'leather',
     buildRawId: stdBuildId('_HIDE'),
-    buildRefinedId: stdBuildId('_LEATHER'),
+    buildRefinedId: encBuildId('_LEATHER'),
   },
   metal: {
     specLabels: ['Minério (T4)', 'Minério (T5)', 'Minério (T6)', 'Minério (T7)', 'Minério (T8)'],
@@ -108,7 +112,7 @@ const CONFIGS = {
     rawPlaceholder: 'metal',
     refinedPlaceholder: 'metal',
     buildRawId: stdBuildId('_ORE'),
-    buildRefinedId: stdBuildId('_METALBAR'),
+    buildRefinedId: encBuildId('_METALBAR'),
   },
   stone: {
     specLabels: ['Pedra (T4)', 'Pedra (T5)', 'Pedra (T6)', 'Pedra (T7)', 'Pedra (T8)'],
@@ -121,7 +125,7 @@ const CONFIGS = {
     rawPlaceholder: 'rock',
     refinedPlaceholder: 'stoneblock',
     buildRawId: stdBuildId('_ROCK'),
-    buildRefinedId: stdBuildId('_STONEBLOCK'),
+    buildRefinedId: encBuildId('_STONEBLOCK'),
   },
 };
 

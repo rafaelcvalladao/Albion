@@ -3,6 +3,7 @@ import { fetchHistory, fetchPrices } from './albionClient.js';
 // ─── Constantes compartilhadas ───
 
 export const NIVEIS = ['', '_LEVEL1@1', '_LEVEL2@2', '_LEVEL3@3', '_LEVEL4@4'];
+const NIVEIS_REF = ['', '@1', '@2', '@3', '@4'];
 
 const FOCO_BASE = { T4: 41, T5: 103, T6: 257, T7: 643, T8: 1607 };
 const FAMA_BASE = { T4: 22, T5: 56, T6: 140, T7: 350, T8: 875 };
@@ -102,13 +103,15 @@ function buildIdsForTier(tSel, rawSuffix, refinedSuffix) {
   const tAnt = tNum > 4 ? `T${tNum - 1}` : 'T3';
   const ids = [];
   const refinedIds = [];
-  for (const n of NIVEIS) {
+  for (let i = 0; i < NIVEIS.length; i++) {
+    const nRaw = NIVEIS[i];
+    const nRef = NIVEIS_REF[i];
     ids.push(
-      `${tSel}${rawSuffix}${n}`,
-      `${tSel}${refinedSuffix}${n}`,
-      tAnt === 'T3' ? `${tAnt}${refinedSuffix}` : `${tAnt}${refinedSuffix}${n}`,
+      `${tSel}${rawSuffix}${nRaw}`,
+      `${tSel}${refinedSuffix}${nRef}`,
+      tAnt === 'T3' ? `${tAnt}${refinedSuffix}` : `${tAnt}${refinedSuffix}${nRef}`,
     );
-    refinedIds.push(`${tSel}${refinedSuffix}${n}`);
+    refinedIds.push(`${tSel}${refinedSuffix}${nRef}`);
   }
   return { tAnt, ids, refinedIds };
 }
@@ -464,13 +467,15 @@ async function estrategiaCompletaRecurso(resource, body) {
   const refinedIds = [];
   for (const t of ['T4', 'T5', 'T6', 'T7', 'T8']) {
     const tAnt = parseInt(t[1], 10) > 4 ? `T${parseInt(t[1], 10) - 1}` : 'T3';
-    for (const n of NIVEIS) {
+    for (let i = 0; i < NIVEIS.length; i++) {
+      const nRaw = NIVEIS[i];
+      const nRef = NIVEIS_REF[i];
       allIds.push(
-        `${t}${cfg.rawSuffix}${n}`,
-        `${t}${cfg.refinedSuffix}${n}`,
-        tAnt === 'T3' ? `${tAnt}${cfg.refinedSuffix}` : `${tAnt}${cfg.refinedSuffix}${n}`,
+        `${t}${cfg.rawSuffix}${nRaw}`,
+        `${t}${cfg.refinedSuffix}${nRef}`,
+        tAnt === 'T3' ? `${tAnt}${cfg.refinedSuffix}` : `${tAnt}${cfg.refinedSuffix}${nRef}`,
       );
-      refinedIds.push(`${t}${cfg.refinedSuffix}${n}`);
+      refinedIds.push(`${t}${cfg.refinedSuffix}${nRef}`);
     }
   }
 
@@ -528,13 +533,14 @@ async function estrategiaCompletaRecurso(resource, body) {
     const tAnt = parseInt(t[1], 10) > 4 ? `T${parseInt(t[1], 10) - 1}` : 'T3';
     for (let idxN = 0; idxN < NIVEIS.length; idxN++) {
       const n = NIVEIS[idxN];
+      const nRef = NIVEIS_REF[idxN];
       const enc = n ? n.split('@')[0].replace('_LEVEL', '.') : '.0';
       const [qt, fat] = obterParametrosTabela(t, enc);
       const txF = (taxaU / 100) * fat;
 
       const iT = `${t}${cfg.rawSuffix}${n}`;
-      const iP = `${t}${cfg.refinedSuffix}${n}`;
-      const iA = tAnt === 'T3' ? `${tAnt}${cfg.refinedSuffix}` : `${tAnt}${cfg.refinedSuffix}${n}`;
+      const iP = `${t}${cfg.refinedSuffix}${nRef}`;
+      const iA = tAnt === 'T3' ? `${tAnt}${cfg.refinedSuffix}` : `${tAnt}${cfg.refinedSuffix}${nRef}`;
 
       // Lucro local (cidade principal)
       const fsT = getDc(cityName, iT);
@@ -662,11 +668,13 @@ async function horariosUtcRecurso(resource, tier) {
   const tNum = parseInt(tSel[1], 10);
   const tAnt = tNum > 4 ? `T${tNum - 1}` : 'T3';
   const ids = [];
-  for (const n of NIVEIS) {
+  for (let i = 0; i < NIVEIS.length; i++) {
+    const nRaw = NIVEIS[i];
+    const nRef = NIVEIS_REF[i];
     ids.push(
-      `${tSel}${cfg.rawSuffix}${n}`,
-      `${tSel}${cfg.refinedSuffix}${n}`,
-      tAnt === 'T3' ? `${tAnt}${cfg.refinedSuffix}` : `${tAnt}${cfg.refinedSuffix}${n}`,
+      `${tSel}${cfg.rawSuffix}${nRaw}`,
+      `${tSel}${cfg.refinedSuffix}${nRef}`,
+      tAnt === 'T3' ? `${tAnt}${cfg.refinedSuffix}` : `${tAnt}${cfg.refinedSuffix}${nRef}`,
     );
   }
 
