@@ -325,9 +325,19 @@ export async function buscarEquipamentoPorNivelEfetivo({ equipamentoNome, nivelE
       direto.push(melhorPorCidade[cidade]);
     }
   }
+  // Manter apenas o mais barato por cidade
+  const melhorGlobal = {};
+  for (const item of direto) {
+    const c = item.cidadeOrigem;
+    if (!melhorGlobal[c] || (item.custoFinal > 0 && (melhorGlobal[c].custoFinal === 0 || item.custoFinal < melhorGlobal[c].custoFinal))) {
+      melhorGlobal[c] = item;
+    }
+  }
+  direto.length = 0;
+  for (const cidade of TODAS_CIDADES) {
+    if (melhorGlobal[cidade]) direto.push(melhorGlobal[cidade]);
+  }
   direto.sort((a, b) => {
-    if (a.tier !== b.tier) return b.tier.localeCompare(a.tier);
-    if (a.enchant !== b.enchant) return a.enchant - b.enchant;
     if (a.custoFinal === 0 && b.custoFinal !== 0) return 1;
     if (b.custoFinal === 0 && a.custoFinal !== 0) return -1;
     return a.custoFinal - b.custoFinal;
