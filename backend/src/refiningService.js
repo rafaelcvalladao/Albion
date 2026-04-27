@@ -324,7 +324,9 @@ async function processarRecurso(resource, body) {
     };
 
     const getProdPreco = (cityName, itemId) =>
-      dailyBonus > 0 ? (avgMap.get(`${cityKey(cityName)}|${itemId}`) ?? 0) : getDv(cityName, itemId);
+      dailyBonus > 0
+        ? (avgMap.get(`${cityKey(cityName)}|${itemId}`) || weeklyAvg.get(`${cityKey(cityName)}|${itemId}`) || getDv(cityName, itemId) || 0)
+        : getDv(cityName, itemId);
 
     function calcLucro(t, a, v) {
       if (t && a && v) return v * taxaVendaNota - ((t * qt + a) * (1 - rrr) + txF);
@@ -384,7 +386,7 @@ async function processarRecurso(resource, body) {
       let bestAvgProduto = null;
       for (const rc of ROYAL_NAMES) {
         const k = `${cityKey(rc)}|${iP}`;
-        const p = royalAvgMap.get(k) ?? 0;
+        const p = royalAvgMap.get(k) || royalSell.get(k) || (royalWeeklyAvg?.get(k) ?? 0);
         if (p > 0 && (!bestAvgProduto || p > bestAvgProduto.preco)) {
           bestAvgProduto = { cidade: rc, preco: p, data: royalSellDate.get(k) ?? null };
         }
@@ -394,17 +396,20 @@ async function processarRecurso(resource, body) {
       mpProduto = bestRoyalMax(iP, royalSell, royalSellDate, royalWeeklyAvg);
     }
 
-    // 2. Materiais: preço na cidade com bônus de refino do recurso (cfg.cityName)
-    const cidadeRefino = cfg.cityName;
+    // 2. Materiais: menor preço entre as 5 cidades reais (itens encantados podem não estar na cidade de refino)
     let mpTronco = null;
     let mpTabuaAnt = null;
-    {
-      const kT = `${cityKey(cidadeRefino)}|${iT}`;
-      const kA = `${cityKey(cidadeRefino)}|${iA}`;
+    for (const rc of ROYAL_NAMES) {
+      const kT = `${cityKey(rc)}|${iT}`;
       const pT = royalDc.get(kT) || (royalWeeklyAvg?.get(kT) ?? 0);
+      if (pT > 0 && (!mpTronco || pT < mpTronco.preco)) {
+        mpTronco = { cidade: rc, preco: pT, data: royalDcDate.get(kT) ?? null };
+      }
+      const kA = `${cityKey(rc)}|${iA}`;
       const pA = royalDc.get(kA) || (royalWeeklyAvg?.get(kA) ?? 0);
-      if (pT > 0) mpTronco = { cidade: cidadeRefino, preco: pT, data: royalDcDate.get(kT) ?? null };
-      if (pA > 0) mpTabuaAnt = { cidade: cidadeRefino, preco: pA, data: royalDcDate.get(kA) ?? null };
+      if (pA > 0 && (!mpTabuaAnt || pA < mpTabuaAnt.preco)) {
+        mpTabuaAnt = { cidade: rc, preco: pA, data: royalDcDate.get(kA) ?? null };
+      }
     }
 
     let mpLucro = -9e8;
@@ -520,8 +525,12 @@ async function estrategiaCompletaRecurso(resource, body) {
   const getDv = (c, it) => dv.get(`${cityKey(c)}|${it}`) || weeklyAvg.get(`${cityKey(c)}|${it}`) || 0;
   const getRoyalDc = (c, it) => royalDc.get(`${cityKey(c)}|${it}`) || royalWeeklyAvg.get(`${cityKey(c)}|${it}`) || 0;
   const getRoyalDv = (c, it) => royalDv.get(`${cityKey(c)}|${it}`) || royalWeeklyAvg.get(`${cityKey(c)}|${it}`) || 0;
-  const getProdLocal = (c, it) => dailyBonus > 0 ? (avgData.get(`${cityKey(c)}|${it}`) ?? 0) : getDv(c, it);
-  const getProdRoyal = (c, it) => dailyBonus > 0 ? (royalAvgData.get(`${cityKey(c)}|${it}`) ?? 0) : getRoyalDv(c, it);
+  const getProdLocal = (c, it) => dailyBonus > 0
+    ? (avgData.get(`${cityKey(c)}|${it}`) || weeklyAvg.get(`${cityKey(c)}|${it}`) || getDv(c, it) || 0)
+    : getDv(c, it);
+  const getProdRoyal = (c, it) => dailyBonus > 0
+    ? (royalAvgData.get(`${cityKey(c)}|${it}`) || royalWeeklyAvg.get(`${cityKey(c)}|${it}`) || getRoyalDv(c, it) || 0)
+    : getRoyalDv(c, it);
   const cityName = cfg.cityName;
   const cfgCities = cfg.cities || [{ name: cfg.cityName }];
   const cfgCityNames = cfgCities.map((c) => c.name);

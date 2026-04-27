@@ -741,7 +741,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                                     </div>
                                   </td>
                                   <td className={profitClass(cd?.lucro)}>
-                                    {Number.isFinite(cd?.lucro)
+                                    {Number.isFinite(cd?.lucro) && cd.lucro > -8e8
                                       ? cd.lucro.toLocaleString('pt-PT', {
                                           maximumFractionDigits: 0,
                                         })
@@ -818,7 +818,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                           .join('-')}
                       </span>
                       <span className={profitClass(row.otimizado)}>
-                        {Number.isFinite(row.otimizado)
+                        {Number.isFinite(row.otimizado) && row.otimizado > -8e8
                           ? `${row.otimizado.toLocaleString('pt-PT', { maximumFractionDigits: 0 })} prata`
                           : '—'}
                       </span>
