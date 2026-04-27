@@ -52,7 +52,7 @@ function stdBuildId(suffix) {
 }
 
 function encBuildId(suffix) {
-  return (tier, level) => (level === '0' ? `${tier}${suffix}` : `${tier}${suffix}@${level}`);
+  return (tier, level) => (level === '0' ? `${tier}${suffix}` : `${tier}${suffix}_LEVEL${level}`);
 }
 
 // ─── Configurações por recurso ───

@@ -3,7 +3,7 @@ import { fetchHistory, fetchPrices } from './albionClient.js';
 // ─── Constantes compartilhadas ───
 
 export const NIVEIS = ['', '_LEVEL1@1', '_LEVEL2@2', '_LEVEL3@3', '_LEVEL4@4'];
-const NIVEIS_REF = ['', '@1', '@2', '@3', '@4'];
+const NIVEIS_REF = ['', '_LEVEL1@1', '_LEVEL2@2', '_LEVEL3@3', '_LEVEL4@4'];
 
 const FOCO_BASE = { T4: 41, T5: 103, T6: 257, T7: 643, T8: 1607 };
 const FAMA_BASE = { T4: 22, T5: 56, T6: 140, T7: 350, T8: 875 };
