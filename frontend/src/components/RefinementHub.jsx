@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { hubStrategy } from '../api.js';
 import { profitClass } from '../utils/profit.js';
 
@@ -42,7 +42,35 @@ function formatPeak(p) {
   return `${String(p.start).padStart(2, '0')}h–${String(p.end).padStart(2, '0')}h`;
 }
 
-function HubTable({ title, rows, valueKey, valueLabel, valueFormat, accent }) {
+function HubTable({ title, rows, getValue, getPercent, valueLabel, valueFormat, accent }) {
+  const [sortCol, setSortCol] = useState('value');
+  const [sortAsc, setSortAsc] = useState(false);
+
+  const sortedRows = useMemo(() => {
+    if (!rows?.length) return [];
+    return [...rows].sort((a, b) => {
+      let va, vb;
+      if (sortCol === 'value') {
+        va = getValue(a) ?? -Infinity;
+        vb = getValue(b) ?? -Infinity;
+      } else if (sortCol === 'pct') {
+        va = getPercent(a) ?? -Infinity;
+        vb = getPercent(b) ?? -Infinity;
+      } else {
+        va = a.volume ?? 0;
+        vb = b.volume ?? 0;
+      }
+      return sortAsc ? va - vb : vb - va;
+    });
+  }, [rows, sortCol, sortAsc, getValue, getPercent]);
+
+  function handleSort(col) {
+    if (sortCol === col) setSortAsc((v) => !v);
+    else { setSortCol(col); setSortAsc(false); }
+  }
+
+  const ind = (col) => sortCol !== col ? '' : sortAsc ? ' ↑' : ' ↓';
+
   if (!rows?.length) return null;
   return (
     <div className="strategy-block">
@@ -60,14 +88,22 @@ function HubTable({ title, rows, valueKey, valueLabel, valueFormat, accent }) {
             <tr>
               <th>Item</th>
               <th>Recurso</th>
-              <th>{valueLabel}</th>
-              <th>Vol. 24h</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('value')}>
+                {valueLabel}{ind('value')}
+              </th>
+              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('pct')}>
+                %{ind('pct')}
+              </th>
+              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('vol')}>
+                Vol. 24h{ind('vol')}
+              </th>
               <th>Pico (UTC-3)</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => {
-              const val = r[valueKey];
+            {sortedRows.map((r, i) => {
+              const val = getValue(r);
+              const pct = getPercent(r);
               const imgId = buildId(r.resource, r.item);
               return (
                 <tr key={`${r.resource}-${r.item}-${i}`}>
@@ -93,6 +129,12 @@ function HubTable({ title, rows, valueKey, valueLabel, valueFormat, accent }) {
                   >
                     {valueFormat(val)}
                   </td>
+                  <td
+                    className={pct != null ? profitClass(pct) : ''}
+                    style={{ fontWeight: 700, textAlign: 'center', fontSize: '0.95rem' }}
+                  >
+                    {pct != null ? `${pct.toFixed(1)}%` : '—'}
+                  </td>
                   <td className="tabular-nums strategy-table-vol">
                     {r.volume != null ? r.volume.toLocaleString('pt-PT') : '—'}
                   </td>
@@ -116,17 +158,26 @@ export default function RefinementHub() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
-  async function handleFetch() {
+  async function fetchData(opts) {
     setLoading(true);
     setError(null);
     try {
-      const result = await hubStrategy({ buyOrder, dailyBonus });
+      const result = await hubStrategy(opts);
       setData(result);
     } catch (e) {
       setError(e.message || String(e));
     } finally {
       setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    fetchData({ buyOrder: false, dailyBonus: 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleRefresh() {
+    fetchData({ buyOrder, dailyBonus });
   }
 
   return (
@@ -164,10 +215,10 @@ export default function RefinementHub() {
           <button
             type="button"
             className="btn btn-primary"
-            onClick={handleFetch}
+            onClick={handleRefresh}
             disabled={loading}
           >
-            {loading ? 'A carregar…' : 'Buscar'}
+            {loading ? 'A carregar…' : 'Refresh'}
           </button>
         </div>
         {error && (
@@ -177,16 +228,17 @@ export default function RefinementHub() {
 
       {loading && (
         <p className="mono strategy-hint" style={{ textAlign: 'center', padding: '2rem' }}>
-          Buscando dados de todos os recursos… pode demorar alguns segundos.
+          Buscando dados de todos os recursos…
         </p>
       )}
 
-      {data && (
+      {data && !loading && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1rem' }}>
           <HubTable
             title="Sem Foco — Top Lucro Local"
             rows={data.topSemFoco}
-            valueKey="lucro"
+            getValue={(r) => r.lucro}
+            getPercent={(r) => (r.custoLocal > 0 && r.lucro > -8e8) ? (r.lucro / r.custoLocal) * 100 : null}
             valueLabel="Lucro"
             valueFormat={(v) => v > -8e8 ? Math.round(v).toLocaleString('pt-PT') : '—'}
             accent="#4CAF50"
@@ -194,7 +246,8 @@ export default function RefinementHub() {
           <HubTable
             title="Com Foco — Top Lucro / Foco"
             rows={data.topComFoco}
-            valueKey="lucroPorFoco"
+            getValue={(r) => r.focoUnidades > 0 ? r.lucroComFoco / r.focoUnidades : -9e8}
+            getPercent={(r) => (r.custoComFoco > 0 && r.lucroComFoco > -8e8) ? (r.lucroComFoco / r.custoComFoco) * 100 : null}
             valueLabel="Lucro/Foco"
             valueFormat={(v) => v > -8e8 ? v.toFixed(2) : '—'}
             accent="#2196F3"
@@ -204,7 +257,7 @@ export default function RefinementHub() {
 
       {!data && !loading && (
         <p style={{ textAlign: 'center', color: '#666', marginTop: '3rem', fontSize: '0.95rem' }}>
-          Clique em "Buscar" para carregar os melhores materiais para refinar.
+          Carregando…
         </p>
       )}
     </div>

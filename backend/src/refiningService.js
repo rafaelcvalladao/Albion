@@ -210,7 +210,7 @@ function buildPeakHourMap(histData) {
   for (const [key, buckets] of cityItemHours) {
     const avg = buckets.map(b => (b.count > 0 ? b.sum / b.count : 0));
     const hoursWithData = buckets.filter(b => b.count > 0).length;
-    if (hoursWithData < 8) { result.set(key, null); continue; }
+    if (hoursWithData < 6) { result.set(key, null); continue; }
 
     let best = 0;
     let bestScore = 0;
@@ -221,7 +221,7 @@ function buildPeakHourMap(histData) {
     }
 
     const meanHourly = avg.reduce((s, v) => s + v, 0) / 24;
-    if (meanHourly === 0 || bestScore / WINDOW < meanHourly * 1.3) {
+    if (meanHourly === 0 || bestScore / WINDOW < meanHourly * 1.2) {
       result.set(key, null);
       continue;
     }
@@ -632,6 +632,7 @@ async function estrategiaCompletaRecurso(resource, body) {
       const focoUnidades = (FOCO_BASE[t] ?? 250) * MULT_ENCHANT[idxN] * 0.5 ** ((reducaoGeral + reducaoTierSpec) / 10000);
 
       const custoLocal = fsT && fsA ? (fsT * qt + fsA) * (1 - rrrFoco) + txF : null;
+      const custoComFoco = fsT && fsA ? (fsT * qt + fsA) * (1 - rrrConFoco) + txF : null;
       const custoOpt = optCfg.minR && optCfg.minP ? (optCfg.minR * qt + optCfg.minP) * (1 - rrrFoco) + txF : null;
       const custoOT = optRoyal.minR && optRoyal.minP ? (optRoyal.minR * qt + optRoyal.minP) * (1 - rrrFoco) + txF : null;
 
@@ -682,7 +683,9 @@ async function estrategiaCompletaRecurso(resource, body) {
           lucroPorFoco: lucroPorFoco ?? -9e8,
           lucroPorFocoOpt: lucroPorFocoOpt ?? -9e8,
           lucroPorFocoOT: lucroPorFocoOT ?? -9e8,
+          lucroComFoco: lucroLocalComFoco ?? -9e8,
           custoLocal: custoLocal ?? null,
+          custoComFoco: custoComFoco ?? null,
           custoOpt: custoOpt ?? null,
           custoOT: custoOT ?? null,
           peakHoursLocal: getPeak(cityName, iP),
@@ -763,8 +766,8 @@ export async function hubStrategy(body) {
     .slice(0, 15);
 
   const topComFoco = [...all]
-    .filter(i => i.lucroPorFoco > -8e8)
-    .sort((a, b) => b.lucroPorFoco - a.lucroPorFoco)
+    .filter(i => i.lucroComFoco > -8e8 && i.focoUnidades > 0)
+    .sort((a, b) => (b.lucroComFoco / b.focoUnidades) - (a.lucroComFoco / a.focoUnidades))
     .slice(0, 15);
 
   return { topSemFoco, topComFoco };
