@@ -18,9 +18,10 @@ import './App.css';
 
 const MarketAnalyzer = lazy(() => import('./components/MarketAnalyzer.jsx'));
 const EquipBuy = lazy(() => import('./components/EquipBuy.jsx'));
+const RefinementHub = lazy(() => import('./components/RefinementHub.jsx'));
 
 export default function App() {
-  const [tab, setTab] = useState('wood');
+  const [tab, setTab] = useState('hub');
   const [authenticated, setAuthenticated] = useState(
     () => sessionStorage.getItem('albion_token') != null,
   );
@@ -51,6 +52,13 @@ export default function App() {
           <p className="app-tagline">Refino e mercado</p>
         </div>
         <nav className="tabs" aria-label="Secções">
+          <button
+            type="button"
+            className={tab === 'hub' ? 'tab active' : 'tab'}
+            onClick={() => setTab('hub')}
+          >
+            Hub
+          </button>
           <button
             type="button"
             className={tab === 'wood' ? 'tab active' : 'tab'}
@@ -103,6 +111,11 @@ export default function App() {
         </nav>
       </header>
       <main className="app-main">
+        {tab === 'hub' && (
+          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando...</div>}>
+            <RefinementHub />
+          </Suspense>
+        )}
         {tab === 'wood' && (
           <ResourceMaster resource="wood" calculateFn={calculateWood} strategyFn={strategyWood} />
         )}

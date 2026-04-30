@@ -712,12 +712,62 @@ async function estrategiaCompletaRecurso(resource, body) {
   const sortDescFama = (a, b) => b.fama - a.fama;
   const top = (arr, n = 8) => [...arr].sort(sortDesc).slice(0, n);
   const topFama = (arr, n = 8) => [...arr].sort(sortDescFama).slice(0, n);
+  const sortedFoco = [...fsFoco].sort(sortDesc);
 
   return {
-    fsLocalFoco: top(fsFoco),
+    fsLocalFoco: sortedFoco.slice(0, 8),
+    fsLocalFocoAll: sortedFoco,
     fsLocalFama: topFama(fsFama),
     fsLocalFamaAll: fsFama,
   };
+}
+
+// ─── Hub: estratégia consolidada de todos os recursos ───
+
+const RESOURCE_LABELS = {
+  wood: 'Madeira', fiber: 'Fibra', leather: 'Couro', metal: 'Minério', stone: 'Pedra',
+};
+
+export async function hubStrategy(body) {
+  const safeBody = {
+    taxaNpc: '800',
+    taxaVenda: '6.5',
+    spec: {},
+    buyOrder: body.buyOrder ?? false,
+    dailyBonus: body.dailyBonus ?? 0,
+    foco: false,
+  };
+
+  const [wood, fiber, leather, metal, stone] = await Promise.all([
+    estrategiaCompletaRecurso('wood', safeBody),
+    estrategiaCompletaRecurso('fiber', safeBody),
+    estrategiaCompletaRecurso('leather', safeBody),
+    estrategiaCompletaRecurso('metal', safeBody),
+    estrategiaCompletaRecurso('stone', safeBody),
+  ]);
+
+  const tag = (items, resource) =>
+    items.map(i => ({ ...i, resource, resourceLabel: RESOURCE_LABELS[resource] }));
+
+  const all = [
+    ...tag(wood.fsLocalFocoAll, 'wood'),
+    ...tag(fiber.fsLocalFocoAll, 'fiber'),
+    ...tag(leather.fsLocalFocoAll, 'leather'),
+    ...tag(metal.fsLocalFocoAll, 'metal'),
+    ...tag(stone.fsLocalFocoAll, 'stone'),
+  ];
+
+  const topSemFoco = [...all]
+    .filter(i => i.lucro > -8e8)
+    .sort((a, b) => b.lucro - a.lucro)
+    .slice(0, 15);
+
+  const topComFoco = [...all]
+    .filter(i => i.lucroPorFoco > -8e8)
+    .sort((a, b) => b.lucroPorFoco - a.lucroPorFoco)
+    .slice(0, 15);
+
+  return { topSemFoco, topComFoco };
 }
 
 // ─── Horários UTC (genérico para qualquer recurso) ───

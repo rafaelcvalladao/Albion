@@ -68,6 +68,10 @@ export const strategyMetal = metal.strategy;
 export const calculateStone = stone.calculate;
 export const strategyStone = stone.strategy;
 
+export function hubStrategy(body) {
+  return request('/api/hub/strategy', { method: 'POST', body: JSON.stringify(body) });
+}
+
 export function marketCategories() {
   return request('/api/market/categories');
 }

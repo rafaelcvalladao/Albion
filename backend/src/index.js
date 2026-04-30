@@ -22,6 +22,7 @@ import {
   estrategiaCompletaMetal,
   processarStone,
   estrategiaCompleteStone,
+  hubStrategy,
 } from './refiningService.js';
 
 const app = express();
@@ -88,6 +89,9 @@ for (const { path, calcFn, stratFn } of refiningRoutes) {
     wrap((req) => stratFn(req.body || {})),
   );
 }
+
+/** Hub: top materiais de refino de todos os recursos */
+app.post('/api/hub/strategy', wrap((req) => hubStrategy(req.body || {})));
 
 /** Últimas atualizações UTC por item (tier selecionado) — só wood por enquanto */
 app.get(
