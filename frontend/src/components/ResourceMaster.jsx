@@ -227,6 +227,11 @@ function StrategyTable({
     if (!custo || custo <= 0 || lucro <= -8e8) return null;
     return (lucro / custo) * 100;
   }
+  function getPeak(r) {
+    if (lucroMode === 'opt') return r.peakHoursOpt ?? r.peakHoursLocal ?? null;
+    if (lucroMode === 'ot') return r.peakHoursOT ?? r.peakHoursLocal ?? null;
+    return r.peakHoursLocal ?? null;
+  }
 
   const handleHeaderClick = (column) => {
     if (sortColumn === column) setSortAsc(!sortAsc);
@@ -282,6 +287,7 @@ function StrategyTable({
               <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('volume')}>
                 Vol. 24h{ind('volume')}
               </th>
+              {kind === 'foco' && <th>Pico (UTC-3)</th>}
             </tr>
           </thead>
           <tbody>
@@ -321,6 +327,16 @@ function StrategyTable({
                 <td className="tabular-nums strategy-table-vol">
                   {getVol(r)?.toLocaleString('pt-PT') ?? '—'}
                 </td>
+                {kind === 'foco' && (() => {
+                  const p = getPeak(r);
+                  return (
+                    <td className="tabular-nums" style={{ textAlign: 'center', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                      {p != null
+                        ? `${String(p.start).padStart(2, '0')}h–${String(p.end).padStart(2, '0')}h`
+                        : '—'}
+                    </td>
+                  );
+                })()}
               </tr>
             ))}
           </tbody>

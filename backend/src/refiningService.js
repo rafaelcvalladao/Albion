@@ -184,6 +184,54 @@ function volumeMapFromHistory(hist) {
   return volMap;
 }
 
+function buildPeakHourMap(histData) {
+  const cityItemHours = new Map(); // "citykey|item_id" -> Array(24) of { sum, count }
+
+  for (const entry of histData) {
+    if (!entry.data || !entry.item_id || entry.data.length === 0) continue;
+    const key = `${cityKey(entry.location)}|${entry.item_id}`;
+    if (!cityItemHours.has(key)) {
+      cityItemHours.set(key, Array.from({ length: 24 }, () => ({ sum: 0, count: 0 })));
+    }
+    const buckets = cityItemHours.get(key);
+    for (const pt of entry.data) {
+      if (!pt.item_count || pt.item_count <= 0) continue;
+      const date = new Date(pt.timestamp);
+      if (isNaN(date.getTime())) continue;
+      const h = ((date.getUTCHours() - 3) + 24) % 24;
+      buckets[h].sum += pt.item_count;
+      buckets[h].count++;
+    }
+  }
+
+  const result = new Map();
+  const WINDOW = 3;
+
+  for (const [key, buckets] of cityItemHours) {
+    const avg = buckets.map(b => (b.count > 0 ? b.sum / b.count : 0));
+    const hoursWithData = buckets.filter(b => b.count > 0).length;
+    if (hoursWithData < 8) { result.set(key, null); continue; }
+
+    let best = 0;
+    let bestScore = 0;
+    for (let h = 0; h < 24; h++) {
+      let score = 0;
+      for (let j = 0; j < WINDOW; j++) score += avg[(h + j) % 24];
+      if (score > bestScore) { bestScore = score; best = h; }
+    }
+
+    const meanHourly = avg.reduce((s, v) => s + v, 0) / 24;
+    if (meanHourly === 0 || bestScore / WINDOW < meanHourly * 1.3) {
+      result.set(key, null);
+      continue;
+    }
+
+    result.set(key, { start: best, end: (best + WINDOW) % 24 });
+  }
+
+  return result;
+}
+
 function convertToUTC3(isoDate) {
   if (!isoDate) return null;
   const dateStr = String(isoDate);
@@ -502,6 +550,7 @@ async function estrategiaCompletaRecurso(resource, body) {
   const royalVolData = volumeMapFromHistory(royalHist);
   const royalAvgData = avgPriceMapFromHistory(royalHist);
   const royalWeeklyAvg = weeklyAvgMapFromHistory(royalWeeklyHist);
+  const peakHours = buildPeakHourMap(royalHist);
 
   const dc = new Map();
   const dv = new Map();
@@ -531,6 +580,7 @@ async function estrategiaCompletaRecurso(resource, body) {
   const getProdRoyal = (c, it) => dailyBonus > 0
     ? (royalAvgData.get(`${cityKey(c)}|${it}`) || royalWeeklyAvg.get(`${cityKey(c)}|${it}`) || getRoyalDv(c, it) || 0)
     : getRoyalDv(c, it);
+  const getPeak = (city, itemId) => peakHours.get(`${cityKey(city)}|${itemId}`) ?? null;
   const cityName = cfg.cityName;
   const cfgCities = cfg.cities || [{ name: cfg.cityName }];
   const cfgCityNames = cfgCities.map((c) => c.name);
@@ -635,6 +685,9 @@ async function estrategiaCompletaRecurso(resource, body) {
           custoLocal: custoLocal ?? null,
           custoOpt: custoOpt ?? null,
           custoOT: custoOT ?? null,
+          peakHoursLocal: getPeak(cityName, iP),
+          peakHoursOpt: optCfg.bestCity ? getPeak(optCfg.bestCity, iP) : null,
+          peakHoursOT: optRoyal.bestCity ? getPeak(optRoyal.bestCity, iP) : null,
         });
         const lucroFamaLocal = fsT && fsA && fsP
           ? fsP * taxaVendaNota - ((fsT * qt + fsA) * (1 - rrrFama) + txF)
