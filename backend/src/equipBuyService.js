@@ -259,9 +259,10 @@ export async function buscarEquipamentoPorNivelEfetivo({ equipamentoNome, nivelE
     return { direto: [], encantando: [] };
   }
 
-  // sell_price_min por item+cidade
+  // sell_price_min por item+cidade, filtrando pela qualidade solicitada
   const precoMap = {};
   for (const p of precos) {
+    if (Number(p.quality) !== qualidadeAPI) continue;
     const price = Number(p.sell_price_min) || 0;
     if (!price) continue;
     const key = `${p.item_id}|${p.city}`;
@@ -273,16 +274,21 @@ export async function buscarEquipamentoPorNivelEfetivo({ equipamentoNome, nivelE
   const avgMapDireto = buildAvgMap(histDireto);
 
   // Retorna entry com preço para um item+cidade.
-  // Prioridade: sell fresco (≤6h) → média histórica → sell desatualizado
+  // Normal: fresco → média histórica → desatualizado
+  // Outras qualidades: fresco → desatualizado (histórico agrega todas as qualidades, não é confiável)
   const getEntryDireto = (itemId, city) => {
     const sellKey = `${itemId}|${city}`;
     const entry = precoMap[sellKey] ?? null;
-    const avg = avgMapDireto.get(`${itemId}|${cityKey(city)}`);
-    const avgPreco = avg?.avg4w || avg?.avg1w || 0;
 
     if (entry && !isPriceStale(entry.data)) return entry;
-    if (avgPreco > 0) return { preco: avgPreco, data: '', quality: qualidadeAPI };
-    return entry ?? null; // sell desatualizado como último recurso
+
+    if (qualidadeAPI === 1) {
+      const avg = avgMapDireto.get(`${itemId}|${cityKey(city)}`);
+      const avgPreco = avg?.avg4w || avg?.avg1w || 0;
+      if (avgPreco > 0) return { preco: avgPreco, data: '', quality: qualidadeAPI };
+    }
+
+    return entry ?? null;
   };
 
   // Direto: uma linha por cidade por combinação
