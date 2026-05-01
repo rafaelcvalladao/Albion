@@ -48,11 +48,11 @@ function formatTimeAgo(isoDate) {
 // ─── Build ID padrão e especial (stone) ───
 
 function stdBuildId(suffix) {
-  return (tier, level) => (level === '0' ? `${tier}${suffix}` : `${tier}${suffix}_LEVEL${level}`);
+  return (tier, level) => (level === '0' ? `${tier}${suffix}` : `${tier}${suffix}_LEVEL${level}@${level}`);
 }
 
 function encBuildId(suffix) {
-  return (tier, level) => (level === '0' ? `${tier}${suffix}` : `${tier}${suffix}_LEVEL${level}`);
+  return (tier, level) => (level === '0' ? `${tier}${suffix}` : `${tier}${suffix}_LEVEL${level}@${level}`);
 }
 
 // ─── Configurações por recurso ───
@@ -728,7 +728,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                                     style={{ textAlign: 'center' }}
                                   >
                                     <div>
-                                      {cd?.tronco?.toLocaleString('pt-PT') ?? '—'}
+                                      {cd?.tronco ? cd.tronco.toLocaleString('pt-PT') : '—'}
                                     </div>
                                     <div style={{ fontSize: '0.85em', color: '#999' }}>
                                       {formatTimeAgo(cd?.troncoDate)}
@@ -739,7 +739,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                                     style={{ textAlign: 'center' }}
                                   >
                                     <div>
-                                      {cd?.tabuaAnt?.toLocaleString('pt-PT') ?? '—'}
+                                      {cd?.tabuaAnt ? cd.tabuaAnt.toLocaleString('pt-PT') : '—'}
                                     </div>
                                     <div style={{ fontSize: '0.85em', color: '#999' }}>
                                       {formatTimeAgo(cd?.tabuaAntDate)}
@@ -750,7 +750,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                                     style={{ textAlign: 'center' }}
                                   >
                                     <div>
-                                      {cd?.tabua?.toLocaleString('pt-PT') ?? '—'}
+                                      {cd?.tabua ? cd.tabua.toLocaleString('pt-PT') : '—'}
                                     </div>
                                     <div style={{ fontSize: '0.85em', color: '#999' }}>
                                       {formatTimeAgo(cd?.tauaDate)}

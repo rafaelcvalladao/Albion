@@ -15,7 +15,7 @@ const RESOURCE_INFO = {
 function buildId(resource, item) {
   const [tier, level = '0'] = String(item).split('.');
   const { suffix } = RESOURCE_INFO[resource];
-  return level === '0' ? `${tier}${suffix}` : `${tier}${suffix}_LEVEL${level}`;
+  return level === '0' ? `${tier}${suffix}` : `${tier}${suffix}_LEVEL${level}@${level}`;
 }
 
 function ResourceBadge({ resource }) {
