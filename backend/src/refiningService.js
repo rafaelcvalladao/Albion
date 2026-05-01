@@ -210,7 +210,7 @@ function buildPeakHourMap(histData) {
   for (const [key, buckets] of cityItemHours) {
     const avg = buckets.map(b => (b.count > 0 ? b.sum / b.count : 0));
     const hoursWithData = buckets.filter(b => b.count > 0).length;
-    if (hoursWithData < 6) { result.set(key, null); continue; }
+    if (hoursWithData < 24) { result.set(key, null); continue; }
 
     let best = 0;
     let bestScore = 0;
