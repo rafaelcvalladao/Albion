@@ -732,21 +732,22 @@ const RESOURCE_LABELS = {
 };
 
 export async function hubStrategy(body) {
-  const safeBody = {
+  const specs = body.specs ?? {};
+  const makeBody = (resource) => ({
     taxaNpc: '800',
     taxaVenda: '6.5',
-    spec: {},
+    spec: specs[resource] ?? {},
     buyOrder: body.buyOrder ?? false,
     dailyBonus: body.dailyBonus ?? 0,
-    foco: false,
-  };
+    foco: body.foco ?? false,
+  });
 
   const [wood, fiber, leather, metal, stone] = await Promise.all([
-    estrategiaCompletaRecurso('wood', safeBody),
-    estrategiaCompletaRecurso('fiber', safeBody),
-    estrategiaCompletaRecurso('leather', safeBody),
-    estrategiaCompletaRecurso('metal', safeBody),
-    estrategiaCompletaRecurso('stone', safeBody),
+    estrategiaCompletaRecurso('wood', makeBody('wood')),
+    estrategiaCompletaRecurso('fiber', makeBody('fiber')),
+    estrategiaCompletaRecurso('leather', makeBody('leather')),
+    estrategiaCompletaRecurso('metal', makeBody('metal')),
+    estrategiaCompletaRecurso('stone', makeBody('stone')),
   ]);
 
   const tag = (items, resource) =>

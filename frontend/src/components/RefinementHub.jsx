@@ -151,6 +151,30 @@ function HubTable({ title, rows, getValue, getPercent, valueLabel, valueFormat, 
   );
 }
 
+const STORAGE_KEYS = {
+  wood:    'albion-wood-config-v1',
+  fiber:   'albion-fiber-config-v1',
+  leather: 'albion-leather-config-v1',
+  metal:   'albion-metal-config-v1',
+  stone:   'albion-stone-config-v1',
+};
+
+const DEFAULT_SPEC = { t4: '0', t5: '0', t6: '0', t7: '0', t8: '0' };
+
+function loadAllSpecs() {
+  const specs = {};
+  for (const [resource, key] of Object.entries(STORAGE_KEYS)) {
+    try {
+      const raw = localStorage.getItem(key);
+      const cfg = raw ? JSON.parse(raw) : null;
+      specs[resource] = cfg?.spec ?? DEFAULT_SPEC;
+    } catch {
+      specs[resource] = DEFAULT_SPEC;
+    }
+  }
+  return specs;
+}
+
 export default function RefinementHub() {
   const [buyOrder, setBuyOrder] = useState(false);
   const [dailyBonus, setDailyBonus] = useState(0);
@@ -162,7 +186,8 @@ export default function RefinementHub() {
     setLoading(true);
     setError(null);
     try {
-      const result = await hubStrategy(opts);
+      const specs = loadAllSpecs();
+      const result = await hubStrategy({ ...opts, specs });
       setData(result);
     } catch (e) {
       setError(e.message || String(e));
@@ -185,7 +210,7 @@ export default function RefinementHub() {
       <div className="panel" style={{ marginBottom: '1rem', padding: '1rem 1.25rem' }}>
         <h2 style={{ margin: '0 0 0.25rem' }}>Hub de Refino</h2>
         <p style={{ margin: '0 0 0.85rem', fontSize: '0.85rem', color: '#888' }}>
-          Top 15 materiais para refinar entre todos os recursos — sem especialização, cidade com bônus de produção.
+          Top 15 materiais para refinar entre todos os recursos — usa as especializações salvas em cada aba de refino.
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
           <label className="checkbox-row">
