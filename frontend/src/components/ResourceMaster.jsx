@@ -743,7 +743,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                                       {formatTimeAgo(cd?.tauaDate)}
                                     </div>
                                   </td>
-                                  <td className={profitClass(cd?.lucro)}>
+                                  <td className={`${profitClass(cd?.lucro)} lucro-cell`}>
                                     {Number.isFinite(cd?.lucro) && cd.lucro > -8e8
                                       ? cd.lucro.toLocaleString('pt-PT', {
                                           maximumFractionDigits: 0,
@@ -768,14 +768,14 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                             },
                           )}
                           {row.melhorPreco && (
-                            <tr style={{ borderTop: '1px solid rgba(0,255,255,0.15)' }}>
-                              <td style={{ fontSize: '0.85em', opacity: 0.8 }}>Melhor preço</td>
+                            <tr className="melhor-preco-row">
+                              <td>Melhor preço</td>
                               {[row.melhorPreco.tronco, row.melhorPreco.tabuaAnt, row.melhorPreco.produto].map(
                                 (mp, i) => (
                                   <td
                                     key={i}
                                     className="tabular-nums"
-                                    style={{ textAlign: 'center', fontSize: '0.85em' }}
+                                    style={{ textAlign: 'center' }}
                                   >
                                     {mp ? (
                                       <>
@@ -790,19 +790,19 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                                   </td>
                                 ),
                               )}
-                              <td className={profitClass(row.melhorPreco.lucro)}>
+                              <td className={`${profitClass(row.melhorPreco.lucro)} lucro-cell`}>
                                 {Number.isFinite(row.melhorPreco.lucro) && row.melhorPreco.lucro > -8e8
                                   ? row.melhorPreco.lucro.toLocaleString('pt-PT', { maximumFractionDigits: 0 })
                                   : '—'}
                               </td>
-                              <td className="tabular-nums" style={{ textAlign: 'center', fontSize: '0.85em' }}>
+                              <td className="tabular-nums" style={{ textAlign: 'center' }}>
                                 {row.melhorPreco.volumeProduto != null
                                   ? row.melhorPreco.volumeProduto.toLocaleString('pt-PT')
                                   : '—'}
                               </td>
                               <td
                                 className={avgPriceClass(row.melhorPreco.produto?.preco, row.melhorPreco.avgPreco)}
-                                style={{ textAlign: 'center', fontSize: '0.85em' }}
+                                style={{ textAlign: 'center' }}
                               >
                                 {row.melhorPreco.avgPreco
                                   ? row.melhorPreco.avgPreco.toLocaleString('pt-PT', { maximumFractionDigits: 0 })

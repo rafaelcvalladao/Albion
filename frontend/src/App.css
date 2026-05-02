@@ -245,7 +245,7 @@ table.result-table {
   width: 100%;
   border-collapse: collapse;
   font-family: var(--mono);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .result-table th,
@@ -272,13 +272,13 @@ table.result-table {
   background: rgba(56, 189, 248, 0.08);
   color: var(--accent);
   font-weight: 600;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 0.5rem 0.5rem;
+  padding: 0.55rem 0.5rem;
   vertical-align: middle;
 }
 
@@ -298,26 +298,28 @@ table.result-table {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1rem;
+  gap: 0.5rem 1.25rem;
   margin: 0 0 1rem;
-  padding: 0.65rem 0.85rem;
+  padding: 0.7rem 1rem;
   background: var(--surface-2);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   font-family: var(--mono);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .summary-strip__label {
   color: var(--muted);
   font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
 .summary-strip__value {
   color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.9375rem;
 }
 
 .result-card {
@@ -332,13 +334,15 @@ table.result-table {
 .result-card__title {
   margin: 0 0 0.75rem;
   font-family: var(--mono);
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 1.0625rem;
+  font-weight: 700;
   color: var(--text);
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.35rem 0.75rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .result-card__tier {
@@ -377,9 +381,11 @@ table.result-table {
 }
 
 .otimizado-line {
-  margin: 0.5rem 0 0;
+  margin: 0.75rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
   font-family: var(--mono);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -391,15 +397,31 @@ table.result-table {
 }
 
 .foco-line {
-  margin: 0.35rem 0 0;
+  margin: 0.3rem 0 0;
   font-family: var(--mono);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
 }
 
 .foco-line .num-foco {
   color: var(--foco);
   font-weight: 600;
+}
+
+.lucro-cell {
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.melhor-preco-row td {
+  border-top: 1px dashed rgba(0, 255, 255, 0.15);
+  font-size: 0.8125rem;
+  opacity: 0.85;
+}
+
+.melhor-preco-row .lucro-cell {
+  font-size: 0.875rem;
+  opacity: 1;
 }
 
 .strategy-hint {
@@ -642,8 +664,8 @@ table.result-table {
 }
 
 .th-with-icon img {
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   border-radius: 4px;
   border: 1px solid var(--border);
   display: block;
@@ -663,8 +685,8 @@ table.result-table {
 }
 
 .strategy-final-product-icon img {
-  width: 84px;
-  height: 84px;
+  width: 34px;
+  height: 34px;
   border-radius: 4px;
   border: 1px solid var(--border);
   display: block;
