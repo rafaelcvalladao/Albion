@@ -317,7 +317,7 @@ function StrategyTable({
                 {kind === 'foco' && (() => {
                   const p = getPeak(r);
                   return (
-                    <td className="tabular-nums" style={{ textAlign: 'center', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                    <td className="tabular-nums" style={{ textAlign: 'center', fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
                       {p != null
                         ? `${String(p.start).padStart(2, '0')}h–${String(p.end).padStart(2, '0')}h`
                         : '—'}
