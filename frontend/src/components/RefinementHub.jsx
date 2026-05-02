@@ -9,7 +9,6 @@ const RESOURCE_INFO = {
   fiber:   { label: 'Fibra',   suffix: '_CLOTH',      color: '#4CAF50', bg: 'rgba(76,175,80,0.15)'  },
   leather: { label: 'Couro',   suffix: '_LEATHER',    color: '#E65100', bg: 'rgba(230,81,0,0.15)'   },
   metal:   { label: 'Minério', suffix: '_METALBAR',   color: '#78909C', bg: 'rgba(96,125,139,0.15)' },
-  stone:   { label: 'Pedra',   suffix: '_STONEBLOCK', color: '#A1887F', bg: 'rgba(121,85,72,0.15)'  },
 };
 
 function buildId(resource, item) {
@@ -156,7 +155,6 @@ const STORAGE_KEYS = {
   fiber:   'albion-fiber-config-v1',
   leather: 'albion-leather-config-v1',
   metal:   'albion-metal-config-v1',
-  stone:   'albion-stone-config-v1',
 };
 
 const DEFAULT_SPEC = { t4: '0', t5: '0', t6: '0', t7: '0', t8: '0' };

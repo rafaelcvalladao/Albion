@@ -11,8 +11,6 @@ import {
   strategyLeather,
   calculateMetal,
   strategyMetal,
-  calculateStone,
-  strategyStone,
 } from './api.js';
 import './App.css';
 
@@ -89,13 +87,6 @@ export default function App() {
           </button>
           <button
             type="button"
-            className={tab === 'stone' ? 'tab active' : 'tab'}
-            onClick={() => setTab('stone')}
-          >
-            Pedra
-          </button>
-          <button
-            type="button"
             className={tab === 'market' ? 'tab active' : 'tab'}
             onClick={() => setTab('market')}
           >
@@ -138,13 +129,6 @@ export default function App() {
             resource="metal"
             calculateFn={calculateMetal}
             strategyFn={strategyMetal}
-          />
-        )}
-        {tab === 'stone' && (
-          <ResourceMaster
-            resource="stone"
-            calculateFn={calculateStone}
-            strategyFn={strategyStone}
           />
         )}
         {tab === 'market' && (

@@ -54,7 +54,6 @@ export const wood = createResourceFns('wood');
 export const fiber = createResourceFns('fiber');
 export const leather = createResourceFns('leather');
 export const metal = createResourceFns('metal');
-export const stone = createResourceFns('stone');
 
 // Aliases individuais para compatibilidade
 export const calculateWood = wood.calculate;
@@ -65,8 +64,6 @@ export const calculateLeather = leather.calculate;
 export const strategyLeather = leather.strategy;
 export const calculateMetal = metal.calculate;
 export const strategyMetal = metal.strategy;
-export const calculateStone = stone.calculate;
-export const strategyStone = stone.strategy;
 
 export function hubStrategy(body) {
   return request('/api/hub/strategy', { method: 'POST', body: JSON.stringify(body) });

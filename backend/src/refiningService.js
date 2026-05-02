@@ -48,14 +48,6 @@ const RESOURCE_CONFIGS = {
     cityName: 'Thetford',
     scheduleLabel: 'MINÉRIO',
   },
-  stone: {
-    locations: ['Bridgewatch'],
-    rawSuffix: '_ROCK',
-    refinedSuffix: '_STONEBLOCK',
-    cityKey: 'bridgewatch',
-    cityName: 'Bridgewatch',
-    scheduleLabel: 'PEDRA',
-  },
 };
 
 // ─── Funções utilitárias (compartilhadas) ───
@@ -728,7 +720,7 @@ async function estrategiaCompletaRecurso(resource, body) {
 // ─── Hub: estratégia consolidada de todos os recursos ───
 
 const RESOURCE_LABELS = {
-  wood: 'Madeira', fiber: 'Fibra', leather: 'Couro', metal: 'Minério', stone: 'Pedra',
+  wood: 'Madeira', fiber: 'Fibra', leather: 'Couro', metal: 'Minério',
 };
 
 export async function hubStrategy(body) {
@@ -742,12 +734,11 @@ export async function hubStrategy(body) {
     foco: body.foco ?? false,
   });
 
-  const [wood, fiber, leather, metal, stone] = await Promise.all([
+  const [wood, fiber, leather, metal] = await Promise.all([
     estrategiaCompletaRecurso('wood', makeBody('wood')),
     estrategiaCompletaRecurso('fiber', makeBody('fiber')),
     estrategiaCompletaRecurso('leather', makeBody('leather')),
     estrategiaCompletaRecurso('metal', makeBody('metal')),
-    estrategiaCompletaRecurso('stone', makeBody('stone')),
   ]);
 
   const tag = (items, resource) =>
@@ -758,7 +749,6 @@ export async function hubStrategy(body) {
     ...tag(fiber.fsLocalFocoAll, 'fiber'),
     ...tag(leather.fsLocalFocoAll, 'leather'),
     ...tag(metal.fsLocalFocoAll, 'metal'),
-    ...tag(stone.fsLocalFocoAll, 'stone'),
   ];
 
   const topSemFoco = [...all]
@@ -852,6 +842,3 @@ export const estrategiaCompletaLeather = (body) => estrategiaCompletaRecurso('le
 export const processarMetal = (body) => processarRecurso('metal', body);
 export const estrategiaCompletaMetal = (body) => estrategiaCompletaRecurso('metal', body);
 
-// Stone
-export const processarStone = (body) => processarRecurso('stone', body);
-export const estrategiaCompleteStone = (body) => estrategiaCompletaRecurso('stone', body);

@@ -114,19 +114,6 @@ const CONFIGS = {
     buildRawId: stdBuildId('_ORE'),
     buildRefinedId: encBuildId('_METALBAR'),
   },
-  stone: {
-    specLabels: ['Pedra (T4)', 'Pedra (T5)', 'Pedra (T6)', 'Pedra (T7)', 'Pedra (T8)'],
-    refiningCity: 'Bridgewatch',
-    storageKey: 'albion-stone-config-v1',
-    cityKey: 'bridgewatch',
-    cityDisplay: 'Bridgewatch',
-    rawAlt: 'pedra',
-    refinedAlt: 'bloco',
-    rawPlaceholder: 'rock',
-    refinedPlaceholder: 'stoneblock',
-    buildRawId: stdBuildId('_ROCK'),
-    buildRefinedId: encBuildId('_STONEBLOCK'),
-  },
 };
 
 const SPEC_TIER_KEYS = ['t4', 't5', 't6', 't7', 't8'];

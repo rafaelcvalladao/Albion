@@ -20,8 +20,6 @@ import {
   estrategiaCompletaLeather,
   processarMetal,
   estrategiaCompletaMetal,
-  processarStone,
-  estrategiaCompleteStone,
   hubStrategy,
 } from './refiningService.js';
 
@@ -76,7 +74,6 @@ const refiningRoutes = [
   { path: 'fiber', calcFn: processarFiber, stratFn: estrategiaCompletaFiber },
   { path: 'leather', calcFn: processarLeather, stratFn: estrategiaCompletaLeather },
   { path: 'metal', calcFn: processarMetal, stratFn: estrategiaCompletaMetal },
-  { path: 'stone', calcFn: processarStone, stratFn: estrategiaCompleteStone },
 ];
 
 for (const { path, calcFn, stratFn } of refiningRoutes) {
