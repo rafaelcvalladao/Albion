@@ -696,6 +696,7 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
                                     e.target.src = `https://via.placeholder.com/84?text=${rc.refinedPlaceholder}`;
                                   }}
                                 />
+                                <span className="th-with-icon__qty">x1</span>
                               </div>
                             </th>
                             <th>Lucro</th>

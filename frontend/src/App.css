@@ -666,8 +666,8 @@ table.result-table {
 }
 
 .th-with-icon img {
-  width: 61px;
-  height: 61px;
+  width: 85px;
+  height: 85px;
   border-radius: 4px;
   border: 1px solid var(--border);
   display: block;
@@ -687,8 +687,8 @@ table.result-table {
 }
 
 .strategy-final-product-icon img {
-  width: 69px;
-  height: 69px;
+  width: 97px;
+  height: 97px;
   border-radius: 4px;
   border: 1px solid var(--border);
   display: block;
