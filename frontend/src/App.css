@@ -481,9 +481,9 @@ table.result-table {
 
 .strategy-section-title {
   margin: 0 0 0.55rem;
-  padding: 0.5rem 0.65rem;
+  padding: 0.65rem 0.85rem;
   border-radius: var(--radius-sm);
-  font-size: 0.875rem;
+  font-size: 1.25rem;
   font-weight: 800;
   font-family: var(--font);
   letter-spacing: 0.02em;

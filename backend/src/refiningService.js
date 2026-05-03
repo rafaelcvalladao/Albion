@@ -756,7 +756,17 @@ export async function hubStrategy(body) {
     .sort((a, b) => b.lucro - a.lucro)
     .slice(0, 15);
 
-  const topComFoco = [...all]
+  // focoUnidades com spec 100 em todos os tiers
+  const maxReducaoGeral = 5 * 100 * 30; // 15000
+  const maxReducaoTier = 100 * 250;      // 25000
+  const allMaxSpec = all.map(i => {
+    const [tier, levelStr = '0'] = i.item.split('.');
+    const idxN = parseInt(levelStr, 10);
+    const focoUnidades = (FOCO_BASE[tier] ?? 250) * (MULT_ENCHANT[idxN] ?? 1) * 0.5 ** ((maxReducaoGeral + maxReducaoTier) / 10000);
+    return { ...i, focoUnidades };
+  });
+
+  const topComFoco = [...allMaxSpec]
     .filter(i => i.lucroComFoco > -8e8 && i.focoUnidades > 0)
     .sort((a, b) => (b.lucroComFoco / b.focoUnidades) - (a.lucroComFoco / a.focoUnidades))
     .slice(0, 15);
