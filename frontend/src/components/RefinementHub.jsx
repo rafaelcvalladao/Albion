@@ -106,18 +106,13 @@ function HubTable({ title, rows, getValue, getPercent, valueLabel, valueFormat, 
               const imgId = buildId(r.resource, r.item);
               return (
                 <tr key={`${r.resource}-${r.item}-${i}`}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <img
-                        src={ITEM_ICON_URL(imgId)}
-                        alt={r.item}
-                        style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }}
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
-                      <span className="tabular-nums" style={{ fontSize: '0.9rem', fontWeight: 600 }}>
-                        {r.item}
-                      </span>
-                    </div>
+                  <td style={{ textAlign: 'center' }}>
+                    <img
+                      src={ITEM_ICON_URL(imgId)}
+                      alt={r.item}
+                      style={{ width: 64, height: 64, objectFit: 'contain' }}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <ResourceBadge resource={r.resource} />
