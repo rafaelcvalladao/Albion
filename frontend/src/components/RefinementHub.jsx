@@ -1,15 +1,74 @@
-import { useEffect, useMemo, useState } from 'react';
-import { hubStrategy } from '../api.js';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { strategyWood, strategyFiber, strategyLeather, strategyMetal } from '../api.js';
 import { profitClass } from '../utils/profit.js';
 
 const ITEM_ICON_URL = (id) => `https://render.albiononline.com/v1/item/${id}.png?quality=1`;
 
 const RESOURCE_INFO = {
-  wood:    { label: 'Madeira', suffix: '_PLANKS',     color: '#C8961C', bg: 'rgba(200,150,28,0.15)' },
-  fiber:   { label: 'Fibra',   suffix: '_CLOTH',      color: '#4CAF50', bg: 'rgba(76,175,80,0.15)'  },
-  leather: { label: 'Couro',   suffix: '_LEATHER',    color: '#E65100', bg: 'rgba(230,81,0,0.15)'   },
-  metal:   { label: 'Minério', suffix: '_METALBAR',   color: '#78909C', bg: 'rgba(96,125,139,0.15)' },
+  wood:    { label: 'Madeira', suffix: '_PLANKS',   color: '#C8961C', bg: 'rgba(200,150,28,0.15)' },
+  fiber:   { label: 'Fibra',   suffix: '_CLOTH',    color: '#4CAF50', bg: 'rgba(76,175,80,0.15)'  },
+  leather: { label: 'Couro',   suffix: '_LEATHER',  color: '#E65100', bg: 'rgba(230,81,0,0.15)'   },
+  metal:   { label: 'Minério', suffix: '_METALBAR', color: '#78909C', bg: 'rgba(96,125,139,0.15)' },
 };
+
+const FOCO_BASE = { T4: 41, T5: 103, T6: 257, T7: 643, T8: 1607 };
+const MULT_ENCHANT = [1, 1.5, 2.5, 5, 10];
+
+const STORAGE_KEYS = {
+  wood:    'albion-wood-config-v1',
+  fiber:   'albion-fiber-config-v1',
+  leather: 'albion-leather-config-v1',
+  metal:   'albion-metal-config-v1',
+};
+
+const STRATEGY_FNS = { wood: strategyWood, fiber: strategyFiber, leather: strategyLeather, metal: strategyMetal };
+const DEFAULT_SPEC = { t4: '0', t5: '0', t6: '0', t7: '0', t8: '0' };
+const ALL_RESOURCES = ['wood', 'fiber', 'leather', 'metal'];
+
+function loadAllSpecs() {
+  const specs = {};
+  for (const [resource, key] of Object.entries(STORAGE_KEYS)) {
+    try {
+      const raw = localStorage.getItem(key);
+      const cfg = raw ? JSON.parse(raw) : null;
+      specs[resource] = cfg?.spec ?? DEFAULT_SPEC;
+    } catch {
+      specs[resource] = DEFAULT_SPEC;
+    }
+  }
+  return specs;
+}
+
+function mergeTopLists(resourceData) {
+  const all = [];
+  for (const [resource, result] of Object.entries(resourceData)) {
+    if (!result?.fsLocalFocoAll) continue;
+    for (const item of result.fsLocalFocoAll) {
+      all.push({ ...item, resource, resourceLabel: RESOURCE_INFO[resource].label });
+    }
+  }
+
+  const topSemFoco = [...all]
+    .filter(i => i.lucro > -8e8)
+    .sort((a, b) => b.lucro - a.lucro)
+    .slice(0, 15);
+
+  const maxReducaoGeral = 5 * 100 * 30;
+  const maxReducaoTier = 100 * 250;
+  const allMaxSpec = all.map(i => {
+    const [tier, levelStr = '0'] = i.item.split('.');
+    const idxN = parseInt(levelStr, 10);
+    const focoUnidades = (FOCO_BASE[tier] ?? 250) * (MULT_ENCHANT[idxN] ?? 1) * 0.5 ** ((maxReducaoGeral + maxReducaoTier) / 10000);
+    return { ...i, focoUnidades };
+  });
+
+  const topComFoco = [...allMaxSpec]
+    .filter(i => i.lucroComFoco > -8e8 && i.focoUnidades > 0)
+    .sort((a, b) => (b.lucroComFoco / b.focoUnidades) - (a.lucroComFoco / a.focoUnidades))
+    .slice(0, 15);
+
+  return { topSemFoco, topComFoco };
+}
 
 function buildId(resource, item) {
   const [tier, level = '0'] = String(item).split('.');
@@ -145,47 +204,45 @@ function HubTable({ title, rows, getValue, getPercent, valueLabel, valueFormat, 
   );
 }
 
-const STORAGE_KEYS = {
-  wood:    'albion-wood-config-v1',
-  fiber:   'albion-fiber-config-v1',
-  leather: 'albion-leather-config-v1',
-  metal:   'albion-metal-config-v1',
-};
-
-const DEFAULT_SPEC = { t4: '0', t5: '0', t6: '0', t7: '0', t8: '0' };
-
-function loadAllSpecs() {
-  const specs = {};
-  for (const [resource, key] of Object.entries(STORAGE_KEYS)) {
-    try {
-      const raw = localStorage.getItem(key);
-      const cfg = raw ? JSON.parse(raw) : null;
-      specs[resource] = cfg?.spec ?? DEFAULT_SPEC;
-    } catch {
-      specs[resource] = DEFAULT_SPEC;
-    }
-  }
-  return specs;
-}
-
 export default function RefinementHub() {
   const [buyOrder, setBuyOrder] = useState(false);
   const [dailyBonus, setDailyBonus] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
+  const [resourceData, setResourceData] = useState({});
+  const [loadingSet, setLoadingSet] = useState(new Set());
+  const [errors, setErrors] = useState({});
+  const fetchIdRef = useRef(0);
 
-  async function fetchData(opts) {
-    setLoading(true);
-    setError(null);
-    try {
-      const specs = loadAllSpecs();
-      const result = await hubStrategy({ ...opts, specs });
-      setData(result);
-    } catch (e) {
-      setError(e.message || String(e));
-    } finally {
-      setLoading(false);
+  const data = useMemo(() => mergeTopLists(resourceData), [resourceData]);
+  const isLoading = loadingSet.size > 0;
+  const loadedCount = ALL_RESOURCES.filter(r => resourceData[r]).length;
+
+  function fetchData({ buyOrder: bo, dailyBonus: db }) {
+    const fetchId = ++fetchIdRef.current;
+    const specs = loadAllSpecs();
+
+    setResourceData({});
+    setLoadingSet(new Set(ALL_RESOURCES));
+    setErrors({});
+
+    for (const resource of ALL_RESOURCES) {
+      STRATEGY_FNS[resource]({
+        taxaNpc: '800',
+        taxaVenda: '6.5',
+        spec: specs[resource] ?? {},
+        buyOrder: bo,
+        dailyBonus: db,
+        foco: false,
+      })
+        .then(result => {
+          if (fetchIdRef.current !== fetchId) return;
+          setResourceData(prev => ({ ...prev, [resource]: result }));
+          setLoadingSet(prev => { const s = new Set(prev); s.delete(resource); return s; });
+        })
+        .catch(err => {
+          if (fetchIdRef.current !== fetchId) return;
+          setErrors(prev => ({ ...prev, [resource]: err.message || String(err) }));
+          setLoadingSet(prev => { const s = new Set(prev); s.delete(resource); return s; });
+        });
     }
   }
 
@@ -197,6 +254,8 @@ export default function RefinementHub() {
   function handleRefresh() {
     fetchData({ buyOrder, dailyBonus });
   }
+
+  const errorList = Object.entries(errors);
 
   return (
     <div style={{ padding: '1rem', maxWidth: '1400px', margin: '0 auto' }}>
@@ -234,26 +293,32 @@ export default function RefinementHub() {
             type="button"
             className="btn btn-primary"
             onClick={handleRefresh}
-            disabled={loading}
+            disabled={isLoading}
           >
-            {loading ? 'A carregar…' : 'Refresh'}
+            {isLoading ? `Carregando ${loadedCount}/4…` : 'Refresh'}
           </button>
         </div>
-        {error && (
-          <p className="error" style={{ marginTop: '0.75rem', marginBottom: 0 }}>{error}</p>
+        {errorList.length > 0 && (
+          <div style={{ marginTop: '0.75rem' }}>
+            {errorList.map(([resource, msg]) => (
+              <p key={resource} className="error" style={{ margin: '0.25rem 0' }}>
+                {RESOURCE_INFO[resource].label}: {msg}
+              </p>
+            ))}
+          </div>
         )}
       </div>
 
-      {loading && (
+      {loadedCount === 0 && isLoading && (
         <p className="mono strategy-hint" style={{ textAlign: 'center', padding: '2rem' }}>
           Buscando dados de todos os recursos…
         </p>
       )}
 
-      {data && !loading && (
+      {loadedCount > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1rem' }}>
           <HubTable
-            title="Sem Foco — Top Lucro Local"
+            title={`Sem Foco — Top Lucro Local${isLoading ? ` (${loadedCount}/4)` : ''}`}
             rows={data.topSemFoco}
             getValue={(r) => r.lucro}
             getPercent={(r) => (r.custoLocal > 0 && r.lucro > -8e8) ? (r.lucro / r.custoLocal) * 100 : null}
@@ -262,7 +327,7 @@ export default function RefinementHub() {
             accent="#4CAF50"
           />
           <HubTable
-            title="Com Foco — Top Lucro / Foco"
+            title={`Com Foco — Top Lucro / Foco${isLoading ? ` (${loadedCount}/4)` : ''}`}
             rows={data.topComFoco}
             getValue={(r) => r.focoUnidades > 0 ? r.lucroComFoco / r.focoUnidades : -9e8}
             getPercent={(r) => (r.custoComFoco > 0 && r.lucroComFoco > -8e8) ? (r.lucroComFoco / r.custoComFoco) * 100 : null}
@@ -273,7 +338,7 @@ export default function RefinementHub() {
         </div>
       )}
 
-      {!data && !loading && (
+      {loadedCount === 0 && !isLoading && errorList.length === 0 && (
         <p style={{ textAlign: 'center', color: '#666', marginTop: '3rem', fontSize: '0.95rem' }}>
           Carregando…
         </p>
