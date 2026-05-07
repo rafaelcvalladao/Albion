@@ -1,6 +1,6 @@
 // Mapa de vizinhança entre cidades (true = vizinhas, custo simples)
 // Anel: FS ↔ Lymhurst ↔ BW ↔ Martlock ↔ Thetford ↔ FS
-// Brecilien nunca é vizinha de ninguém.
+// Brecilien e Caerleon nunca são vizinhas de ninguém.
 export const CITY_NEIGHBORS = {
   Bridgewatch: new Set(['Lymhurst', 'Martlock']),
   FortSterling: new Set(['Thetford', 'Lymhurst']),
@@ -8,6 +8,7 @@ export const CITY_NEIGHBORS = {
   Martlock: new Set(['Bridgewatch', 'Thetford']),
   Thetford: new Set(['Martlock', 'FortSterling']),
   Brecilien: new Set(),
+  Caerleon: new Set(),
 };
 
 // Taxa por kg de peso do item (prata por kg, para cidades vizinhas).
@@ -184,6 +185,7 @@ export const CATEGORIAS = {
 
 export const CIDADES_SEGURAS = [
   'Bridgewatch',
+  'Caerleon',
   'FortSterling',
   'Lymhurst',
   'Martlock',
@@ -225,6 +227,7 @@ function isResourceOrJournal(itemId) {
 }
 
 export function calcularCustoTeleporte(itemId, cidadeOrigem, cidadeDestino) {
+  if (cidadeOrigem === 'Caerleon' || cidadeDestino === 'Caerleon') return 0;
   const peso = obterPesoReal(itemId);
   const multiplicadorCarga = isResourceOrJournal(itemId) ? 2.25 : 1;
   const pesoEfetivo = peso * multiplicadorCarga;
