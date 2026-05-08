@@ -10,6 +10,7 @@ import {
   CATEGORIAS,
   obterCategoriasDinamicas,
 } from './marketService.js';
+import { buscarOportunidadesBMStream } from './blackMarketService.js';
 import {
   processarWood,
   estrategiaCompleta,
@@ -204,6 +205,48 @@ app.post(
     return { volumes };
   }),
 );
+
+/** SSE Streaming de oportunidades para o Mercado Negro */
+app.get('/api/blackmarket/opportunities/stream', async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+
+  const {
+    quality = '0',
+    maxIdadeHoras = '24',
+    taxaVenda = '3',
+  } = req.query;
+
+  console.log('[SSE BM] Stream iniciado');
+
+  let closed = false;
+  req.on('close', () => { closed = true; });
+
+  try {
+    await buscarOportunidadesBMStream(
+      {
+        quality: parseInt(quality) || 0,
+        maxIdadeHoras: parseInt(maxIdadeHoras) || 24,
+        taxaVenda: parseFloat(taxaVenda) || 3,
+      },
+      (event) => {
+        if (closed) return;
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      },
+    );
+  } catch (err) {
+    if (!closed) {
+      res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+    }
+    console.error('[SSE BM] Erro:', err);
+  }
+
+  if (!closed) res.end();
+});
 
 /** Melhor opção de compra de equipamento (procura em todas as cidades com custo de teleporte) */
 app.post(

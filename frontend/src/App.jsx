@@ -15,6 +15,7 @@ import {
 import './App.css';
 
 const MarketAnalyzer = lazy(() => import('./components/MarketAnalyzer.jsx'));
+const BlackMarketAnalyzer = lazy(() => import('./components/BlackMarketAnalyzer.jsx'));
 const EquipBuy = lazy(() => import('./components/EquipBuy.jsx'));
 const RefinementHub = lazy(() => import('./components/RefinementHub.jsx'));
 
@@ -94,6 +95,13 @@ export default function App() {
           </button>
           <button
             type="button"
+            className={tab === 'blackmarket' ? 'tab active' : 'tab'}
+            onClick={() => setTab('blackmarket')}
+          >
+            Black Market
+          </button>
+          <button
+            type="button"
             className={tab === 'equipbuy' ? 'tab active' : 'tab'}
             onClick={() => setTab('equipbuy')}
           >
@@ -134,6 +142,11 @@ export default function App() {
         {tab === 'market' && (
           <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando...</div>}>
             <MarketAnalyzer />
+          </Suspense>
+        )}
+        {tab === 'blackmarket' && (
+          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando...</div>}>
+            <BlackMarketAnalyzer />
           </Suspense>
         )}
         {tab === 'equipbuy' && (
