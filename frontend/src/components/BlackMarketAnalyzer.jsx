@@ -61,6 +61,7 @@ export default function BlackMarketAnalyzer() {
   const [sortAsc, setSortAsc] = useState(false);
   const [volMinimo, setVolMinimo] = useState(0.75);
   const [volMinimoInput, setVolMinimoInput] = useState('0.75');
+  const [filtroCidade, setFiltroCidade] = useState('Todos');
   const [copiedId, setCopiedId] = useState(null);
   const streamRef = useRef(null);
   const scanIdRef = useRef(0);
@@ -180,6 +181,26 @@ export default function BlackMarketAnalyzer() {
             }}
           />
         </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: '#aaa', whiteSpace: 'nowrap' }}>
+          Cidade
+          <select
+            value={filtroCidade}
+            onChange={(e) => { setFiltroCidade(e.target.value); setCurrentPage(1); }}
+            style={{
+              padding: '0.2rem 0.4rem',
+              background: '#1e1e2e',
+              border: '1px solid #3a3a52',
+              borderRadius: 4,
+              color: '#eee',
+              fontSize: '0.82rem',
+            }}
+          >
+            <option value="Todos">Todas</option>
+            {[...new Set(rows.map((op) => op.origem))].sort().map((cidade) => (
+              <option key={cidade} value={cidade}>{cidade}</option>
+            ))}
+          </select>
+        </label>
         <button
           type="button"
           className="btn btn-primary"
@@ -226,9 +247,11 @@ export default function BlackMarketAnalyzer() {
 
       {/* Tabela paginada */}
       {(() => {
-        const validRows = rows.filter(
-          (op) => (Number(op.volumeDiario) || 0) >= volMinimo,
-        );
+        const validRows = rows.filter((op) => {
+          if ((Number(op.volumeDiario) || 0) < volMinimo) return false;
+          if (filtroCidade !== 'Todos' && op.origem !== filtroCidade) return false;
+          return true;
+        });
 
         const handleSort = (col) => {
           if (sortCol === col) setSortAsc(!sortAsc);
