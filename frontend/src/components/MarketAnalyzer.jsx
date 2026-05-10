@@ -96,7 +96,9 @@ export default function MarketAnalyzer() {
     setSortCol('lucro');
     setSortAsc(false);
     setFilterInstant(false);
-    setModoCaerleon(false);
+
+    // Capturar o modo no momento do clique — não deve mudar durante o stream
+    const modoAtual = modoCaerleon;
 
     // Acumulador de oportunidades (dedup incremental)
     const dedupSet = new Set();
@@ -114,6 +116,7 @@ export default function MarketAnalyzer() {
           if (scanIdRef.current !== currentScanId) return;
 
           for (const op of oportunidades) {
+            if (modoAtual && op.origem !== 'Caerleon') continue;
             const chave = `${op.id}|${op.origem}|${op.destino}`;
             if (!dedupSet.has(chave)) {
               dedupSet.add(chave);
@@ -370,7 +373,6 @@ export default function MarketAnalyzer() {
         const searchLower = searchItem.trim().toLowerCase();
         const validRows = rows.filter((op) => {
           if (modoCaerleon) {
-            if (op.origem !== 'Caerleon') return false;
             if (!op.precoMedioDest || op.precoMedioDest <= 0) return false;
             if (getLucroEfetivo(op) <= 0) return false;
           }
