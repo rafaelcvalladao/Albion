@@ -77,18 +77,21 @@ export async function fetchPricesMarket(itemIds, locations, quality = 0) {
   return merged;
 }
 
-export async function fetchHistoryMarket(itemIds, locations) {
+export async function fetchHistoryMarket(itemIds, locations, qualities = null) {
   const unique = [...new Set(itemIds.filter(Boolean))];
   const loc = Array.isArray(locations) ? locations.join(',') : locations;
   const allChunks = chunk(unique, HISTORY_CHUNK_SIZE);
   const concurrency = HISTORY_CONCURRENCY;
+  const qualParam = Array.isArray(qualities) && qualities.length > 0
+    ? `&qualities=${qualities.join(',')}`
+    : '';
 
   // Buscar histórico horário (time-scale=1)
   const merged = [];
   for (let i = 0; i < allChunks.length; i += concurrency) {
     const batch = allChunks.slice(i, i + concurrency);
     const calls = batch.map(async (part) => {
-      const url = `https://www.albion-online-data.com/api/v2/stats/history/${part.join(',')}?locations=${encodeURIComponent(loc)}&time-scale=1`;
+      const url = `https://www.albion-online-data.com/api/v2/stats/history/${part.join(',')}?locations=${encodeURIComponent(loc)}&time-scale=1${qualParam}`;
       const res = await fetch(url, { headers: { Accept: 'application/json' } });
       if (!res.ok) return [];
       return res.json();
@@ -105,11 +108,15 @@ export async function fetchHistoryMarket(itemIds, locations) {
   }
 
   // volumeMap: key → { volume, avgPrice }
+  // Se qualities foi passado, a chave inclui qualidade: `itemId|location|quality`
+  // Caso contrário, mantém formato original: `itemId|location`
   const volumeMap = new Map();
 
   for (const entry of merged) {
     if (!entry.data || !Array.isArray(entry.data)) continue;
-    const key = `${entry.item_id}|${entry.location}`;
+    const key = qualParam
+      ? `${entry.item_id}|${entry.location}|${entry.quality ?? 1}`
+      : `${entry.item_id}|${entry.location}`;
 
     const sorted = [...entry.data].sort(
       (a, b) => new Date(a.timestamp) - new Date(b.timestamp),

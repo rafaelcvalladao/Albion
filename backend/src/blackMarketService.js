@@ -97,6 +97,7 @@ function extrairOportunidadesBM(respostaPrecos, maxIdade, agora, taxaVendaNota) 
       tier,
       encanto,
       estado,
+      qualidade: qual,
       origem: melhorCidade,
       compra: melhorPreco,
       buyOrderBM: bmData.buyMax,
@@ -157,13 +158,13 @@ export async function buscarOportunidadesBMStream(
       const uniqueIds = [...new Set(batchOps.map((op) => op.id))];
       let volumeMap = new Map();
       try {
-        volumeMap = await fetchHistoryMarket(uniqueIds, BLACK_MARKET);
+        volumeMap = await fetchHistoryMarket(uniqueIds, BLACK_MARKET, [1, 2, 3, 4, 5]);
       } catch {
         // continua sem volume
       }
 
       for (const op of batchOps) {
-        const dataBM = volumeMap.get(`${op.id}|${BLACK_MARKET}`);
+        const dataBM = volumeMap.get(`${op.id}|${BLACK_MARKET}|${op.qualidade}`);
         op.volumeDiario = dataBM?.volume || 0;
         op.precoMedioBM = dataBM?.avgPrice || 0;
         op.desvio = op.precoMedioBM > 0 ? (op.buyOrderBM / op.precoMedioBM - 1) * 100 : null;

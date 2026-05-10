@@ -3,7 +3,6 @@ import { blackMarketStream } from '../api.js';
 import { profitClass } from '../utils/profit.js';
 
 const ITEMS_PER_PAGE = 20;
-const VOL_MINIMO = 0.75;
 const MAX_IDADE_HORAS = 24;
 
 function tierStyle(tier) {
@@ -60,6 +59,9 @@ export default function BlackMarketAnalyzer() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortCol, setSortCol] = useState('lucro');
   const [sortAsc, setSortAsc] = useState(false);
+  const [volMinimo, setVolMinimo] = useState(0.75);
+  const [volMinimoInput, setVolMinimoInput] = useState('0.75');
+  const [copiedId, setCopiedId] = useState(null);
   const streamRef = useRef(null);
   const scanIdRef = useRef(0);
 
@@ -143,9 +145,41 @@ export default function BlackMarketAnalyzer() {
         marginBottom: '1rem',
         border: '1px solid #2a2a38',
       }}>
-        <div style={{ fontSize: '0.82rem', color: '#666', flex: 1 }}>
-          Dados ≤ {MAX_IDADE_HORAS}h &nbsp;·&nbsp; Vol. mín./dia {VOL_MINIMO} &nbsp;·&nbsp; Taxa 3%
+        <div style={{ fontSize: '0.82rem', color: '#666' }}>
+          Dados ≤ {MAX_IDADE_HORAS}h &nbsp;·&nbsp; Taxa 3%
         </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: '#aaa', whiteSpace: 'nowrap' }}>
+          Vol. mín./dia
+          <input
+            type="number"
+            min="0"
+            step="0.25"
+            value={volMinimoInput}
+            onChange={(e) => setVolMinimoInput(e.target.value)}
+            onBlur={() => {
+              const v = parseFloat(volMinimoInput);
+              if (!isNaN(v) && v >= 0) {
+                setVolMinimo(v);
+                setCurrentPage(1);
+              } else {
+                setVolMinimoInput(String(volMinimo));
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.target.blur();
+            }}
+            style={{
+              width: 60,
+              padding: '0.2rem 0.4rem',
+              background: '#1e1e2e',
+              border: '1px solid #3a3a52',
+              borderRadius: 4,
+              color: '#eee',
+              fontSize: '0.82rem',
+              textAlign: 'right',
+            }}
+          />
+        </label>
         <button
           type="button"
           className="btn btn-primary"
@@ -193,7 +227,7 @@ export default function BlackMarketAnalyzer() {
       {/* Tabela paginada */}
       {(() => {
         const validRows = rows.filter(
-          (op) => (Number(op.volumeDiario) || 0) >= VOL_MINIMO,
+          (op) => (Number(op.volumeDiario) || 0) >= volMinimo,
         );
 
         const handleSort = (col) => {
@@ -295,7 +329,31 @@ export default function BlackMarketAnalyzer() {
                               onError={(e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/32?text=?'; }}
                             />
                             <div>
-                              <strong>{op.nomeBase}</strong>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                <strong>{op.nomeBase}</strong>
+                                <button
+                                  type="button"
+                                  title="Copiar nome"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(op.nomeBase).then(() => {
+                                      setCopiedId(`${op.id}|${op.estado}`);
+                                      setTimeout(() => setCopiedId(null), 1500);
+                                    });
+                                  }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '0 2px',
+                                    color: copiedId === `${op.id}|${op.estado}` ? '#4caf50' : '#555',
+                                    fontSize: '0.8rem',
+                                    lineHeight: 1,
+                                    transition: 'color 0.2s',
+                                  }}
+                                >
+                                  {copiedId === `${op.id}|${op.estado}` ? '✓' : '⎘'}
+                                </button>
+                              </div>
                               <div style={{ marginTop: '0.1rem', fontSize: '0.80rem', color: '#aaa' }}>
                                 <span style={{ color: tierStyle(op.tier), fontWeight: 700 }}>[{op.tier}]</span>
                                 <span style={{ marginLeft: '0.4rem' }}>
