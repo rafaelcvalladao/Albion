@@ -62,6 +62,7 @@ export default function BlackMarketAnalyzer() {
   const [volMinimo, setVolMinimo] = useState(0.75);
   const [volMinimoInput, setVolMinimoInput] = useState('0.75');
   const [filtroCidade, setFiltroCidade] = useState('Todos');
+  const [modoCaerleon, setModoCaerleon] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const streamRef = useRef(null);
   const scanIdRef = useRef(0);
@@ -85,6 +86,8 @@ export default function BlackMarketAnalyzer() {
     setSortCol('lucro');
     setSortAsc(false);
 
+    const modoAtual = modoCaerleon;
+
     const dedupSet = new Set();
     const acumulador = [];
 
@@ -94,6 +97,7 @@ export default function BlackMarketAnalyzer() {
         onChunk: (oportunidades) => {
           if (scanIdRef.current !== currentScanId) return;
           for (const op of oportunidades) {
+            if (modoAtual && op.origem !== 'Caerleon') continue;
             const chave = `${op.id}|${op.estado}`;
             if (!dedupSet.has(chave)) {
               dedupSet.add(chave);
@@ -201,6 +205,15 @@ export default function BlackMarketAnalyzer() {
             ))}
           </select>
         </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: '0.82rem', color: modoCaerleon ? '#c8a02a' : '#888' }}>
+          <input
+            type="checkbox"
+            checked={modoCaerleon}
+            onChange={(e) => { setModoCaerleon(e.target.checked); setCurrentPage(1); }}
+            style={{ accentColor: '#c8a02a', width: 14, height: 14 }}
+          />
+          Caerleon (avg)
+        </label>
         <button
           type="button"
           className="btn btn-primary"
@@ -247,9 +260,23 @@ export default function BlackMarketAnalyzer() {
 
       {/* Tabela paginada */}
       {(() => {
+        const TAX = 0.97;
+
+        const getPrecoEfetivo = (op) =>
+          modoCaerleon && op.precoMedioBM > 0 ? op.precoMedioBM : op.buyOrderBM;
+
+        const getLucroEfetivo = (op) => {
+          if (modoCaerleon && op.precoMedioBM > 0) {
+            return op.precoMedioBM * TAX - op.compra;
+          }
+          return Number(op.lucro) || 0;
+        };
+
         const validRows = rows.filter((op) => {
           if ((Number(op.volumeDiario) || 0) < volMinimo) return false;
           if (filtroCidade !== 'Todos' && op.origem !== filtroCidade) return false;
+          if (modoCaerleon && (!op.precoMedioBM || op.precoMedioBM <= 0)) return false;
+          if (modoCaerleon && getLucroEfetivo(op) <= 0) return false;
           return true;
         });
 
@@ -263,11 +290,11 @@ export default function BlackMarketAnalyzer() {
         const sortedRows = [...validRows].sort((a, b) => {
           let va, vb;
           if (sortCol === 'lucro') {
-            va = Number(a.lucro) || 0;
-            vb = Number(b.lucro) || 0;
+            va = getLucroEfetivo(a);
+            vb = getLucroEfetivo(b);
           } else if (sortCol === 'margem') {
-            va = Number(a.margem) || 0;
-            vb = Number(b.margem) || 0;
+            va = a.compra > 0 ? getPrecoEfetivo(a) / a.compra : 0;
+            vb = b.compra > 0 ? getPrecoEfetivo(b) / b.compra : 0;
           } else if (sortCol === 'volume') {
             va = Number(a.volumeDiario) || 0;
             vb = Number(b.volumeDiario) || 0;
@@ -275,14 +302,14 @@ export default function BlackMarketAnalyzer() {
             va = a.desvio ?? 999;
             vb = b.desvio ?? 999;
           } else if (sortCol === 'buyOrderBM') {
-            va = Number(a.buyOrderBM) || 0;
-            vb = Number(b.buyOrderBM) || 0;
+            va = getPrecoEfetivo(a);
+            vb = getPrecoEfetivo(b);
           } else {
-            va = Number(a.lucro) || 0;
-            vb = Number(b.lucro) || 0;
+            va = getLucroEfetivo(a);
+            vb = getLucroEfetivo(b);
           }
           const diff = sortAsc ? va - vb : vb - va;
-          return diff !== 0 ? diff : (Number(b.lucro) || 0) - (Number(a.lucro) || 0);
+          return diff !== 0 ? diff : getLucroEfetivo(b) - getLucroEfetivo(a);
         });
 
         const totalPages = Math.ceil(sortedRows.length / ITEMS_PER_PAGE);
@@ -308,7 +335,7 @@ export default function BlackMarketAnalyzer() {
                       style={{ cursor: 'pointer', userSelect: 'none' }}
                       onClick={() => handleSort('buyOrderBM')}
                     >
-                      Buy Order BM{sortIndicator('buyOrderBM')}
+                      {modoCaerleon ? 'Preço Médio BM' : 'Buy Order BM'}{sortIndicator('buyOrderBM')}
                     </th>
                     <th
                       style={{ cursor: 'pointer', userSelect: 'none' }}
@@ -339,7 +366,9 @@ export default function BlackMarketAnalyzer() {
                 </thead>
                 <tbody>
                   {pageRows.map((op, idx) => {
-                    const margem = op.compra > 0 ? ((op.buyOrderBM / op.compra - 1) * 100).toFixed(1) : '0.0';
+                    const precoEf = getPrecoEfetivo(op);
+                    const lucroEf = getLucroEfetivo(op);
+                    const margem = op.compra > 0 ? ((precoEf / op.compra - 1) * 100).toFixed(1) : '0.0';
                     return (
                       <tr key={`${op.id}-${op.estado}`}>
                         <td style={{ textAlign: 'right' }}>{startIdx + idx + 1}</td>
@@ -395,15 +424,18 @@ export default function BlackMarketAnalyzer() {
                           </div>
                         </td>
                         <td>
-                          <div style={{ fontWeight: 600, color: '#c8a02a' }}>{op.buyOrderBM?.toLocaleString('pt-PT')}</div>
+                          <div style={{ fontWeight: 600, color: modoCaerleon ? '#7eb8d4' : '#c8a02a' }}>
+                            {precoEf?.toLocaleString('pt-PT')}
+                          </div>
                           <div style={{ fontSize: '0.8rem' }}>
                             <span style={{ opacity: 0.7 }}>Black Market</span>
-                            {' · '}
-                            <span style={timeAgoStyle(op.atualizacaoBM)}>{timeAgo(op.atualizacaoBM)}</span>
+                            {!modoCaerleon && (
+                              <>{' · '}<span style={timeAgoStyle(op.atualizacaoBM)}>{timeAgo(op.atualizacaoBM)}</span></>
+                            )}
                           </div>
                         </td>
-                        <td className={profitClass(Number(op.lucro) || 0)} style={{ fontWeight: 700 }}>
-                          {(Number(op.lucro) || 0).toLocaleString('pt-PT', { maximumFractionDigits: 0 })}
+                        <td className={profitClass(lucroEf)} style={{ fontWeight: 700 }}>
+                          {lucroEf.toLocaleString('pt-PT', { maximumFractionDigits: 0 })}
                         </td>
                         <td style={{ textAlign: 'right' }}>{margem}%</td>
                         <td style={{
