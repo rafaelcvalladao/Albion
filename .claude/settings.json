@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -I \"https://raw.githubusercontent.com/broderickhyman/ao-bin-dumps/master/items.xml\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/broderickhyman/ao-bin-dumps/master/items.xml\")",
+      "Bash(curl -s \"https://api.github.com/search/repositories?q=albion+online+items+berserk+potion&sort=updated&per_page=5\")",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -v -A \"Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36 \\(KHTML, like Gecko\\) Chrome/120.0.0.0 Safari/537.36\" \"https://wiki.albiononline.com/api.php?action=query&titles=Berserk_Potion&prop=revisions&rvprop=content&format=json\")",
+      "WebFetch(domain:web.archive.org)",
+      "WebFetch(domain:forum.albiononline.com)",
+      "WebFetch(domain:jaccak.github.io)",
+      "WebFetch(domain:albionfreemarket.com)",
+      "Bash(curl -s \"https://api.github.com/repos/emogooo/Albion-Online-Potion-Crafting-Calculator/contents/\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/items.xml\")"
+    ]
+  }
+}

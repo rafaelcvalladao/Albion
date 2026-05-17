@@ -232,3 +232,7 @@ export function blackMarketStream(params, { onChunk, onProgress, onDone, onError
 export function validateToken(token) {
   return request('/api/auth/validate', { method: 'POST', body: JSON.stringify({ token }) });
 }
+
+export function potionAnalyze(body) {
+  return request('/api/potions/analyze', { method: 'POST', body: JSON.stringify(body) });
+}

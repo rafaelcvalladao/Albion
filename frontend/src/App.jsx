@@ -18,6 +18,7 @@ const MarketAnalyzer = lazy(() => import('./components/MarketAnalyzer.jsx'));
 const BlackMarketAnalyzer = lazy(() => import('./components/BlackMarketAnalyzer.jsx'));
 const EquipBuy = lazy(() => import('./components/EquipBuy.jsx'));
 const RefinementHub = lazy(() => import('./components/RefinementHub.jsx'));
+const PotionAnalyzer = lazy(() => import('./components/PotionAnalyzer.jsx'));
 
 export default function App() {
   const [tab, setTab] = useState('hub');
@@ -107,6 +108,13 @@ export default function App() {
           >
             Equip Buy
           </button>
+          <button
+            type="button"
+            className={tab === 'potions' ? 'tab active' : 'tab'}
+            onClick={() => setTab('potions')}
+          >
+            Poções
+          </button>
         </nav>
       </header>
       <main className="app-main">
@@ -159,6 +167,11 @@ export default function App() {
               Carregando base de dados de equipamentos...
             </div>
           )
+        )}
+        {tab === 'potions' && (
+          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando...</div>}>
+            <PotionAnalyzer />
+          </Suspense>
         )}
       </main>
     </div>

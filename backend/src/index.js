@@ -1,5 +1,6 @@
 import { buscarEquipamentoPorNivelEfetivo } from './equipBuyService.js';
 import { getEquipmentData } from './equipmentService.js';
+import { analyzePotions } from './potionService.js';
 
 import express from 'express';
 import cors from 'cors';
@@ -90,6 +91,9 @@ for (const { path, calcFn, stratFn } of refiningRoutes) {
 
 /** Hub: top materiais de refino de todos os recursos */
 app.post('/api/hub/strategy', wrap((req) => hubStrategy(req.body || {})));
+
+/** Análise de lucro de poções por cidade */
+app.post('/api/potions/analyze', wrap((req) => analyzePotions(req.body || {})));
 
 /** Últimas atualizações UTC por item (tier selecionado) — só wood por enquanto */
 app.get(
