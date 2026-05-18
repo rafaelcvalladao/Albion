@@ -17,6 +17,25 @@ function fmt(n) {
   return n.toLocaleString('pt-BR');
 }
 
+function timeAgo(dateStr) {
+  if (!dateStr) return { label: '—', color: '#555' };
+  const d = new Date(dateStr.replace(' ', 'T') + (dateStr.includes('Z') ? '' : 'Z'));
+  if (isNaN(d.getTime())) return { label: '?', color: '#555' };
+  const hrs = (Date.now() - d.getTime()) / 3_600_000;
+  if (hrs < 1) return { label: `${Math.round(hrs * 60)}min`, color: '#4caf50' };
+  if (hrs < 2) return { label: `${Math.round(hrs)}h`, color: '#4caf50' };
+  if (hrs < 6) return { label: `${Math.round(hrs)}h`, color: '#ff9800' };
+  if (hrs < 24) return { label: `${Math.round(hrs)}h`, color: '#f44336' };
+  return { label: `${Math.floor(hrs / 24)}d`, color: '#f44336' };
+}
+
+function volColor(v) {
+  if (!v || v === 0) return '#555';
+  if (v >= 20) return '#4caf50';
+  if (v >= 5) return '#ff9800';
+  return '#f44336';
+}
+
 function SortHeader({ label, col, sortCol, sortAsc, onSort }) {
   const active = sortCol === col;
   return (
@@ -309,13 +328,14 @@ export default function PotionAnalyzer() {
                       <SortHeader label="Lucro/Batch" col="profit" sortCol={sortCol} sortAsc={sortAsc} onSort={handleSort} />
                       <SortHeader label="Lucro/Unid." col="profitPerUnit" sortCol={sortCol} sortAsc={sortAsc} onSort={handleSort} />
                       <SortHeader label="Margem" col="margin" sortCol={sortCol} sortAsc={sortAsc} onSort={handleSort} />
-                      <th style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>RRR</th>
+                      <SortHeader label="Vol./dia" col="volumeDiario" sortCol={sortCol} sortAsc={sortAsc} onSort={handleSort} />
+                      <SortHeader label="Atualizado" col="dataPreco" sortCol={sortCol} sortAsc={sortAsc} onSort={handleSort} />
                     </tr>
                   </thead>
                   <tbody>
                     {filteredSame.length === 0 && (
                       <tr>
-                        <td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                        <td colSpan={10} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                           Nenhum resultado encontrado.
                         </td>
                       </tr>
@@ -364,9 +384,20 @@ export default function PotionAnalyzer() {
                           className={profitClass(r.margin)}>
                           {r.margin >= 0 ? '+' : ''}{r.margin}%
                         </td>
-                        <td style={{ padding: '0.5rem 0.75rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                          {r.rrr}%
-                        </td>
+                        {(() => { const ta = timeAgo(r.dataPreco); return (
+                          <>
+                            <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontWeight: 600 }}
+                              title={r.dataPreco || 'Sem data'}>
+                              <span style={{ color: volColor(r.volumeDiario) }}>
+                                {r.volumeDiario ?? 0}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontSize: '0.8rem', fontWeight: 600 }}
+                              title={r.dataPreco || 'Sem data'}>
+                              <span style={{ color: ta.color }}>{ta.label}</span>
+                            </td>
+                          </>
+                        ); })()}
                       </tr>
                     ))}
                   </tbody>
@@ -399,13 +430,15 @@ export default function PotionAnalyzer() {
                       <SortHeader label="Lucro/Batch" col="profit" sortCol={sortCol} sortAsc={sortAsc} onSort={handleSort} />
                       <SortHeader label="Lucro/Unid." col="profitPerUnit" sortCol={sortCol} sortAsc={sortAsc} onSort={handleSort} />
                       <SortHeader label="Margem" col="margin" sortCol={sortCol} sortAsc={sortAsc} onSort={handleSort} />
+                      <SortHeader label="Vol./dia" col="volumeDiario" sortCol={sortCol} sortAsc={sortAsc} onSort={handleSort} />
+                      <SortHeader label="Atualizado" col="dataPreco" sortCol={sortCol} sortAsc={sortAsc} onSort={handleSort} />
                       <th style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>Ingredientes</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredBrec.length === 0 && (
                       <tr>
-                        <td colSpan={10} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                        <td colSpan={12} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                           Nenhum resultado encontrado.
                         </td>
                       </tr>
@@ -455,6 +488,20 @@ export default function PotionAnalyzer() {
                           className={profitClass(r.margin)}>
                           {r.margin >= 0 ? '+' : ''}{r.margin}%
                         </td>
+                        {(() => { const ta = timeAgo(r.dataPreco); return (
+                          <>
+                            <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontWeight: 600 }}
+                              title={`Volume na cidade de venda (${r.sellCity})\n${r.dataPreco || 'Sem data'}`}>
+                              <span style={{ color: volColor(r.volumeDiario) }}>
+                                {r.volumeDiario ?? 0}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', fontSize: '0.8rem', fontWeight: 600 }}
+                              title={`Preço mais antigo entre ingredientes e poção:\n${r.dataPreco || 'Sem data'}`}>
+                              <span style={{ color: ta.color }}>{ta.label}</span>
+                            </td>
+                          </>
+                        ); })()}
                         <td style={{ padding: '0.5rem 0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                           {r.ingredientes.map(ing => (
                             <div key={ing.id} style={{ whiteSpace: 'nowrap' }}>

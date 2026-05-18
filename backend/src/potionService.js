@@ -1,4 +1,4 @@
-import { fetchPrices } from './albionClient.js';
+import { fetchPrices, fetchHistory } from './albionClient.js';
 import { calcularRrrManual } from './refiningService.js';
 
 const BATCH_SIZE = 5;
@@ -276,25 +276,55 @@ function ck(name) {
   return (name || '').toLowerCase().replace(/\s+/g, '');
 }
 
-function buildPriceMap(rawPrices) {
-  // item_id -> cityKey -> minimum sell price (ignoring quality)
-  const map = new Map();
+function buildPriceMaps(rawPrices) {
+  const priceMap = new Map(); // item_id -> cityKey -> sell_price_min
+  const dateMap = new Map();  // item_id -> cityKey -> sell_price_min_date
   for (const entry of rawPrices) {
     const price = entry.sell_price_min;
     if (!price || price <= 0) continue;
     const itemId = entry.item_id;
     const cityKey = ck(entry.city);
-    if (!map.has(itemId)) map.set(itemId, new Map());
-    const current = map.get(itemId).get(cityKey) || 0;
+    if (!priceMap.has(itemId)) { priceMap.set(itemId, new Map()); dateMap.set(itemId, new Map()); }
+    const current = priceMap.get(itemId).get(cityKey) || 0;
     if (current === 0 || price < current) {
-      map.get(itemId).set(cityKey, price);
+      priceMap.get(itemId).set(cityKey, price);
+      dateMap.get(itemId).set(cityKey, entry.sell_price_min_date || null);
     }
   }
-  return map;
+  return { priceMap, dateMap };
+}
+
+function buildVolumeMap(histData) {
+  // item_id -> cityKey -> avg daily volume (últimas 72h / 3 dias)
+  const volMap = new Map();
+  for (const entry of histData) {
+    const itemId = entry.item_id;
+    const cityKey = ck(entry.location);
+    if (!entry.data || entry.data.length === 0) { volMap.set(`${itemId}|${cityKey}`, 0); continue; }
+    const sorted = [...entry.data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const last72 = sorted.slice(-72);
+    const total = last72.reduce((s, d) => s + (d.item_count || 0), 0);
+    volMap.set(`${itemId}|${cityKey}`, Math.round(total / 3));
+  }
+  return volMap;
 }
 
 function getPrice(priceMap, itemId, cityKey) {
   return priceMap.get(itemId)?.get(cityKey) || 0;
+}
+
+function getDate(dateMap, itemId, cityKey) {
+  return dateMap.get(itemId)?.get(cityKey) || null;
+}
+
+// Retorna a data mais antiga entre todas (o "gargalo" de atualização)
+function oldestDate(dates) {
+  let oldest = null;
+  for (const d of dates) {
+    if (!d) continue;
+    if (!oldest || new Date(d) < new Date(oldest)) oldest = d;
+  }
+  return oldest;
 }
 
 export async function analyzePotions({ foco = false, dailyBonus = 0, taxaVenda = 6.5 } = {}) {
@@ -302,16 +332,25 @@ export async function analyzePotions({ foco = false, dailyBonus = 0, taxaVenda =
 
   // Coletar todos os item IDs necessários
   const allIds = new Set();
+  const potionOutputIds = new Set();
   for (const pt of POTION_TYPES) {
     for (const tier of pt.tiers) {
       allIds.add(tier.output);
+      potionOutputIds.add(tier.output);
       for (const ing of tier.ingredients) allIds.add(ing.id);
     }
   }
 
   const locationNames = CITIES.map(c => c.name);
-  const rawPrices = await fetchPrices([...allIds], locationNames);
-  const priceMap = buildPriceMap(rawPrices);
+
+  // Buscar preços e histórico em paralelo
+  const [rawPrices, histData] = await Promise.all([
+    fetchPrices([...allIds], locationNames),
+    fetchHistory([...potionOutputIds], locationNames, 1), // timescale=1h para volume
+  ]);
+
+  const { priceMap, dateMap } = buildPriceMaps(rawPrices);
+  const volMap = buildVolumeMap(histData);
 
   // ─── Análise mesma cidade ───
   const sameCidade = [];
@@ -337,6 +376,16 @@ export async function analyzePotions({ foco = false, dailyBonus = 0, taxaVenda =
         const revenue = BATCH_SIZE * potionPrice * taxaVendaNota;
         const profit = revenue - effectiveCost;
 
+        // Data mais antiga entre todos os preços desta linha
+        const allDates = [
+          getDate(dateMap, tier.output, city.key),
+          ...tier.ingredients.map(ing => getDate(dateMap, ing.id, city.key)),
+        ];
+        const dataPreco = oldestDate(allDates);
+
+        // Volume diário da poção nesta cidade
+        const volumeDiario = volMap.get(`${tier.output}|${city.key}`) ?? 0;
+
         sameCidade.push({
           potionId: pt.id,
           potionName: pt.name,
@@ -351,6 +400,8 @@ export async function analyzePotions({ foco = false, dailyBonus = 0, taxaVenda =
           profitPerUnit: Math.round(profit / BATCH_SIZE),
           margin: revenue > 0 ? Math.round((profit / revenue) * 1000) / 10 : 0,
           rrr: Math.round(rrr * 1000) / 10,
+          dataPreco,
+          volumeDiario,
         });
       }
     }
@@ -420,6 +471,14 @@ export async function analyzePotions({ foco = false, dailyBonus = 0, taxaVenda =
       const totalTeleport = teleportIng + teleportPocao;
       const profit = revenue - effectiveCost - totalTeleport;
 
+      // Data mais antiga entre todos os ingredientes (pior caso de atualização)
+      const allIngDates = ingDetalhes.map(ing => getDate(dateMap, ing.id, ck(ing.city)));
+      allIngDates.push(getDate(dateMap, tier.output, ck(bestCity)));
+      const dataPreco = oldestDate(allIngDates);
+
+      // Volume diário na melhor cidade de venda
+      const volumeDiario = volMap.get(`${tier.output}|${ck(bestCity)}`) ?? 0;
+
       brecilien.push({
         potionId: pt.id,
         potionName: pt.name,
@@ -438,6 +497,8 @@ export async function analyzePotions({ foco = false, dailyBonus = 0, taxaVenda =
         margin: revenue > 0 ? Math.round((profit / revenue) * 1000) / 10 : 0,
         rrr: Math.round(rrr_brec * 1000) / 10,
         ingredientes: ingDetalhes,
+        dataPreco,
+        volumeDiario,
       });
     }
   }
