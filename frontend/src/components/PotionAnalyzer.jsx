@@ -12,6 +12,20 @@ const CITY_SHORT = {
   Martlock: 'MT', Thetford: 'TF', Brecilien: 'BR ⭐', Caerleon: 'CL',
 };
 
+const CITY_COLORS = {
+  'Fort Sterling': '#d0d0d0',
+  Bridgewatch:     '#e07b39',
+  Caerleon:        '#999999',
+  Lymhurst:        '#56b856',
+  Martlock:        '#4a8fcf',
+  Thetford:        '#9b59b6',
+  Brecilien:       '#f44336',
+};
+
+function cityColor(city) {
+  return CITY_COLORS[city] || 'var(--text)';
+}
+
 function fmt(n) {
   if (!Number.isFinite(n)) return '—';
   return n.toLocaleString('pt-BR');
@@ -359,10 +373,7 @@ export default function PotionAnalyzer() {
                           </span>
                         </td>
                         <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center' }}>
-                          <span style={{
-                            color: r.city === 'Brecilien' ? '#ffd700' : 'var(--text)',
-                            fontWeight: r.city === 'Brecilien' ? 700 : 400,
-                          }}>
+                          <span style={{ color: cityColor(r.city), fontWeight: 600 }}>
                             {CITY_SHORT[r.city] || r.city}
                           </span>
                         </td>
@@ -461,7 +472,7 @@ export default function PotionAnalyzer() {
                             {r.tier}
                           </span>
                         </td>
-                        <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', color: '#ffd700', fontWeight: 700 }}>
+                        <td style={{ padding: '0.5rem 0.5rem', textAlign: 'center', color: cityColor(r.sellCity), fontWeight: 600 }}>
                           {CITY_SHORT[r.sellCity] || r.sellCity}
                         </td>
                         <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: 'var(--text-secondary)' }}>
@@ -506,7 +517,7 @@ export default function PotionAnalyzer() {
                           {r.ingredientes.map(ing => (
                             <div key={ing.id} style={{ whiteSpace: 'nowrap' }}>
                               {ing.id.replace(/^T\d_/, '')} ×{ing.qty}{' '}
-                              <span style={{ color: '#64b5f6' }}>@ {CITY_SHORT[ing.city] || ing.city}</span>
+                              <span style={{ color: cityColor(ing.city) }}>@ {CITY_SHORT[ing.city] || ing.city}</span>
                             </div>
                           ))}
                         </td>
