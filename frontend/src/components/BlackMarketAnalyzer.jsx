@@ -304,6 +304,14 @@ export default function BlackMarketAnalyzer() {
           } else if (sortCol === 'buyOrderBM') {
             va = getPrecoEfetivo(a);
             vb = getPrecoEfetivo(b);
+          } else if (sortCol === 'coeficiente') {
+            const calcCoef = (op) => {
+              const vol = op.volumeDiario || 0;
+              const peso = op.peso || 1;
+              return vol > 0 ? (getLucroEfetivo(op) * vol) / peso : -1;
+            };
+            va = calcCoef(a);
+            vb = calcCoef(b);
           } else {
             va = getLucroEfetivo(a);
             vb = getLucroEfetivo(b);
@@ -361,6 +369,13 @@ export default function BlackMarketAnalyzer() {
                       title="Desvio do buy order em relação ao preço médio histórico no BM"
                     >
                       Desvio{sortIndicator('desvio')}
+                    </th>
+                    <th
+                      style={{ cursor: 'pointer', userSelect: 'none' }}
+                      onClick={() => handleSort('coeficiente')}
+                      title="(Lucro × Vol/dia) ÷ Peso — maior = melhor para transportar"
+                    >
+                      Coef.{sortIndicator('coeficiente')}
                     </th>
                   </tr>
                 </thead>
@@ -459,6 +474,24 @@ export default function BlackMarketAnalyzer() {
                                     {op.precoMedioBM.toLocaleString('pt-PT')}
                                   </div>
                                 )}
+                              </>
+                            );
+                          })()}
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          {(() => {
+                            const vol = op.volumeDiario || 0;
+                            const peso = op.peso || 1;
+                            if (vol <= 0) return <span style={{ color: '#666' }}>-</span>;
+                            const coef = (getLucroEfetivo(op) * vol) / peso;
+                            return (
+                              <>
+                                <div style={{ fontWeight: 700, color: '#7eb8d4' }}>
+                                  {coef.toLocaleString('pt-PT', { maximumFractionDigits: 0 })}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: '#888' }}>
+                                  {peso} kg
+                                </div>
                               </>
                             );
                           })()}

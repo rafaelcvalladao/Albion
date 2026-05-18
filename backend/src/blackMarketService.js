@@ -3,6 +3,7 @@ import {
   QUALITY_NAMES,
   nomeItemEmPortugues,
   extrairInfoItem,
+  obterPesoReal,
 } from './marketConstants.js';
 import { gerarListaItens } from './marketItems.js';
 import { chunk, fetchPricesMarket, fetchHistoryMarket } from './marketPrices.js';
@@ -105,6 +106,7 @@ function extrairOportunidadesBM(respostaPrecos, maxIdade, agora, taxaVendaNota) 
       margem: melhorPreco > 0 ? (bmData.buyMax / melhorPreco - 1) * 100 : 0,
       atualizacaoOrig: melhorDataOrig,
       atualizacaoBM: bmData.dataStr,
+      peso: obterPesoReal(itemId),
     });
   }
 
