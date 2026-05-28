@@ -1,4 +1,5 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
+import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import ResourceMaster from './components/ResourceMaster.jsx';
 import LoginGate from './components/LoginGate.jsx';
 import { loadEquipmentHierarchy } from './data/equipmentHierarchy.js';
@@ -12,6 +13,7 @@ import {
   calculateMetal,
   strategyMetal,
 } from './api.js';
+import { useState } from 'react';
 import './App.css';
 
 const MarketAnalyzer = lazy(() => import('./components/MarketAnalyzer.jsx'));
@@ -20,14 +22,14 @@ const EquipBuy = lazy(() => import('./components/EquipBuy.jsx'));
 const RefinementHub = lazy(() => import('./components/RefinementHub.jsx'));
 const PotionAnalyzer = lazy(() => import('./components/PotionAnalyzer.jsx'));
 
+const fallback = <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando...</div>;
+
 export default function App() {
-  const [tab, setTab] = useState('hub');
   const [authenticated, setAuthenticated] = useState(
     () => sessionStorage.getItem('albion_token') != null,
   );
   const [equipmentReady, setEquipmentReady] = useState(false);
 
-  // Carregar hierarquia de equipamentos do backend ao inicializar
   useEffect(() => {
     loadEquipmentHierarchy()
       .then(() => {
@@ -36,7 +38,7 @@ export default function App() {
       })
       .catch(err => {
         console.error('Erro ao carregar equipamentos:', err);
-        setEquipmentReady(true); // Use fallback mesmo com erro
+        setEquipmentReady(true);
       });
   }, []);
 
@@ -52,127 +54,40 @@ export default function App() {
           <p className="app-tagline">Refino e mercado</p>
         </div>
         <nav className="tabs" aria-label="Secções">
-          <button
-            type="button"
-            className={tab === 'hub' ? 'tab active' : 'tab'}
-            onClick={() => setTab('hub')}
-          >
-            Hub
-          </button>
-          <button
-            type="button"
-            className={tab === 'wood' ? 'tab active' : 'tab'}
-            onClick={() => setTab('wood')}
-          >
-            Madeira
-          </button>
-          <button
-            type="button"
-            className={tab === 'fiber' ? 'tab active' : 'tab'}
-            onClick={() => setTab('fiber')}
-          >
-            Tecido
-          </button>
-          <button
-            type="button"
-            className={tab === 'leather' ? 'tab active' : 'tab'}
-            onClick={() => setTab('leather')}
-          >
-            Couro
-          </button>
-          <button
-            type="button"
-            className={tab === 'metal' ? 'tab active' : 'tab'}
-            onClick={() => setTab('metal')}
-          >
-            Minério
-          </button>
-          <button
-            type="button"
-            className={tab === 'market' ? 'tab active' : 'tab'}
-            onClick={() => setTab('market')}
-          >
-            Market Analyzer
-          </button>
-          <button
-            type="button"
-            className={tab === 'blackmarket' ? 'tab active' : 'tab'}
-            onClick={() => setTab('blackmarket')}
-          >
-            Black Market
-          </button>
-          <button
-            type="button"
-            className={tab === 'equipbuy' ? 'tab active' : 'tab'}
-            onClick={() => setTab('equipbuy')}
-          >
-            Equip Buy
-          </button>
-          <button
-            type="button"
-            className={tab === 'potions' ? 'tab active' : 'tab'}
-            onClick={() => setTab('potions')}
-          >
-            Poções
-          </button>
+          <NavLink className={({ isActive }) => isActive ? 'tab active' : 'tab'} to="/hub">Hub</NavLink>
+          <NavLink className={({ isActive }) => isActive ? 'tab active' : 'tab'} to="/wood">Madeira</NavLink>
+          <NavLink className={({ isActive }) => isActive ? 'tab active' : 'tab'} to="/fiber">Tecido</NavLink>
+          <NavLink className={({ isActive }) => isActive ? 'tab active' : 'tab'} to="/leather">Couro</NavLink>
+          <NavLink className={({ isActive }) => isActive ? 'tab active' : 'tab'} to="/metal">Minério</NavLink>
+          <NavLink className={({ isActive }) => isActive ? 'tab active' : 'tab'} to="/market">Market Analyzer</NavLink>
+          <NavLink className={({ isActive }) => isActive ? 'tab active' : 'tab'} to="/blackmarket">Black Market</NavLink>
+          <NavLink className={({ isActive }) => isActive ? 'tab active' : 'tab'} to="/equipbuy">Equip Buy</NavLink>
+          <NavLink className={({ isActive }) => isActive ? 'tab active' : 'tab'} to="/potions">Poções</NavLink>
         </nav>
       </header>
       <main className="app-main">
-        {tab === 'hub' && (
-          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando...</div>}>
-            <RefinementHub />
-          </Suspense>
-        )}
-        {tab === 'wood' && (
-          <ResourceMaster resource="wood" calculateFn={calculateWood} strategyFn={strategyWood} />
-        )}
-        {tab === 'fiber' && (
-          <ResourceMaster
-            resource="fiber"
-            calculateFn={calculateFiber}
-            strategyFn={strategyFiber}
-          />
-        )}
-        {tab === 'leather' && (
-          <ResourceMaster
-            resource="leather"
-            calculateFn={calculateLeather}
-            strategyFn={strategyLeather}
-          />
-        )}
-        {tab === 'metal' && (
-          <ResourceMaster
-            resource="metal"
-            calculateFn={calculateMetal}
-            strategyFn={strategyMetal}
-          />
-        )}
-        {tab === 'market' && (
-          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando...</div>}>
-            <MarketAnalyzer />
-          </Suspense>
-        )}
-        {tab === 'blackmarket' && (
-          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando...</div>}>
-            <BlackMarketAnalyzer />
-          </Suspense>
-        )}
-        {tab === 'equipbuy' && (
-          equipmentReady ? (
-            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando...</div>}>
-              <EquipBuy />
-            </Suspense>
-          ) : (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
-              Carregando base de dados de equipamentos...
-            </div>
-          )
-        )}
-        {tab === 'potions' && (
-          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando...</div>}>
-            <PotionAnalyzer />
-          </Suspense>
-        )}
+        <Suspense fallback={fallback}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/hub" replace />} />
+            <Route path="/hub" element={<RefinementHub />} />
+            <Route path="/wood" element={<ResourceMaster resource="wood" calculateFn={calculateWood} strategyFn={strategyWood} />} />
+            <Route path="/fiber" element={<ResourceMaster resource="fiber" calculateFn={calculateFiber} strategyFn={strategyFiber} />} />
+            <Route path="/leather" element={<ResourceMaster resource="leather" calculateFn={calculateLeather} strategyFn={strategyLeather} />} />
+            <Route path="/metal" element={<ResourceMaster resource="metal" calculateFn={calculateMetal} strategyFn={strategyMetal} />} />
+            <Route path="/market" element={<MarketAnalyzer />} />
+            <Route path="/blackmarket" element={<BlackMarketAnalyzer />} />
+            <Route
+              path="/equipbuy"
+              element={
+                equipmentReady
+                  ? <EquipBuy />
+                  : <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>Carregando base de dados de equipamentos...</div>
+              }
+            />
+            <Route path="/potions" element={<PotionAnalyzer />} />
+            <Route path="*" element={<Navigate to="/hub" replace />} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   );

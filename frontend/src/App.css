@@ -62,6 +62,8 @@
   color: var(--text-secondary);
   font-weight: 500;
   font-size: 0.875rem;
+  text-decoration: none;
+  cursor: pointer;
   transition:
     color 0.15s,
     background 0.15s;
