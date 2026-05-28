@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { validateToken } from '../api.js';
+import { ICONS } from './Icons.jsx';
 import '../styles/LoginGate.css';
 
 export default function LoginGate({ onSuccess }) {
@@ -27,25 +28,40 @@ export default function LoginGate({ onSuccess }) {
   }
 
   return (
-    <div className="login-gate">
-      <div className="login-card">
-        <div className="login-icon">⚔️</div>
-        <h1 className="login-title">Calculadora Albion</h1>
-        <p className="login-subtitle">Insira o código de acesso para continuar</p>
-        <form onSubmit={handleSubmit} className="login-form">
-          <input
-            type="password"
-            className="login-input"
-            placeholder="Código de acesso"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            autoFocus
-          />
-          {error && <p className="login-error">{error}</p>}
-          <button type="submit" className="login-btn" disabled={loading || !token.trim()}>
-            {loading ? 'Validando...' : 'Entrar'}
+    <div className="gate">
+      <div className={`gate-card${error ? ' gate-card-err' : ''}`}>
+        <div className="gate-mark">
+          <ICONS.lock size={28} />
+        </div>
+        <div className="gate-kicker">Calculadora Albion</div>
+        <h1 className="gate-title">Acesso <em>restrito</em></h1>
+        <p className="gate-sub">Insira o código de acesso para continuar</p>
+        <div className="gate-rule" />
+        <form onSubmit={handleSubmit} className="gate-form">
+          <div className="gate-field-lbl">Código de acesso</div>
+          <div className="gate-input-wrap">
+            <span className="gate-input-icon"><ICONS.lock size={16} /></span>
+            <input
+              type="password"
+              className="gate-input"
+              placeholder="••••••••"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <p className={`gate-error${error ? ' gate-error-on' : ''}`}>
+            {error}
+          </p>
+          <button
+            type="submit"
+            className="gate-submit"
+            disabled={loading || !token.trim()}
+          >
+            {loading ? 'Validando…' : 'Entrar'}
           </button>
         </form>
+        <p className="gate-foot">Acesso limitado a membros autorizados</p>
       </div>
     </div>
   );

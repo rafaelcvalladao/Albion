@@ -1,108 +1,213 @@
-.login-gate {
-  min-height: 100vh;
+/* ─── Access gate ──────────────────────────────────────────── */
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-gradient);
-  padding: 1rem;
+  padding: 24px;
+  background: var(--bg-base);
+  overflow: hidden;
+}
+.gate::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(58% 42% at 50% 38%, var(--accent-dim) 0%, transparent 68%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.gate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.45) 100%);
+  pointer-events: none;
 }
 
-.login-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  padding: 2.5rem 2rem;
-  max-width: 380px;
+.gate-card {
+  position: relative;
+  z-index: 1;
   width: 100%;
+  max-width: 388px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  padding: 40px 36px 32px;
   text-align: center;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 80px rgba(56, 189, 248, 0.06);
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  animation: gate-in 320ms cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes gate-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.gate-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 28px; right: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent) 50%, transparent);
+  opacity: 0.6;
 }
 
-.login-icon {
-  font-size: 3rem;
-  margin-bottom: 0.75rem;
+.gate-mark {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(201,150,58,0.08), 0 0 18px var(--accent-dim);
 }
 
-.login-title {
-  margin: 0 0 0.25rem;
-  font-size: 1.4rem;
+.gate-kicker {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+
+.gate-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
   font-weight: 700;
-  background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+}
+.gate-title em {
+  font-style: normal;
+  color: var(--accent);
 }
 
-.login-subtitle {
-  margin: 0 0 1.5rem;
-  font-size: 0.85rem;
-  color: var(--muted);
+.gate-sub {
+  margin: 8px auto 0;
+  max-width: 260px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
 
-.login-form {
+.gate-rule {
+  margin: 22px auto;
+  height: 1px;
+  width: 100%;
+  background: var(--border-subtle);
+}
+
+.gate-form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 12px;
+  text-align: left;
 }
 
-.login-input {
-  padding: 0.7rem 0.85rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 0.95rem;
-  text-align: center;
-  letter-spacing: 0.15em;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-
-.login-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--ring);
-}
-
-.login-input::placeholder {
-  color: var(--muted);
-  letter-spacing: 0.04em;
-}
-
-.login-error {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--profit-neg);
-  font-weight: 500;
-}
-
-.login-btn {
-  padding: 0.7rem 1rem;
-  border-radius: 0.5rem;
-  border: none;
+.gate-field-lbl {
+  font-family: var(--font-display);
+  font-size: 10px;
   font-weight: 600;
-  font-size: 0.9rem;
-  background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.35);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: -4px;
+}
+
+.gate-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.gate-input-icon {
+  position: absolute;
+  left: 13px;
+  display: flex;
+  color: var(--text-tertiary);
+  pointer-events: none;
+  transition: color 120ms ease;
+}
+.gate-input-wrap:focus-within .gate-input-icon { color: var(--accent); }
+
+.gate-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px 0 40px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 7px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  letter-spacing: 0.18em;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.gate-input::placeholder {
+  color: var(--text-tertiary);
+  letter-spacing: 0.06em;
+  font-size: 13px;
+}
+.gate-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.gate-card-err .gate-input {
+  border-color: var(--negative);
+  box-shadow: 0 0 0 3px rgba(224,92,92,0.16);
+}
+
+.gate-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--negative);
+  min-height: 16px;
+  margin-top: -4px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.gate-error-on { opacity: 1; }
+
+.gate-submit {
+  width: 100%;
+  height: 46px;
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--accent);
+  color: #0d0e12;
+  border: 0;
+  border-radius: 7px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition:
-    transform 0.1s,
-    background 0.15s;
+  transition: background 120ms ease, transform 80ms ease;
 }
-
-.login-btn:hover:not(:disabled) {
-  background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 100%);
-}
-
-.login-btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.login-btn:disabled {
-  opacity: 0.5;
+.gate-submit:hover:not(:disabled) { background: var(--accent-hover); }
+.gate-submit:active:not(:disabled) { transform: translateY(1px); }
+.gate-submit:disabled {
+  background: var(--bg-elevated);
+  color: var(--text-tertiary);
   cursor: not-allowed;
+}
+
+.gate-foot {
+  margin-top: 22px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
 }

@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { strategyWood, strategyFiber, strategyLeather, strategyMetal } from '../api.js';
-import { profitClass } from '../utils/profit.js';
+import { ICONS } from './Icons.jsx';
 
 const ITEM_ICON_URL = (id) => `https://render.albiononline.com/v1/item/${id}.png?quality=1`;
 
 const RESOURCE_INFO = {
-  wood:    { label: 'Madeira', suffix: '_PLANKS',   color: '#C8961C', bg: 'rgba(200,150,28,0.15)' },
-  fiber:   { label: 'Fibra',   suffix: '_CLOTH',    color: '#4CAF50', bg: 'rgba(76,175,80,0.15)'  },
-  leather: { label: 'Couro',   suffix: '_LEATHER',  color: '#E65100', bg: 'rgba(230,81,0,0.15)'   },
-  metal:   { label: 'Minério', suffix: '_METALBAR', color: '#78909C', bg: 'rgba(96,125,139,0.15)' },
+  wood:    { label: 'Madeira', suffix: '_PLANKS',   color: 'var(--wood)',    bg: 'rgba(122,92,58,0.18)'   },
+  fiber:   { label: 'Fibra',   suffix: '_CLOTH',    color: 'var(--fiber)',   bg: 'rgba(107,138,78,0.18)'  },
+  leather: { label: 'Couro',   suffix: '_LEATHER',  color: 'var(--leather)', bg: 'rgba(160,98,42,0.18)'   },
+  metal:   { label: 'Minério', suffix: '_METALBAR', color: 'var(--metal)',   bg: 'rgba(122,138,154,0.18)' },
 };
 
 const FOCO_BASE = { T4: 41, T5: 103, T6: 257, T7: 643, T8: 1607 };
@@ -76,19 +76,14 @@ function buildId(resource, item) {
   return level === '0' ? `${tier}${suffix}` : `${tier}${suffix}_LEVEL${level}@${level}`;
 }
 
+// ─── Sub-components ───────────────────────────────────────────────────────
+
 function ResourceBadge({ resource }) {
   const info = RESOURCE_INFO[resource];
   return (
-    <span style={{
-      display: 'inline-block',
-      padding: '0.15rem 0.45rem',
-      borderRadius: '3px',
-      fontSize: '0.72rem',
-      fontWeight: 700,
-      color: info.color,
-      backgroundColor: info.bg,
-      border: `1px solid ${info.color}55`,
-      whiteSpace: 'nowrap',
+    <span className="rbadge" style={{
+      borderLeftColor: info.color,
+      background: info.bg,
     }}>
       {info.label}
     </span>
@@ -100,7 +95,46 @@ function formatPeak(p) {
   return `${String(p.start).padStart(2, '0')}h–${String(p.end).padStart(2, '0')}h`;
 }
 
-function HubTable({ title, rows, getValue, getPercent, valueLabel, valueFormat, accent }) {
+function fmtProfit(v) {
+  if (v <= -8e8) return '—';
+  return Math.round(v).toLocaleString('pt-BR');
+}
+
+function fmtFoco(v) {
+  if (v <= -8e8) return '—';
+  return v.toFixed(2);
+}
+
+function fmtPct(v) {
+  if (v == null) return '—';
+  return (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+}
+
+// ─── Item cell (real Albion Online image) ─────────────────────────────────
+function ItemCell({ resource, item, imgId }) {
+  const [tier, enc = '0'] = String(item).split('.');
+  return (
+    <div className="item-cell">
+      {/* item image — Albion Online CDN asset */}
+      <div className="item-icon">
+        <img
+          src={ITEM_ICON_URL(imgId)}
+          alt={item}
+          width={24}
+          height={24}
+          style={{ objectFit: 'contain', width: 24, height: 24 }}
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        />
+      </div>
+      <span className="item-name">
+        {tier}{enc !== '0' && <sup className="enc">.{enc}</sup>}
+      </span>
+    </div>
+  );
+}
+
+// ─── HubTable ──────────────────────────────────────────────────────────────
+function HubTable({ title, rows, getValue, getPercent, valueLabel, valueFormat }) {
   const [sortCol, setSortCol] = useState('value');
   const [sortAsc, setSortAsc] = useState(false);
 
@@ -127,73 +161,70 @@ function HubTable({ title, rows, getValue, getPercent, valueLabel, valueFormat, 
     else { setSortCol(col); setSortAsc(false); }
   }
 
-  const ind = (col) => sortCol !== col ? '' : sortAsc ? ' ↑' : ' ↓';
-
   if (!rows?.length) return null;
+
+  const SortIcon = sortAsc ? ICONS.arrowUp : ICONS.arrowDown;
+
   return (
-    <div className="strategy-block">
-      <div
-        className="strategy-section-title"
-        style={{ borderLeft: `3px solid ${accent}`, paddingLeft: '0.5rem', color: accent }}
-        role="heading"
-        aria-level={3}
-      >
-        {title}
+    <div className="card hub-table-card">
+      <div className="hub-table-head">
+        <h2 className="hub-table-title">{title}</h2>
       </div>
-      <div className="table-wrap">
-        <table className="result-table">
+      <div className="hub-table-scroll">
+        <table className="rt">
           <thead>
             <tr>
-              <th>Item</th>
-              <th>Recurso</th>
-              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('value')}>
-                {valueLabel}{ind('value')}
+              <th className="rt-num">#</th>
+              <th className="rt-item">Item</th>
+              <th className="rt-res">Recurso</th>
+              <th
+                className={`rt-lucro${sortCol === 'value' ? ' rt-sort' : ''} rt-sort-header`}
+                onClick={() => handleSort('value')}
+              >
+                <span>{valueLabel}</span>
+                {sortCol === 'value' && <SortIcon size={11} />}
               </th>
-              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('pct')}>
-                %{ind('pct')}
+              <th
+                className={`rt-pct${sortCol === 'pct' ? ' rt-sort' : ''} rt-sort-header`}
+                onClick={() => handleSort('pct')}
+              >
+                %
               </th>
-              <th style={{ cursor: 'pointer' }} onClick={() => handleSort('vol')}>
-                Vol. 24h{ind('vol')}
+              <th
+                className={`rt-vol${sortCol === 'vol' ? ' rt-sort' : ''} rt-sort-header`}
+                onClick={() => handleSort('vol')}
+              >
+                Vol. 24h
               </th>
-              <th>Pico (UTC-3)</th>
+              <th className="rt-pico">Pico (UTC-3)</th>
             </tr>
           </thead>
           <tbody>
             {sortedRows.map((r, i) => {
+              const rank = i + 1;
+              const topClass = rank <= 3 ? `rt-top rt-top-${rank}` : '';
               const val = getValue(r);
               const pct = getPercent(r);
               const imgId = buildId(r.resource, r.item);
+              const valOk = val != null && val > -8e8;
+              const pctOk = pct != null;
               return (
-                <tr key={`${r.resource}-${r.item}-${i}`}>
-                  <td style={{ textAlign: 'center' }}>
-                    <img
-                      src={ITEM_ICON_URL(imgId)}
-                      alt={r.item}
-                      style={{ width: 64, height: 64, objectFit: 'contain' }}
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
+                <tr key={`${r.resource}-${r.item}-${i}`} className={topClass}>
+                  <td className="rt-num">{String(rank).padStart(2, '0')}</td>
+                  <td className="rt-item">
+                    <ItemCell resource={r.resource} item={r.item} imgId={imgId} />
                   </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <ResourceBadge resource={r.resource} />
-                  </td>
-                  <td
-                    className={profitClass(val)}
-                    style={{ fontWeight: 700, textAlign: 'center', fontSize: '1rem' }}
-                  >
+                  <td className="rt-res"><ResourceBadge resource={r.resource} /></td>
+                  <td className={`rt-lucro mono ${valOk ? (val >= 0 ? 'pos' : 'neg') : ''}`}>
                     {valueFormat(val)}
                   </td>
-                  <td
-                    className={pct != null ? profitClass(pct) : ''}
-                    style={{ fontWeight: 700, textAlign: 'center', fontSize: '0.95rem' }}
-                  >
-                    {pct != null ? `${pct.toFixed(1)}%` : '—'}
+                  <td className={`rt-pct mono ${pctOk ? (pct >= 0 ? 'pos' : 'neg') : ''}`}>
+                    {fmtPct(pct)}
                   </td>
-                  <td className="tabular-nums strategy-table-vol">
-                    {r.volume != null ? r.volume.toLocaleString('pt-PT') : '—'}
+                  <td className="rt-vol mono">
+                    {r.volume != null ? r.volume.toLocaleString('pt-BR') : '—'}
                   </td>
-                  <td className="tabular-nums" style={{ textAlign: 'center', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                    {formatPeak(r.peakHoursLocal)}
-                  </td>
+                  <td className="rt-pico mono">{formatPeak(r.peakHoursLocal)}</td>
                 </tr>
               );
             })}
@@ -204,6 +235,7 @@ function HubTable({ title, rows, getValue, getPercent, valueLabel, valueFormat, 
   );
 }
 
+// ─── RefinementHub ─────────────────────────────────────────────────────────
 export default function RefinementHub() {
   const [buyOrder, setBuyOrder] = useState(false);
   const [dailyBonus, setDailyBonus] = useState(0);
@@ -258,91 +290,82 @@ export default function RefinementHub() {
   const errorList = Object.entries(errors);
 
   return (
-    <div style={{ padding: '1rem', maxWidth: '1400px', margin: '0 auto' }}>
-      <div className="panel" style={{ marginBottom: '1rem', padding: '1rem 1.25rem' }}>
-        <h2 style={{ margin: '0 0 0.25rem' }}>Hub de Refino</h2>
-        <p style={{ margin: '0 0 0.85rem', fontSize: '0.85rem', color: '#888' }}>
-          Top 15 materiais para refinar entre todos os recursos — usa as especializações salvas em cada aba de refino.
-        </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={buyOrder}
-              onChange={(e) => setBuyOrder(e.target.checked)}
-            />
-            Comprar via buy order
+    <div className="page-inner">
+
+      {/* Controls card */}
+      <div className="card hub-controls">
+        <div className="hub-checks">
+          <label className={`cb ${buyOrder ? 'cb-on' : ''}`}>
+            <span className="cb-box">{buyOrder && <ICONS.check size={12} />}</span>
+            <input type="checkbox" checked={buyOrder} onChange={(e) => setBuyOrder(e.target.checked)} />
+            <span className="cb-label">Comprar via buy order</span>
           </label>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={dailyBonus === 10}
-              onChange={() => setDailyBonus(dailyBonus === 10 ? 0 : 10)}
-            />
-            Bônus diário 10%
+          <label className={`cb ${dailyBonus === 10 ? 'cb-on' : ''}`}>
+            <span className="cb-box">{dailyBonus === 10 && <ICONS.check size={12} />}</span>
+            <input type="checkbox" checked={dailyBonus === 10} onChange={() => setDailyBonus(dailyBonus === 10 ? 0 : 10)} />
+            <span className="cb-label">Bônus diário 10%</span>
           </label>
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={dailyBonus === 20}
-              onChange={() => setDailyBonus(dailyBonus === 20 ? 0 : 20)}
-            />
-            Bônus diário 20%
+          <label className={`cb ${dailyBonus === 20 ? 'cb-on' : ''}`}>
+            <span className="cb-box">{dailyBonus === 20 && <ICONS.check size={12} />}</span>
+            <input type="checkbox" checked={dailyBonus === 20} onChange={() => setDailyBonus(dailyBonus === 20 ? 0 : 20)} />
+            <span className="cb-label">Bônus diário 20%</span>
           </label>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            {isLoading ? `Carregando ${loadedCount}/4…` : 'Refresh'}
-          </button>
         </div>
-        {errorList.length > 0 && (
-          <div style={{ marginTop: '0.75rem' }}>
-            {errorList.map(([resource, msg]) => (
-              <p key={resource} className="error" style={{ margin: '0.25rem 0' }}>
-                {RESOURCE_INFO[resource].label}: {msg}
-              </p>
-            ))}
-          </div>
-        )}
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={handleRefresh}
+          disabled={isLoading}
+        >
+          <span className={`btn-icon ${isLoading ? 'spin' : ''}`}>
+            <ICONS.refresh size={15} />
+          </span>
+          <span>{isLoading ? `${loadedCount}/4` : 'Atualizar'}</span>
+        </button>
       </div>
 
-      {loadedCount === 0 && isLoading && (
-        <p className="mono strategy-hint" style={{ textAlign: 'center', padding: '2rem' }}>
-          Buscando dados de todos os recursos…
-        </p>
+      {/* Errors */}
+      {errorList.length > 0 && (
+        <div>
+          {errorList.map(([resource, msg]) => (
+            <p key={resource} className="error" style={{ margin: '0.25rem 0' }}>
+              {RESOURCE_INFO[resource].label}: {msg}
+            </p>
+          ))}
+        </div>
       )}
 
+      {/* Initial loading */}
+      {loadedCount === 0 && isLoading && (
+        <p className="hub-loading-hint">Buscando dados de todos os recursos…</p>
+      )}
+
+      {/* Tables */}
       {loadedCount > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1rem' }}>
+        <div className="hub-tables-grid">
           <HubTable
-            title={`Sem Foco — Top Lucro Local${isLoading ? ` (${loadedCount}/4)` : ''}`}
+            title={`Sem Foco — Top Lucro${isLoading ? ` (${loadedCount}/4)` : ''}`}
             rows={data.topSemFoco}
             getValue={(r) => r.lucro}
             getPercent={(r) => (r.custoLocal > 0 && r.lucro > -8e8) ? (r.lucro / r.custoLocal) * 100 : null}
             valueLabel="Lucro"
-            valueFormat={(v) => v > -8e8 ? Math.round(v).toLocaleString('pt-PT') : '—'}
-            accent="#4CAF50"
+            valueFormat={fmtProfit}
           />
           <HubTable
-            title={`Com Foco — Top Lucro / Foco${isLoading ? ` (${loadedCount}/4)` : ''}`}
+            title={`Com Foco — Top Lucro/Foco${isLoading ? ` (${loadedCount}/4)` : ''}`}
             rows={data.topComFoco}
             getValue={(r) => r.focoUnidades > 0 ? r.lucroComFoco / r.focoUnidades : -9e8}
             getPercent={(r) => (r.custoComFoco > 0 && r.lucroComFoco > -8e8) ? (r.lucroComFoco / r.custoComFoco) * 100 : null}
             valueLabel="Lucro/Foco"
-            valueFormat={(v) => v > -8e8 ? v.toFixed(2) : '—'}
-            accent="#2196F3"
+            valueFormat={fmtFoco}
           />
         </div>
       )}
 
       {loadedCount === 0 && !isLoading && errorList.length === 0 && (
-        <p style={{ textAlign: 'center', color: '#666', marginTop: '3rem', fontSize: '0.95rem' }}>
-          Carregando…
-        </p>
+        <p className="hub-loading-hint">Carregando…</p>
       )}
+
     </div>
   );
 }
