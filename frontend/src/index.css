@@ -1,11 +1,11 @@
 /* ─── Calculadora Albion — design system tokens ──────────────────────────── */
 
 :root {
-  /* Surfaces */
-  --bg-base:     #0d0e12;
-  --bg-surface:  #13151c;
-  --bg-elevated: #1a1d27;
-  --bg-hover:    rgba(33, 37, 51, 0.27);
+  /* Surfaces — warm warmth (default) */
+  --bg-base:     #100f0c;
+  --bg-surface:  #181612;
+  --bg-elevated: #211e18;
+  --bg-hover:    #2a261d55;
 
   /* Borders */
   --border-subtle:  rgba(255, 255, 255, 0.06);
