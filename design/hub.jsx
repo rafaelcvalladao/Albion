@@ -101,7 +101,6 @@ function ItemCell({ item, enc, res }) {
   const Icon = window.ICONS[meta.iconKey];
   return (
     <div className="item-cell">
-      {/* placeholder — replace with game asset <img> at implementation */}
       <div className="item-icon" style={{ color: meta.color }}>
         <Icon size={18}/>
       </div>
@@ -153,7 +152,6 @@ function HubPage() {
 
       {/* Mode toggle */}
       <div className="hub-mode-wrap">
-        <span className="hub-mode-label">Cálculo</span>
         <ModePill value={mode} onChange={setMode}/>
       </div>
 

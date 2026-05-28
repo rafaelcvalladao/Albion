@@ -529,7 +529,6 @@ textarea::placeholder { color: var(--text-tertiary); opacity: 1; }
   justify-content: space-between;
   gap: 24px;
   padding: 14px 20px;
-  border-top: 2px solid var(--accent);
 }
 .hub-checks {
   display: flex;
@@ -605,18 +604,8 @@ textarea::placeholder { color: var(--text-tertiary); opacity: 1; }
 /* ─── Mode pill ──────────────────────────────────────────── */
 .hub-mode-wrap {
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 12px;
   margin: 22px 0 18px;
-}
-.hub-mode-label {
-  font-family: var(--font-display);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
 }
 .pill {
   display: inline-flex;
@@ -648,10 +637,7 @@ textarea::placeholder { color: var(--text-tertiary); opacity: 1; }
 .pill-on:hover { color: #0d0e12; }
 
 /* ─── Ranking table ──────────────────────────────────────── */
-.hub-table-card {
-  overflow: hidden;
-  border-top: 2px solid var(--accent);
-}
+.hub-table-card { overflow: hidden; }
 .hub-table-head {
   display: flex;
   align-items: baseline;
@@ -739,19 +725,6 @@ textarea::placeholder { color: var(--text-tertiary); opacity: 1; }
 .rt-top-1 td:first-child::before { opacity: 1; }
 .rt-top-2 td:first-child::before { opacity: 0.65; }
 .rt-top-3 td:first-child::before { opacity: 0.4; }
-
-/* Top 3 row background tints */
-.rt tbody tr.rt-top-1 { background: color-mix(in oklab, var(--accent) 8%, var(--bg-surface)); }
-.rt tbody tr.rt-top-2 { background: color-mix(in oklab, var(--accent) 5%, var(--bg-surface)); }
-.rt tbody tr.rt-top-3 { background: color-mix(in oklab, var(--accent) 3%, var(--bg-surface)); }
-.rt tbody tr.rt-top-1:hover,
-.rt tbody tr.rt-top-2:hover,
-.rt tbody tr.rt-top-3:hover { background: var(--accent-dim); }
-
-/* Top 3 rank number coloring */
-.rt tbody tr.rt-top-1 .rt-num { color: var(--accent); font-weight: 700; }
-.rt tbody tr.rt-top-2 .rt-num { color: color-mix(in oklab, var(--accent) 70%, var(--text-tertiary)); font-weight: 600; }
-.rt tbody tr.rt-top-3 .rt-num { color: color-mix(in oklab, var(--accent) 45%, var(--text-tertiary)); font-weight: 600; }
 
 /* Column widths & alignment */
 .rt-num   { width: 36px; color: var(--text-tertiary); font-size: 11px; font-family: var(--font-mono); }
