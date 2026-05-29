@@ -1682,7 +1682,6 @@ table.result-table {
   border-radius: 8px;
   overflow: hidden;
   align-self: flex-start;
-  position: sticky;
   top: calc(var(--tb-h) + 16px);
   max-height: calc(100vh - var(--tb-h) - 48px);
   overflow-y: auto;
@@ -2964,7 +2963,7 @@ table.result-table {
   align-items: center;
   justify-content: center;
 }
-.ing-qty {
+.ing-sq .ing-qty {
   position: absolute;
   right: -3px;
   bottom: -3px;
