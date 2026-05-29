@@ -106,7 +106,7 @@ export default function LoginGate({ onSuccess }) {
         </form>
 
         <div className="gate-foot">
-          Acesso limitado a membros autorizados
+          Acesso limitado
         </div>
       </div>
     </div>
