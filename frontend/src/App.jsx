@@ -29,7 +29,7 @@ const NAV_REFINERS = [
   { id: 'metal',   path: '/metal',   label: 'Minério', iconKey: 'hammer' },
 ];
 const NAV_MARKET = [
-  { id: 'market',      path: '/market',      label: 'Market Analyzer', iconKey: 'candle' },
+  // { id: 'market',      path: '/market',      label: 'Market Analyzer', iconKey: 'candle' },
   { id: 'blackmarket', path: '/blackmarket', label: 'Black Market',    iconKey: 'skull'  },
   { id: 'equipbuy',    path: '/equipbuy',    label: 'Equip Buy',       iconKey: 'sword'  },
   { id: 'potions',     path: '/potions',     label: 'Poções',          iconKey: 'flask'  },
