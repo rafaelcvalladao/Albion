@@ -539,15 +539,13 @@
   padding: 10px 12px;
   white-space: nowrap;
 }
-.rt th.rt-sort { color: var(--accent); }
-.rt th.rt-sort > span { color: var(--accent); }
-.rt-sort {
-  display: inline-flex;
+.rt th.rt-sort {
+  color: var(--accent);
+  display: flex;
   align-items: center;
   gap: 5px;
-  color: var(--accent);
-  cursor: pointer;
 }
+.rt th.rt-sort > span { color: var(--accent); }
 .rt td {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-subtle);

@@ -78,6 +78,29 @@ function buildId(resource, item) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────
 
+function ModePill({ value, onChange }) {
+  return (
+    <div className="pill" role="tablist">
+      <button
+        role="tab"
+        aria-selected={value === 'sem'}
+        className={`pill-opt ${value === 'sem' ? 'pill-on' : ''}`}
+        onClick={() => onChange('sem')}
+      >
+        Sem Foco
+      </button>
+      <button
+        role="tab"
+        aria-selected={value === 'com'}
+        className={`pill-opt ${value === 'com' ? 'pill-on' : ''}`}
+        onClick={() => onChange('com')}
+      >
+        Com Foco
+      </button>
+    </div>
+  );
+}
+
 function ResourceBadge({ resource }) {
   const info = RESOURCE_INFO[resource];
   return (
@@ -110,12 +133,10 @@ function fmtPct(v) {
   return (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
 }
 
-// ─── Item cell (real Albion Online image) ─────────────────────────────────
 function ItemCell({ resource, item, imgId }) {
   const [tier, enc = '0'] = String(item).split('.');
   return (
     <div className="item-cell">
-      {/* item image — Albion Online CDN asset */}
       <div className="item-icon">
         <img
           src={ITEM_ICON_URL(imgId)}
@@ -134,7 +155,7 @@ function ItemCell({ resource, item, imgId }) {
 }
 
 // ─── HubTable ──────────────────────────────────────────────────────────────
-function HubTable({ title, rows, getValue, getPercent, valueLabel, valueFormat }) {
+function HubTable({ title, subtitle, rows, getValue, getPercent, valueLabel, valueFormat }) {
   const [sortCol, setSortCol] = useState('value');
   const [sortAsc, setSortAsc] = useState(false);
 
@@ -169,6 +190,7 @@ function HubTable({ title, rows, getValue, getPercent, valueLabel, valueFormat }
     <div className="card hub-table-card">
       <div className="hub-table-head">
         <h2 className="hub-table-title">{title}</h2>
+        {subtitle && <div className="hub-table-sub">{subtitle}</div>}
       </div>
       <div className="hub-table-scroll">
         <table className="rt">
@@ -237,6 +259,7 @@ function HubTable({ title, rows, getValue, getPercent, valueLabel, valueFormat }
 
 // ─── RefinementHub ─────────────────────────────────────────────────────────
 export default function RefinementHub() {
+  const [mode, setMode] = useState('sem');
   const [buyOrder, setBuyOrder] = useState(false);
   const [dailyBonus, setDailyBonus] = useState(0);
   const [resourceData, setResourceData] = useState({});
@@ -289,6 +312,10 @@ export default function RefinementHub() {
 
   const errorList = Object.entries(errors);
 
+  const tableTitle = mode === 'sem' ? 'TOP 15 — LUCRO LOCAL' : 'TOP 15 — LUCRO / FOCO';
+  const tableSubtitle = isLoading ? `Carregando ${loadedCount}/4 recursos…` : null;
+  const tableRows = mode === 'sem' ? data.topSemFoco : data.topComFoco;
+
   return (
     <div className="page-inner">
 
@@ -335,31 +362,31 @@ export default function RefinementHub() {
         </div>
       )}
 
-      {/* Initial loading */}
+      {/* Mode toggle */}
+      <div className="hub-mode-wrap">
+        <ModePill value={mode} onChange={setMode} />
+      </div>
+
+      {/* Initial loading hint */}
       {loadedCount === 0 && isLoading && (
         <p className="hub-loading-hint">Buscando dados de todos os recursos…</p>
       )}
 
-      {/* Tables */}
+      {/* Ranking table */}
       {loadedCount > 0 && (
-        <div className="hub-tables-grid">
-          <HubTable
-            title={`Sem Foco — Top Lucro${isLoading ? ` (${loadedCount}/4)` : ''}`}
-            rows={data.topSemFoco}
-            getValue={(r) => r.lucro}
-            getPercent={(r) => (r.custoLocal > 0 && r.lucro > -8e8) ? (r.lucro / r.custoLocal) * 100 : null}
-            valueLabel="Lucro"
-            valueFormat={fmtProfit}
-          />
-          <HubTable
-            title={`Com Foco — Top Lucro/Foco${isLoading ? ` (${loadedCount}/4)` : ''}`}
-            rows={data.topComFoco}
-            getValue={(r) => r.focoUnidades > 0 ? r.lucroComFoco / r.focoUnidades : -9e8}
-            getPercent={(r) => (r.custoComFoco > 0 && r.lucroComFoco > -8e8) ? (r.lucroComFoco / r.custoComFoco) * 100 : null}
-            valueLabel="Lucro/Foco"
-            valueFormat={fmtFoco}
-          />
-        </div>
+        <HubTable
+          title={tableTitle}
+          subtitle={tableSubtitle}
+          rows={tableRows}
+          getValue={mode === 'sem'
+            ? (r) => r.lucro
+            : (r) => r.focoUnidades > 0 ? r.lucroComFoco / r.focoUnidades : -9e8}
+          getPercent={mode === 'sem'
+            ? (r) => (r.custoLocal > 0 && r.lucro > -8e8) ? (r.lucro / r.custoLocal) * 100 : null
+            : (r) => (r.custoComFoco > 0 && r.lucroComFoco > -8e8) ? (r.lucroComFoco / r.custoComFoco) * 100 : null}
+          valueLabel={mode === 'sem' ? 'Lucro' : 'Lucro/Foco'}
+          valueFormat={mode === 'sem' ? fmtProfit : fmtFoco}
+        />
       )}
 
       {loadedCount === 0 && !isLoading && errorList.length === 0 && (
