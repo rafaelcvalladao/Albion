@@ -402,6 +402,11 @@ export async function analyzePotions({ foco = false, dailyBonus = 0, taxaVenda =
           rrr: Math.round(rrr * 1000) / 10,
           dataPreco,
           volumeDiario,
+          ingredientes: tier.ingredients.map(ing => ({
+            id: ing.id,
+            qty: ing.qty,
+            price: getPrice(priceMap, ing.id, city.key),
+          })),
         });
       }
     }

@@ -2945,3 +2945,274 @@ table.result-table {
   min-width: 80px;
   text-align: center;
 }
+
+/* ─── Ingredient squares ───────────────────────────────── */
+.ing-sq {
+  width: 28px;
+  height: 28px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+.ing-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ing-qty {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 2px;
+  padding: 0 3px;
+  line-height: 1.3;
+}
+
+/* ─── Poções page ──────────────────────────────────────── */
+.poc-label {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+  margin-right: 2px;
+}
+
+.poc-num-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.poc-num-wrap input {
+  width: 64px;
+  height: 30px;
+  padding: 0 20px 0 9px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.poc-num-wrap input::-webkit-outer-spin-button,
+.poc-num-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.poc-num-wrap input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.poc-num-suffix {
+  position: absolute;
+  right: 8px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+/* Mode tabs */
+.poc-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 18px;
+}
+.poc-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 42px;
+  border: 0;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--text-tertiary);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+.poc-tab:hover { color: var(--text-secondary); background: var(--bg-hover); }
+.poc-tab-on {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+.poc-tab-on:hover { color: var(--text-primary); }
+.poc-tab-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.poc-tab .poc-tab-star { color: var(--accent); display: inline-flex; }
+
+/* Secondary filters row */
+.poc-subfilters {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 2px 12px;
+  flex-wrap: wrap;
+}
+.poc-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.poc-count-n {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-right: 5px;
+}
+.poc-subfilters-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Table — column tweaks */
+.poc-table td.poc-cell-item { min-width: 230px; padding-top: 10px; padding-bottom: 10px; }
+.poc-item-inner {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.poc-item-name {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.poc-table th.poc-r { text-align: right; }
+.poc-cost  { text-align: right; color: var(--text-primary); }
+.poc-receita { text-align: right; color: var(--text-secondary); }
+.poc-lucro { text-align: right; font-size: 14px; font-weight: 600; }
+.poc-unid  { text-align: right; }
+.poc-pct   { text-align: right; }
+.poc-vol   { text-align: right; color: var(--text-primary); }
+.poc-atual { color: var(--text-tertiary); font-size: 12px; white-space: nowrap; }
+.poc-row-neg { opacity: 0.42; }
+.poc-row-clickable { cursor: pointer; }
+
+/* City label */
+.poc-city {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.poc-city-br { color: var(--accent); }
+.poc-city-star { display: inline-flex; color: var(--accent); font-style: normal; }
+
+/* Teleporte badge */
+.poc-tele-yes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border-radius: 3px;
+  padding: 2px 7px;
+}
+.poc-tele-no { color: var(--text-tertiary); }
+
+/* Expand chevron */
+.poc-expand-chev {
+  display: inline-flex;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: transform 180ms ease, color 120ms ease;
+}
+.poc-row-open .poc-expand-chev { transform: rotate(90deg); color: var(--accent); }
+
+/* Expanded detail row */
+.poc-detail-row > td {
+  padding: 0 !important;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+}
+.poc-detail-inner {
+  padding: 14px 18px 16px 52px;
+}
+.poc-detail-title {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+}
+.poc-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 600px;
+}
+.poc-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.poc-detail-name {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+  flex: 1;
+}
+.poc-detail-qty {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+.poc-detail-city {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 120px;
+}
+.poc-detail-price {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  min-width: 80px;
+  text-align: right;
+}
+.poc-detail-price-u {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-left: 3px;
+}
