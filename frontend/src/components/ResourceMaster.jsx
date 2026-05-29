@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { profitClass, famaClass } from '../utils/profit.js';
+import { profitClass } from '../utils/profit.js';
 
 const ITEM_ICON_URL = (id) => `https://render.albiononline.com/v1/item/${id}.png?quality=1`;
 
@@ -11,8 +11,6 @@ function avgPriceClass(current, avg) {
   if (dev <= 0.50) return 'tabular-nums avg-orange';
   return 'tabular-nums avg-red';
 }
-
-// ─── Helpers genéricos ───
 
 function parseTierItem(item) {
   const [tier, level] = String(item).split('.');
@@ -38,14 +36,11 @@ function formatTimeAgo(isoDate) {
     if (diffMin < 60) return `${diffMin}m`;
     const diffHour = Math.floor(diffMin / 60);
     if (diffHour < 24) return `${diffHour}h`;
-    const diffDay = Math.floor(diffHour / 24);
-    return `${diffDay}d`;
+    return `${Math.floor(diffHour / 24)}d`;
   } catch {
     return '—';
   }
 }
-
-// ─── Build ID padrão e especial (stone) ───
 
 function stdBuildId(suffix) {
   return (tier, level) => (level === '0' ? `${tier}${suffix}` : `${tier}${suffix}_LEVEL${level}@${level}`);
@@ -55,11 +50,9 @@ function encBuildId(suffix) {
   return (tier, level) => (level === '0' ? `${tier}${suffix}` : `${tier}${suffix}_LEVEL${level}@${level}`);
 }
 
-// ─── Configurações por recurso ───
-
 const CONFIGS = {
   wood: {
-    specLabels: ['Bétula (T4)', 'Cedro (T5)', 'Carvalho (T6)', 'Ferro (T7)', 'Abrunheiro (T8)'],
+    specLabels: ['T4', 'T5', 'T6', 'T7', 'T8'],
     refiningCity: 'Fort Sterling',
     storageKey: 'albion-wood-config-v1',
     cityKey: 'fortSterling',
@@ -76,7 +69,7 @@ const CONFIGS = {
     buildRefinedId: encBuildId('_PLANKS'),
   },
   fiber: {
-    specLabels: ['Fibra (T4)', 'Fibra (T5)', 'Fibra (T6)', 'Fibra (T7)', 'Fibra (T8)'],
+    specLabels: ['T4', 'T5', 'T6', 'T7', 'T8'],
     refiningCity: 'Lymhurst',
     storageKey: 'albion-fiber-config-v1',
     cityKey: 'lymhurst',
@@ -89,7 +82,7 @@ const CONFIGS = {
     buildRefinedId: encBuildId('_CLOTH'),
   },
   leather: {
-    specLabels: ['Couro (T4)', 'Couro (T5)', 'Couro (T6)', 'Couro (T7)', 'Couro (T8)'],
+    specLabels: ['T4', 'T5', 'T6', 'T7', 'T8'],
     refiningCity: 'Martlock',
     storageKey: 'albion-leather-config-v1',
     cityKey: 'martlock',
@@ -102,13 +95,13 @@ const CONFIGS = {
     buildRefinedId: encBuildId('_LEATHER'),
   },
   metal: {
-    specLabels: ['Minério (T4)', 'Minério (T5)', 'Minério (T6)', 'Minério (T7)', 'Minério (T8)'],
+    specLabels: ['T4', 'T5', 'T6', 'T7', 'T8'],
     refiningCity: 'Thetford',
     storageKey: 'albion-metal-config-v1',
     cityKey: 'thetford',
     cityDisplay: 'Thetford',
     rawAlt: 'minério',
-    refinedAlt: 'minério',
+    refinedAlt: 'lingote',
     rawPlaceholder: 'metal',
     refinedPlaceholder: 'metal',
     buildRawId: stdBuildId('_ORE'),
@@ -122,9 +115,7 @@ function loadConfig(storageKey) {
   try {
     const raw = localStorage.getItem(storageKey);
     if (raw) return JSON.parse(raw);
-  } catch {
-    /* ignore */
-  }
+  } catch { /* ignore */ }
   return {
     spec: { t4: '0', t5: '0', t6: '0', t7: '0', t8: '0' },
     tier: 'T6',
@@ -135,294 +126,504 @@ function loadConfig(storageKey) {
   };
 }
 
-// ─── Sub-componentes compartilhados ───
+// ─── Shared primitives ────────────────────────────────────────────────────
 
-function FinalProductIcon({ item, buildRefinedId, refinedAlt, refinedPlaceholder }) {
-  const { tier, level } = parseTierItem(item);
-  const id = buildRefinedId(tier, level);
+function ItemImg({ src, alt, size = 28 }) {
   return (
-    <div className="strategy-final-product-icon">
-      <img
-        src={ITEM_ICON_URL(id)}
-        alt={`${tier} ${refinedAlt}`}
-        onError={(e) => {
-          e.target.onerror = null;
-          e.target.src = `https://via.placeholder.com/56?text=${refinedPlaceholder}`;
-        }}
-      />
+    <img
+      src={src}
+      alt={alt}
+      width={size}
+      height={size}
+      className="item-img"
+      onError={(e) => { e.target.style.opacity = '0'; }}
+    />
+  );
+}
+
+function TierSelector({ tier, onChange }) {
+  return (
+    <div className="tier-seg" role="tablist">
+      {['T4', 'T5', 'T6', 'T7', 'T8'].map((t) => (
+        <button
+          key={t}
+          role="tab"
+          aria-selected={t === tier}
+          className={`tier-seg-opt${t === tier ? ' tier-seg-on' : ''}`}
+          onClick={() => onChange(t)}
+        >
+          {t}
+        </button>
+      ))}
     </div>
   );
 }
 
-function StrategyTable({
-  title,
-  kind,
-  rows,
-  compact,
-  buildRefinedId,
-  refinedAlt,
-  refinedPlaceholder,
-  lucroMode,
-  foco,
-}) {
-  const [sortColumn, setSortColumn] = useState(kind === 'foco' ? 'lucro' : null);
-  const [sortAsc, setSortAsc] = useState(kind === 'foco' ? false : true);
+function Checkbox({ label, checked, onChange }) {
+  return (
+    <label className={`cb${checked ? ' cb-on' : ''}`}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span className="cb-box">
+        {checked && (
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+            <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </span>
+      <span className="cb-label">{label}</span>
+    </label>
+  );
+}
 
-  if (!rows?.length) return null;
+// ─── Collapsible panel ────────────────────────────────────────────────────
 
-  const headClass =
-    kind === 'foco'
-      ? 'strategy-section-title strategy-section-title--foco'
-      : kind === 'fama'
-        ? 'strategy-section-title strategy-section-title--fama'
-        : 'strategy-section-title';
+function Panel({ open, onToggle, label, summary, children }) {
+  return (
+    <div className={`pnl${open ? ' pnl-open' : ''}`}>
+      <button className="pnl-head" onClick={onToggle} aria-expanded={open}>
+        <span className="pnl-label">{label}</span>
+        {summary && <span className="pnl-summary">{summary}</span>}
+        <span className="pnl-chev">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M5 3l4 4-4 4" />
+          </svg>
+        </span>
+      </button>
+      {open && (
+        <div className="pnl-body">
+          <div className="pnl-body-inner">{children}</div>
+        </div>
+      )}
+    </div>
+  );
+}
 
-  const colHeaderLabel = kind !== 'foco' ? 'Fama por Prata' : foco ? 'Lucro/Foco' : 'Lucro';
+// ─── Especialização e Taxa panel ──────────────────────────────────────────
 
+function SpecsPanel({ open, onToggle, cfg, setCfg, specKeys, onSave }) {
+  const summary = `Taxa: ${cfg.taxaNpc ?? 800} · T6: ${cfg.spec.t6 ?? 0}%`;
+  return (
+    <Panel open={open} onToggle={onToggle} label="Especialização e Taxa" summary={summary}>
+      <div className="specs-row">
+        <label className="specs-field">
+          <span className="specs-lbl">Taxa NPC (nutrição)</span>
+          <div className="specs-input-wrap">
+            <input
+              type="number"
+              min="0"
+              value={cfg.taxaNpc ?? '800'}
+              onChange={(e) => setCfg((c) => ({ ...c, taxaNpc: e.target.value }))}
+            />
+          </div>
+        </label>
+      </div>
+      <div className="specs-row specs-row--stacked">
+        <span className="specs-lbl">Especialização por tier</span>
+        <div className="specs-tier-grid">
+          {specKeys.map(({ key, label }) => (
+            <label key={key} className="specs-tier-field">
+              <span className="specs-tier-lbl">{label}</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={cfg.spec[key] ?? ''}
+                onChange={(e) => setCfg((c) => ({ ...c, spec: { ...c.spec, [key]: e.target.value } }))}
+              />
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="specs-actions">
+        <button className="btn-secondary" onClick={onSave}>Salvar e recalcular</button>
+      </div>
+    </Panel>
+  );
+}
+
+// ─── Farm Fama panel ──────────────────────────────────────────────────────
+
+function FarmFamaPanel({ open, onToggle, strategy, strategyLoading, cfg, rc }) {
+  const [ffTier, setFfTier] = useState('T6');
+
+  const rows = useMemo(() => {
+    const allRows = strategy?.fsLocalFamaAll || strategy?.fsLocalFama || [];
+    const tierRows = allRows.filter((r) => r.item.startsWith(ffTier));
+    return [...tierRows].sort((a, b) => {
+      const aVal = cfg.foco ? (a.famaPerPrataComFoco ?? 0) : (a.famaPerPrata ?? 0);
+      const bVal = cfg.foco ? (b.famaPerPrataComFoco ?? 0) : (b.famaPerPrata ?? 0);
+      return bVal - aVal;
+    });
+  }, [strategy, ffTier, cfg.foco]);
+
+  const best = rows[0];
+  const bestFpp = best ? (cfg.foco ? best.famaPerPrataComFoco : best.famaPerPrata) : null;
+  const enc = best?.item?.split('.')[1] ?? '0';
+  const summary = best
+    ? `${ffTier} · .${enc} · ${bestFpp?.toFixed(4).replace('.', ',') ?? '—'} fama/prata`
+    : ffTier;
+
+  return (
+    <Panel open={open} onToggle={onToggle} label="Farm Fama" summary={summary}>
+      <div className="ff2-tier-wrap">
+        <span className="ff2-tier-lbl">Tier</span>
+        <TierSelector tier={ffTier} onChange={setFfTier} />
+        <span className="ff2-hint">Todos os enchants do {ffTier}, ordenado por fama/prata.</span>
+      </div>
+      {strategyLoading ? (
+        <p className="ff2-loading">Carregando…</p>
+      ) : !rows.length ? (
+        <p className="ff2-loading">Sem dados disponíveis</p>
+      ) : (
+        <table className="ff2-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th className="ff-right">Fama/Prata ↓</th>
+              <th className="ff-right">Vol. 24h</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const { tier, level } = parseTierItem(r.item);
+              const fpp = cfg.foco ? r.famaPerPrataComFoco : r.famaPerPrata;
+              return (
+                <tr key={r.item}>
+                  <td>
+                    <div className="ff2-item">
+                      <div className="ff2-icon">
+                        <ItemImg
+                          src={ITEM_ICON_URL(rc.buildRefinedId(tier, level))}
+                          alt={r.item}
+                          size={28}
+                        />
+                      </div>
+                      <span className="ff2-label mono">{r.item}</span>
+                    </div>
+                  </td>
+                  <td className="ff-right mono ff2-fp">
+                    {fpp != null ? fpp.toFixed(4).replace('.', ',') : '—'}
+                  </td>
+                  <td className="ff-right mono acc-muted">
+                    {r.volume?.toLocaleString('pt-PT') ?? '—'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </Panel>
+  );
+}
+
+// ─── Accordion result row ─────────────────────────────────────────────────
+
+function AccordionRow({ row, open, onToggle, rc }) {
+  const { tier, level } = parseTierItem(row.nivel);
+  const tierNum = parseInt(tier.slice(1), 10);
+  const antLevel = tierNum === 4 ? '0' : level;
+  const isEnc = level !== '0';
+
+  const cities = rc.cities || [{ key: rc.cityKey, display: rc.cityDisplay }];
+  const cityData = cities.map((c) => ({ ...c, cd: row[c.key] })).filter((c) => c.cd);
+
+  const profits = cityData.map((c) => (Number.isFinite(c.cd.lucro) ? c.cd.lucro : -Infinity));
+  const bestLucro = profits.length ? Math.max(...profits) : null;
+  const bestVol = cityData.length ? Math.max(...cityData.map((c) => c.cd.volume24h ?? 0)) : null;
+
+  const bestCity = cityData.reduce((b, c) =>
+    !b || (c.cd.lucro ?? -Infinity) > (b.cd.lucro ?? -Infinity) ? c : b, null);
+  const custo = bestCity?.cd.tabua;
+  const margem = custo && bestLucro != null && bestLucro > -8e8 ? (bestLucro / custo) * 100 : null;
+
+  const rawId = rc.buildRawId(tier, level);
+  const antId = rc.buildRefinedId(tAntOf(tier), antLevel);
+  const outId = rc.buildRefinedId(tier, level);
+
+  return (
+    <div className={`acc${open ? ' acc-open' : ''}`}>
+      <button className="acc-head" onClick={onToggle} aria-expanded={open}>
+        <span className={`acc-tier mono${isEnc ? ' acc-tier-enc' : ''}`}>{row.nivel}</span>
+
+        <div className="acc-ing-stack">
+          <div className="acc-ing">
+            <ItemImg src={ITEM_ICON_URL(rawId)} alt="raw" size={26} />
+            <span className="ing-qty">×{row.qtTronco ?? 4}</span>
+          </div>
+          <div className="acc-ing acc-ing-dim">
+            <ItemImg src={ITEM_ICON_URL(antId)} alt="ant" size={26} />
+            <span className="ing-qty">×1</span>
+          </div>
+          <div className="acc-ing">
+            <ItemImg src={ITEM_ICON_URL(outId)} alt="out" size={26} />
+            <span className="ing-qty">×1</span>
+          </div>
+        </div>
+
+        <div className="acc-stat">
+          <span className="acc-stat-k">Lucro</span>
+          <span className={`acc-stat-v mono ${bestLucro != null && bestLucro > -8e8 ? profitClass(bestLucro) : ''}`}>
+            {bestLucro != null && bestLucro > -8e8
+              ? bestLucro.toLocaleString('pt-PT', { maximumFractionDigits: 0 })
+              : '—'}
+          </span>
+        </div>
+
+        {margem != null && (
+          <div className="acc-stat">
+            <span className="acc-stat-k">%</span>
+            <span className={`acc-stat-v mono ${profitClass(margem)}`}>{margem.toFixed(1)}%</span>
+          </div>
+        )}
+
+        <div className="acc-stat">
+          <span className="acc-stat-k">Vol. 24h</span>
+          <span className="acc-stat-v mono acc-muted">
+            {bestVol ? bestVol.toLocaleString('pt-PT') : '—'}
+          </span>
+        </div>
+
+        <span className="acc-chev">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M5 3l4 4-4 4" />
+          </svg>
+        </span>
+      </button>
+
+      {open && (
+        <div className="acc-body">
+          <div className="acc-body-inner">
+            <div className="acc-table-wrap">
+              <table className="acc-table">
+                <thead>
+                  <tr>
+                    <th>Cidade</th>
+                    <th>
+                      <div className="acc-th-imgs">
+                        <div className="acc-th-img">
+                          <ItemImg src={ITEM_ICON_URL(rawId)} alt="raw" size={40} />
+                          <span>×{row.qtTronco ?? 4}</span>
+                        </div>
+                        <div className="acc-th-img">
+                          <ItemImg src={ITEM_ICON_URL(antId)} alt="ant" size={40} />
+                          <span>×1</span>
+                        </div>
+                        <div className="acc-th-img">
+                          <ItemImg src={ITEM_ICON_URL(outId)} alt="out" size={40} />
+                          <span>×1</span>
+                        </div>
+                      </div>
+                    </th>
+                    <th className="ff-right">Lucro</th>
+                    <th className="ff-right">Vol. 24h</th>
+                    <th className="ff-right">Preço Médio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cityData.map(({ key, display, cd }) => (
+                    <tr key={key}>
+                      <td className="acc-city-name">{display}</td>
+                      <td>
+                        <div className="acc-price-trio">
+                          <span className="mono">{cd.tronco?.toLocaleString('pt-PT') ?? '—'}</span>
+                          <span className="acc-time">{formatTimeAgo(cd.troncoDate)}</span>
+                          <span className="mono">{cd.tabuaAnt?.toLocaleString('pt-PT') ?? '—'}</span>
+                          <span className="acc-time">{formatTimeAgo(cd.tabuaAntDate)}</span>
+                          <span className="mono">{cd.tabua?.toLocaleString('pt-PT') ?? '—'}</span>
+                          <span className="acc-time">{formatTimeAgo(cd.tauaDate)}</span>
+                        </div>
+                      </td>
+                      <td className={`ff-right mono ${profitClass(cd.lucro)}`}>
+                        {Number.isFinite(cd.lucro) && cd.lucro > -8e8
+                          ? cd.lucro.toLocaleString('pt-PT', { maximumFractionDigits: 0 })
+                          : '—'}
+                      </td>
+                      <td className="ff-right mono acc-muted">
+                        {cd.volume24h?.toLocaleString('pt-PT') ?? '—'}
+                      </td>
+                      <td className={`ff-right ${avgPriceClass(cd.tabua, cd.avgPreco)}`}>
+                        {cd.avgPreco?.toLocaleString('pt-PT', { maximumFractionDigits: 0 }) ?? '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  {row.melhorPreco && (
+                    <tr className="acc-best">
+                      <td><span className="acc-best-tag">Melhor preço</span></td>
+                      <td>
+                        <div className="acc-price-trio">
+                          {[row.melhorPreco.tronco, row.melhorPreco.tabuaAnt, row.melhorPreco.produto].map((mp, i) =>
+                            mp ? (
+                              <span key={i} className="acc-best-price">
+                                <span className="mono">{mp.preco.toLocaleString('pt-PT')}</span>
+                                <span className="acc-time">{mp.cidade} · {formatTimeAgo(mp.data)}</span>
+                              </span>
+                            ) : <span key={i} className="mono">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className={`ff-right mono ${profitClass(row.melhorPreco.lucro)}`}>
+                        {Number.isFinite(row.melhorPreco.lucro) && row.melhorPreco.lucro > -8e8
+                          ? row.melhorPreco.lucro.toLocaleString('pt-PT', { maximumFractionDigits: 0 })
+                          : '—'}
+                      </td>
+                      <td className="ff-right mono acc-muted">
+                        {row.melhorPreco.volumeProduto?.toLocaleString('pt-PT') ?? '—'}
+                      </td>
+                      <td className={`ff-right ${avgPriceClass(row.melhorPreco.produto?.preco, row.melhorPreco.avgPreco)}`}>
+                        {row.melhorPreco.avgPreco?.toLocaleString('pt-PT', { maximumFractionDigits: 0 }) ?? '—'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="acc-footer">
+              <span className="acc-callout">
+                Otimizado{' '}
+                {(rc.cities || [{ display: rc.cityDisplay }])
+                  .map((c) => c.display.split(' ').map((w) => w[0]).join(''))
+                  .join('-')}
+                <span className="acc-callout-v mono">
+                  {' '}{Number.isFinite(row.otimizado) && row.otimizado > -8e8
+                    ? `${row.otimizado.toLocaleString('pt-PT', { maximumFractionDigits: 0 })} prata`
+                    : '—'}
+                </span>
+              </span>
+              {row.foco && (
+                <span className="acc-foco-line">
+                  Foco: <span className="mono">{row.foco.unidades?.toFixed(1)}</span> un ·{' '}
+                  <span className={`mono ${profitClass(row.foco.prataPorFoco)}`}>
+                    {row.foco.prataPorFoco?.toFixed(2)} prata/foco
+                  </span>
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Indicações aside ─────────────────────────────────────────────────────
+
+function IndicacoesPanel({ strategy, strategyLoading, lucroMode, setLucroMode, cfg, rc }) {
   function getLucro(r) {
-    if (kind !== 'foco') return r.lucro;
-    const focoU = r.focoUnidades || 1;
-    if (foco) {
-      if (lucroMode === 'opt') return (r.lucroOpt ?? r.lucro) / focoU;
-      if (lucroMode === 'ot') return (r.lucroOT ?? r.lucro) / focoU;
-      return r.lucro / focoU;
-    }
     if (lucroMode === 'opt') return r.lucroOpt ?? r.lucro;
     if (lucroMode === 'ot') return r.lucroOT ?? r.lucro;
     return r.lucro;
   }
   function getVol(r) {
-    if (kind !== 'foco') return r.volume;
     if (lucroMode === 'opt') return r.volumeOpt ?? r.volume;
     if (lucroMode === 'ot') return r.volumeOT ?? r.volume;
     return r.volume;
-  }
-  function getAbsLucro(r) {
-    if (lucroMode === 'opt') return r.lucroOpt ?? r.lucro;
-    if (lucroMode === 'ot') return r.lucroOT ?? r.lucro;
-    return r.lucro;
   }
   function getCusto(r) {
     if (lucroMode === 'opt') return r.custoOpt ?? r.custoLocal;
     if (lucroMode === 'ot') return r.custoOT ?? r.custoLocal;
     return r.custoLocal;
   }
-  function getMargem(r) {
-    if (kind !== 'foco') return null;
-    const custo = getCusto(r);
-    const lucro = getAbsLucro(r);
-    if (!custo || custo <= 0 || lucro <= -8e8) return null;
-    return (lucro / custo) * 100;
-  }
   function getPeak(r) {
-    if (lucroMode === 'opt') return r.peakHoursOpt ?? r.peakHoursLocal ?? null;
-    if (lucroMode === 'ot') return r.peakHoursOT ?? r.peakHoursLocal ?? null;
-    return r.peakHoursLocal ?? null;
+    if (lucroMode === 'opt') return r.peakHoursOpt ?? r.peakHoursLocal;
+    if (lucroMode === 'ot') return r.peakHoursOT ?? r.peakHoursLocal;
+    return r.peakHoursLocal;
   }
 
-  const handleHeaderClick = (column) => {
-    if (sortColumn === column) setSortAsc(!sortAsc);
-    else {
-      setSortColumn(column);
-      setSortAsc(false);
-    }
-  };
+  const rows = useMemo(() => {
+    const all = strategy?.fsLocalFoco || [];
+    return [...all]
+      .sort((a, b) => (getLucro(b) ?? -Infinity) - (getLucro(a) ?? -Infinity))
+      .slice(0, 8);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [strategy, lucroMode]);
 
-  const sortedRows = useMemo(() => [...rows].sort((a, b) => {
-    let valA, valB;
-    if (sortColumn === 'lucro' || sortColumn === 'fama') {
-      valA = kind === 'foco' ? getLucro(a) : a.famaPerPrata;
-      valB = kind === 'foco' ? getLucro(b) : b.famaPerPrata;
-    } else if (sortColumn === 'volume') {
-      valA = getVol(a) ?? 0;
-      valB = getVol(b) ?? 0;
-    } else if (sortColumn === 'margem') {
-      valA = getMargem(a) ?? -Infinity;
-      valB = getMargem(b) ?? -Infinity;
-    } else {
-      valA = a.item;
-      valB = b.item;
-    }
-    if (typeof valA === 'string')
-      return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    return sortAsc ? valA - valB : valB - valA;
-  }), [rows, sortColumn, sortAsc, kind, lucroMode, foco]);
-
-  const ind = (col) => (sortColumn !== col ? '' : sortAsc ? ' ↑' : ' ↓');
+  const cityAbbr = rc.cityDisplay.split(' ').map((w) => w[0]).join('');
+  const modeLabel =
+    lucroMode === 'opt'
+      ? `Top Lucro ${rc.cities?.map((c) => c.display.split(' ').map((w) => w[0]).join('')).join('-') ?? ''}`
+      : lucroMode === 'ot'
+        ? 'Top Lucro OT'
+        : `Top Lucro · ${cityAbbr}`;
 
   return (
-    <div className={`strategy-block${compact ? ' strategy-block--compact' : ''}`}>
-      <div className={headClass} role="heading" aria-level={3}>
-        {title}
+    <aside className="ind">
+      <div className="ind-head">
+        <h3 className="ind-title">Indicações</h3>
+        <div className="ind-sub">Top 8 com volume · todas as tiers</div>
       </div>
-      <div className="table-wrap">
-        <table className="result-table">
-          <thead>
-            <tr>
-              <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('item')}>
-                Item{ind('item')}
-              </th>
-              <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('lucro')}>
-                {colHeaderLabel}
-                {ind('lucro')}
-              </th>
-              {kind === 'foco' && (
-                <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('margem')}>
-                  %{ind('margem')}
-                </th>
-              )}
-              <th style={{ cursor: 'pointer' }} onClick={() => handleHeaderClick('volume')}>
-                Vol. 24h{ind('volume')}
-              </th>
-              {kind === 'foco' && <th>Pico (UTC-3)</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {sortedRows.map((r) => (
-              <tr key={r.item}>
-                <td>
-                  <div className="strategy-item-cell">
-                    <FinalProductIcon
-                      item={r.item}
-                      buildRefinedId={buildRefinedId}
-                      refinedAlt={refinedAlt}
-                      refinedPlaceholder={refinedPlaceholder}
-                    />
-                  </div>
-                </td>
-                <td
-                  className={kind === 'fama' ? famaClass(getLucro(r)) : profitClass(getLucro(r))}
-                  style={{ fontSize: '1.1rem', fontWeight: 700, textAlign: 'center' }}
-                >
-                  {kind === 'foco'
-                    ? foco
-                      ? (getLucro(r) > -8e8 ? getLucro(r).toFixed(2) : '—')
-                      : (getLucro(r) > -8e8 ? Math.round(getLucro(r)).toLocaleString('pt-PT') : '—')
-                    : (r.famaPerPrata?.toFixed(4).toLocaleString('pt-PT') ?? '—')}
-                </td>
-                {kind === 'foco' && (() => {
-                  const m = getMargem(r);
-                  return (
-                    <td
-                      className={m != null ? profitClass(m) : ''}
-                      style={{ fontSize: '1rem', fontWeight: 700, textAlign: 'center' }}
-                    >
-                      {m != null ? `${m.toFixed(1)}%` : '—'}
-                    </td>
-                  );
-                })()}
-                <td className="tabular-nums strategy-table-vol">
-                  {getVol(r)?.toLocaleString('pt-PT') ?? '—'}
-                </td>
-                {kind === 'foco' && (() => {
-                  const p = getPeak(r);
-                  return (
-                    <td className="tabular-nums" style={{ textAlign: 'center', fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
-                      {p != null
-                        ? `${String(p.start).padStart(2, '0')}h–${String(p.end).padStart(2, '0')}h`
+      <select className="ind-select" value={lucroMode} onChange={(e) => setLucroMode(e.target.value)}>
+        <option value="local">Lucro {cityAbbr}</option>
+        {rc.cities && rc.cities.length > 1 && (
+          <option value="opt">
+            Lucro {rc.cities.map((c) => c.display.split(' ').map((w) => w[0]).join('')).join('-')}
+          </option>
+        )}
+        <option value="ot">Lucro OT</option>
+      </select>
+      <div className="ind-mode-bar">{modeLabel}</div>
+
+      {strategyLoading && <p className="ind-loading">Carregando…</p>}
+      {strategy?.error && <p className="error" style={{ margin: '8px 16px' }}>{strategy.error}</p>}
+
+      {!strategyLoading && rows.length > 0 && (
+        <ul className="ind-list">
+          {rows.map((r) => {
+            const lucro = getLucro(r);
+            const vol = getVol(r);
+            const custo = getCusto(r);
+            const peak = getPeak(r);
+            const margem =
+              custo && custo > 0 && lucro != null && lucro > -8e8
+                ? (lucro / custo) * 100
+                : null;
+            const { tier, level } = parseTierItem(r.item);
+
+            return (
+              <li key={r.item} className="ind-item">
+                <div className="ind-item-icon">
+                  <ItemImg
+                    src={ITEM_ICON_URL(rc.buildRefinedId(tier, level))}
+                    alt={r.item}
+                    size={36}
+                  />
+                </div>
+                <div className="ind-item-mid">
+                  <div className="ind-item-l1">
+                    <span className="ind-item-name mono">{r.item}</span>
+                    <span className={`mono ind-item-val ${lucro != null ? profitClass(lucro) : ''}`}>
+                      {lucro != null && lucro > -8e8
+                        ? cfg.foco
+                          ? lucro.toFixed(2)
+                          : Math.round(lucro).toLocaleString('pt-PT')
                         : '—'}
-                    </td>
-                  );
-                })()}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+                    </span>
+                  </div>
+                  <div className="ind-item-l2">
+                    {margem != null && (
+                      <span className={`mono ${profitClass(margem)}`}>{margem.toFixed(1)}%</span>
+                    )}
+                    <span className="ind-item-vol mono acc-muted">
+                      {vol?.toLocaleString('pt-PT') ?? '—'}
+                    </span>
+                    {peak != null && (
+                      <span className="ind-item-pico">
+                        {String(peak.start).padStart(2, '0')}h–{String(peak.end).padStart(2, '0')}h
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </aside>
   );
 }
 
-function TieredFamaTables({ rows, buildRefinedId, refinedAlt, refinedPlaceholder, foco }) {
-  const [sortBy, setSortBy] = useState('famaPerPrata');
-  const [sortAsc, setSortAsc] = useState(false);
-  if (!rows?.length) return null;
-
-  const getFamaPerPrata = (r) => foco ? (r.famaPerPrataComFoco ?? 0) : (r.famaPerPrata ?? 0);
-  const getLucroFama = (r) => foco ? r.lucroComFoco : r.lucro;
-
-  const grouped = ['T4', 'T5', 'T6', 'T7', 'T8']
-    .map((tier) => {
-      const tierRows = rows.filter((r) => r.item.startsWith(tier));
-      const sorted = [...tierRows].sort((a, b) => {
-        const aVal = sortBy === 'famaPerPrata' ? getFamaPerPrata(a) : (a.volume ?? 0);
-        const bVal = sortBy === 'famaPerPrata' ? getFamaPerPrata(b) : (b.volume ?? 0);
-        return sortAsc ? aVal - bVal : bVal - aVal;
-      });
-      return { tier, items: sorted };
-    })
-    .filter((g) => g.items.length > 0);
-
-  if (!grouped.length) return null;
-
-  const handleSort = (col) => {
-    if (sortBy === col) setSortAsc((c) => !c);
-    else {
-      setSortBy(col);
-      setSortAsc(false);
-    }
-  };
-
-  const ind = (col) => (sortBy !== col ? '' : sortAsc ? ' ↑' : ' ↓');
-
-  return (
-    <div>
-      <div className="strategy-section-title strategy-section-title--fama">
-        Local: Fama (Todos os enchantments)
-      </div>
-      <div className="tiered-fama-grid">
-        {grouped.map(({ tier, items }) => (
-          <div key={tier} className="strategy-block strategy-block--compact">
-            <div className="strategy-section-title strategy-section-title--fama">{tier}</div>
-            <div className="table-wrap">
-              <table className="result-table">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th style={{ cursor: 'pointer' }} onClick={() => handleSort('famaPerPrata')}>
-                      Fama/Prata{ind('famaPerPrata')}
-                    </th>
-                    <th style={{ cursor: 'pointer' }} onClick={() => handleSort('volume')}>
-                      Vol. 24h{ind('volume')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((r) => (
-                    <tr key={r.item}>
-                      <td>
-                        <FinalProductIcon
-                          item={r.item}
-                          buildRefinedId={buildRefinedId}
-                          refinedAlt={refinedAlt}
-                          refinedPlaceholder={refinedPlaceholder}
-                        />
-                      </td>
-                      <td
-                        className={famaClass(getLucroFama(r))}
-                        style={{ fontSize: '1.1rem', fontWeight: 700, textAlign: 'center' }}
-                      >
-                        {getFamaPerPrata(r)?.toFixed(4).toLocaleString('pt-PT') ?? '—'}
-                      </td>
-                      <td
-                        className="tabular-nums strategy-table-vol"
-                        style={{ textAlign: 'center' }}
-                      >
-                        {r.volume?.toLocaleString('pt-PT') ?? '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Componente principal genérico ───
+// ─── Main component ───────────────────────────────────────────────────────
 
 export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
   const rc = CONFIGS[resource];
@@ -432,19 +633,16 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
-  const [showConfig, setShowConfig] = useState(false);
-  const [showFarmFama, setShowFarmFama] = useState(false);
+  const [specsOpen, setSpecsOpen] = useState(false);
+  const [famaOpen, setFamaOpen] = useState(false);
   const [strategy, setStrategy] = useState(null);
   const [strategyLoading, setStrategyLoading] = useState(false);
   const [lucroMode, setLucroMode] = useState('local');
+  const [openNivel, setOpenNivel] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(rc.storageKey, JSON.stringify(cfg));
   }, [cfg, rc.storageKey]);
-
-  const setSpec = (key, value) => {
-    setCfg((c) => ({ ...c, spec: { ...c.spec, [key]: value } }));
-  };
 
   const runCalculate = useCallback(async () => {
     setLoading(true);
@@ -496,29 +694,14 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
     setLoading(true);
     setErr(null);
     calculateFn({
-      tier: cfg.tier,
-      taxaNpc: '800',
-      taxaVenda: '6.5',
-      spec: cfg.spec,
-      buyOrder: cfg.buyOrder,
-      foco: cfg.foco,
+      tier: cfg.tier, taxaNpc: '800', taxaVenda: '6.5',
+      spec: cfg.spec, buyOrder: cfg.buyOrder, foco: cfg.foco,
       dailyBonus: cfg.dailyBonus ?? 0,
     })
-      .then((data) => {
-        if (!cancelled) setResult(data);
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setErr(e.message || String(e));
-          setResult(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .then((data) => { if (!cancelled) setResult(data); })
+      .catch((e) => { if (!cancelled) { setErr(e.message || String(e)); setResult(null); } })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cfg.tier, cfg.buyOrder, cfg.foco, cfg.dailyBonus]);
 
@@ -526,465 +709,127 @@ export default function ResourceMaster({ resource, calculateFn, strategyFn }) {
     let cancelled = false;
     setStrategyLoading(true);
     strategyFn({
-      taxaNpc: '800',
-      taxaVenda: '6.5',
-      spec: cfg.spec,
-      buyOrder: cfg.buyOrder,
-      foco: cfg.foco,
+      taxaNpc: '800', taxaVenda: '6.5',
+      spec: cfg.spec, buyOrder: cfg.buyOrder, foco: cfg.foco,
       dailyBonus: cfg.dailyBonus ?? 0,
     })
-      .then((data) => {
-        if (!cancelled) setStrategy(data);
-      })
-      .catch((e) => {
-        if (!cancelled) setStrategy({ error: e.message || String(e) });
-      })
-      .finally(() => {
-        if (!cancelled) setStrategyLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .then((data) => { if (!cancelled) setStrategy(data); })
+      .catch((e) => { if (!cancelled) setStrategy({ error: e.message || String(e) }); })
+      .finally(() => { if (!cancelled) setStrategyLoading(false); });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cfg.buyOrder, cfg.foco, cfg.dailyBonus]);
 
   return (
-    <div className="wood-layout">
-      <aside className="panel panel--sidebar wood-sidebar">
-        <h2>Configurações</h2>
-        <div
-          style={{
-            marginBottom: '1rem',
-            padding: '0.75rem',
-            backgroundColor: 'rgba(76, 175, 80, 0.1)',
-            borderRadius: '4px',
-            border: '1px solid #4CAF50',
-          }}
-        >
-          <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold', color: '#2E7D32' }}>
-            🏴 Refino em: <strong>{rc.refiningCity}</strong>
-          </p>
-        </div>
-        <div className="form-grid">
-          <label>
-            Tier
-            <select value={cfg.tier} onChange={(e) => setCfg({ ...cfg, tier: e.target.value })}>
-              {['T4', 'T5', 'T6', 'T7', 'T8'].map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="button" className="btn btn-primary" onClick={() => setShowConfig(true)}>
-            Editar taxa e specs
-          </button>
-          <div className="checkbox-grid">
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={cfg.buyOrder}
-                onChange={(e) => setCfg({ ...cfg, buyOrder: e.target.checked })}
-              />
-              Comprar via buy order
-            </label>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={cfg.foco}
-                onChange={(e) => setCfg({ ...cfg, foco: e.target.checked })}
-              />
-              Usar foco
-            </label>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={cfg.dailyBonus === 10}
-                onChange={() => setCfg({ ...cfg, dailyBonus: cfg.dailyBonus === 10 ? 0 : 10 })}
-              />
-              Bônus diário 10%
-            </label>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={cfg.dailyBonus === 20}
-                onChange={() => setCfg({ ...cfg, dailyBonus: cfg.dailyBonus === 20 ? 0 : 20 })}
-              />
-              Bônus diário 20%
-            </label>
+    <div className="ref-layout">
+      <div className="ref-main">
+
+        {/* ── Config bar ── */}
+        <div className="cfgbar">
+          <span className="cfgbar-city">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+              <path d="M6.5 1v11M6.5 1L3 4.5h7L6.5 1z" />
+            </svg>
+            {rc.cityDisplay}
+          </span>
+          <div className="cfgbar-sep" />
+          <TierSelector tier={cfg.tier} onChange={(t) => setCfg((c) => ({ ...c, tier: t }))} />
+          <div className="cfgbar-sep" />
+          <div className="cfgbar-checks">
+            <Checkbox
+              label="Buy order"
+              checked={cfg.buyOrder}
+              onChange={(v) => setCfg((c) => ({ ...c, buyOrder: v }))}
+            />
+            <Checkbox
+              label="Usar foco"
+              checked={cfg.foco}
+              onChange={(v) => setCfg((c) => ({ ...c, foco: v }))}
+            />
+            <Checkbox
+              label="Bônus 10%"
+              checked={cfg.dailyBonus === 10}
+              onChange={(v) => setCfg((c) => ({ ...c, dailyBonus: v ? 10 : 0 }))}
+            />
+            <Checkbox
+              label="Bônus 20%"
+              checked={cfg.dailyBonus === 20}
+              onChange={(v) => setCfg((c) => ({ ...c, dailyBonus: v ? 20 : 0 }))}
+            />
           </div>
-          {cfg.dailyBonus > 0 && (
-            <div style={{ fontSize: '0.8rem', color: '#ffb74d', marginTop: '-0.5rem', padding: '0.4rem 0.5rem', background: 'rgba(255,183,77,0.08)', borderRadius: '4px', border: '1px solid rgba(255,183,77,0.3)' }}>
-              Bônus {cfg.dailyBonus}% ativo — lucro calculado pelo preço médio da tábua
-            </div>
-          )}
+          <div className="cfgbar-spacer" />
           <button
-            type="button"
-            className="btn btn-primary"
+            className="btn-primary"
             onClick={refreshAll}
             disabled={loading || strategyLoading}
           >
-            {loading || strategyLoading ? 'A carregar…' : 'Refresh preços'}
-          </button>
-          <button type="button" className="btn btn-primary" onClick={() => setShowFarmFama(true)}>
-            Farm Fama
+            {loading || strategyLoading ? 'Carregando…' : 'Refresh preços'}
           </button>
         </div>
-      </aside>
 
-      <div className="wood-results-row">
-        <section className="panel wood-results-main">
-          <h2>Resultados</h2>
-          {err && <p className="error">{err}</p>}
-          {result && (
-            <>
-              <div className="summary-strip">
-                <span className="summary-strip__label">Ordem</span>
-                <span className="summary-strip__value">{result.strategy}</span>
-                <span className="summary-strip__label">RRR</span>
-                <span className="summary-strip__value">{result.rrrPercent?.toFixed(1)}%</span>
-              </div>
-              {result.rows?.map((row) => {
-                const q = row.qtTronco ?? 0;
-                const { tier, level } = parseTierItem(row.nivel);
-                const tierNum = parseInt(tier.slice(1), 10);
-                const antLevel = tierNum === 4 ? '0' : level;
-
-                return (
-                  <article key={row.nivel} className="result-card">
-                    <h3 className="result-card__title">
-                      <span className="result-card__tier">{row.nivel}</span>
-                    </h3>
-                    <div className="table-wrap">
-                      <table className="result-table">
-                        <thead>
-                          <tr>
-                            <th>Cidade</th>
-                            <th>
-                              <div className="th-with-icon">
-                                <img
-                                  src={ITEM_ICON_URL(rc.buildRawId(tier, level))}
-                                  alt={`${row.nivel} ${rc.rawAlt}`}
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src = `https://via.placeholder.com/84?text=${rc.rawPlaceholder}`;
-                                  }}
-                                />
-                                <span className="th-with-icon__qty">x{q}</span>
-                              </div>
-                            </th>
-                            <th>
-                              <div className="th-with-icon">
-                                <img
-                                  src={ITEM_ICON_URL(rc.buildRefinedId(tAntOf(tier), antLevel))}
-                                  alt={`${tAntOf(tier)} ${rc.refinedAlt} ant.`}
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src = `https://via.placeholder.com/84?text=${rc.refinedPlaceholder}`;
-                                  }}
-                                />
-                                <span className="th-with-icon__qty">x1</span>
-                              </div>
-                            </th>
-                            <th>
-                              <div className="th-with-icon">
-                                <img
-                                  src={ITEM_ICON_URL(rc.buildRefinedId(tier, level))}
-                                  alt={`${row.nivel} ${rc.refinedAlt}`}
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src = `https://via.placeholder.com/84?text=${rc.refinedPlaceholder}`;
-                                  }}
-                                />
-                                <span className="th-with-icon__qty">x1</span>
-                              </div>
-                            </th>
-                            <th>Lucro</th>
-                            <th>Vol. 24h</th>
-                            <th>Preço Médio</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(rc.cities || [{ key: rc.cityKey, display: rc.cityDisplay }]).map(
-                            (city) => {
-                              const cd = row[city.key];
-                              return (
-                                <tr key={city.key}>
-                                  <td>{city.display}</td>
-                                  <td
-                                    className="tabular-nums"
-                                    style={{ textAlign: 'center' }}
-                                  >
-                                    <div>
-                                      {cd?.tronco ? cd.tronco.toLocaleString('pt-PT') : '—'}
-                                    </div>
-                                    <div style={{ fontSize: '0.85em', color: '#999' }}>
-                                      {formatTimeAgo(cd?.troncoDate)}
-                                    </div>
-                                  </td>
-                                  <td
-                                    className="tabular-nums"
-                                    style={{ textAlign: 'center' }}
-                                  >
-                                    <div>
-                                      {cd?.tabuaAnt ? cd.tabuaAnt.toLocaleString('pt-PT') : '—'}
-                                    </div>
-                                    <div style={{ fontSize: '0.85em', color: '#999' }}>
-                                      {formatTimeAgo(cd?.tabuaAntDate)}
-                                    </div>
-                                  </td>
-                                  <td
-                                    className="tabular-nums"
-                                    style={{ textAlign: 'center' }}
-                                  >
-                                    <div>
-                                      {cd?.tabua ? cd.tabua.toLocaleString('pt-PT') : '—'}
-                                    </div>
-                                    <div style={{ fontSize: '0.85em', color: '#999' }}>
-                                      {formatTimeAgo(cd?.tauaDate)}
-                                    </div>
-                                  </td>
-                                  <td className={`${profitClass(cd?.lucro)} lucro-cell`}>
-                                    {Number.isFinite(cd?.lucro) && cd.lucro > -8e8
-                                      ? cd.lucro.toLocaleString('pt-PT', {
-                                          maximumFractionDigits: 0,
-                                        })
-                                      : '—'}
-                                  </td>
-                                  <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                                    {cd?.volume24h != null
-                                      ? cd.volume24h.toLocaleString('pt-PT')
-                                      : '—'}
-                                  </td>
-                                  <td
-                                    className={avgPriceClass(cd?.tabua, cd?.avgPreco)}
-                                    style={{ textAlign: 'center' }}
-                                  >
-                                    {cd?.avgPreco
-                                      ? cd.avgPreco.toLocaleString('pt-PT', { maximumFractionDigits: 0 })
-                                      : '—'}
-                                  </td>
-                                </tr>
-                              );
-                            },
-                          )}
-                          {row.melhorPreco && (
-                            <tr className="melhor-preco-row">
-                              <td>Melhor preço</td>
-                              {[row.melhorPreco.tronco, row.melhorPreco.tabuaAnt, row.melhorPreco.produto].map(
-                                (mp, i) => (
-                                  <td
-                                    key={i}
-                                    className="tabular-nums"
-                                    style={{ textAlign: 'center' }}
-                                  >
-                                    {mp ? (
-                                      <>
-                                        <div>{mp.preco.toLocaleString('pt-PT')}</div>
-                                        <div style={{ fontSize: '0.85em', color: '#999' }}>
-                                          {mp.cidade} · {formatTimeAgo(mp.data)}
-                                        </div>
-                                      </>
-                                    ) : (
-                                      '—'
-                                    )}
-                                  </td>
-                                ),
-                              )}
-                              <td className={`${profitClass(row.melhorPreco.lucro)} lucro-cell`}>
-                                {Number.isFinite(row.melhorPreco.lucro) && row.melhorPreco.lucro > -8e8
-                                  ? row.melhorPreco.lucro.toLocaleString('pt-PT', { maximumFractionDigits: 0 })
-                                  : '—'}
-                              </td>
-                              <td className="tabular-nums" style={{ textAlign: 'center' }}>
-                                {row.melhorPreco.volumeProduto != null
-                                  ? row.melhorPreco.volumeProduto.toLocaleString('pt-PT')
-                                  : '—'}
-                              </td>
-                              <td
-                                className={avgPriceClass(row.melhorPreco.produto?.preco, row.melhorPreco.avgPreco)}
-                                style={{ textAlign: 'center' }}
-                              >
-                                {row.melhorPreco.avgPreco
-                                  ? row.melhorPreco.avgPreco.toLocaleString('pt-PT', { maximumFractionDigits: 0 })
-                                  : '—'}
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                    <p className="otimizado-line">
-                      <span className="otimizado-line__label">
-                        Otimizado{' '}
-                        {(rc.cities || [{ display: rc.cityDisplay }])
-                          .map((c) => c.display.split(' ').map((w) => w[0]).join(''))
-                          .join('-')}
-                      </span>
-                      <span className={profitClass(row.otimizado)}>
-                        {Number.isFinite(row.otimizado) && row.otimizado > -8e8
-                          ? `${row.otimizado.toLocaleString('pt-PT', { maximumFractionDigits: 0 })} prata`
-                          : '—'}
-                      </span>
-                    </p>
-                    {row.foco && (
-                      <p className="foco-line">
-                        Foco: <span className="tabular-nums">{row.foco.unidades?.toFixed(1)}</span>{' '}
-                        un ·{' '}
-                        <span className={profitClass(row.foco.prataPorFoco)}>
-                          {row.foco.prataPorFoco?.toFixed(2)} prata/foco
-                        </span>
-                      </p>
-                    )}
-                  </article>
-                );
-              })}
-            </>
-          )}
-        </section>
-
-        <aside className="panel wood-strategy-panel" aria-label="Indicações">
-          <div className="strategy-panel__head">
-            <h2>Indicações</h2>
-          </div>
-          <p className="strategy-hint">
-            Top 8 com volume (todas as tiers). Atualiza ao mudar buy order / foco ou com Refresh.
-          </p>
-          <div style={{ margin: '0.5rem 0' }}>
-            <select
-              value={lucroMode}
-              onChange={(e) => setLucroMode(e.target.value)}
-              className="strategy-select"
-            >
-              <option value="local">
-                Lucro {rc.cityDisplay.split(' ').map((w) => w[0]).join('')}
-              </option>
-              {rc.cities && rc.cities.length > 1 && (
-                <option value="opt">
-                  Lucro{' '}
-                  {rc.cities.map((c) => c.display.split(' ').map((w) => w[0]).join('')).join('-')}
-                </option>
-              )}
-              <option value="ot">Lucro OT</option>
-            </select>
-          </div>
-          {strategyLoading && <p className="mono strategy-hint">A carregar…</p>}
-          {strategy?.error && <p className="error">{strategy.error}</p>}
-          {strategy && !strategy.error && (
-            <StrategyTable
-              title="Top Lucro"
-              kind="foco"
-              rows={strategy.fsLocalFoco}
-              compact
-              buildRefinedId={rc.buildRefinedId}
-              refinedAlt={rc.refinedAlt}
-              refinedPlaceholder={rc.refinedPlaceholder}
-              lucroMode={lucroMode}
-              foco={cfg.foco}
-            />
-          )}
-        </aside>
-      </div>
-
-      {showConfig && (
-        <div className="modal-backdrop" role="presentation" onClick={() => setShowConfig(false)}>
-          <div
-            className="modal"
-            role="dialog"
-            aria-labelledby="config-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header>
-              <h3 id="config-title">Especialização</h3>
-              <button
-                type="button"
-                className="modal-close"
-                onClick={() => setShowConfig(false)}
-                aria-label="Fechar"
-              >
-                ×
-              </button>
-            </header>
-            <div className="form-grid">
-              <label>
-                Taxa NPC (nutrição)
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={cfg.taxaNpc ?? '800'}
-                  onChange={(e) => setCfg((c) => ({ ...c, taxaNpc: e.target.value }))}
-                />
-              </label>
-              {specKeys.map(({ key, label }) => (
-                <label key={key}>
-                  {label}
-                  <input
-                    type="text"
-                    value={cfg.spec[key] ?? ''}
-                    onChange={(e) => setSpec(key, e.target.value)}
-                  />
-                </label>
-              ))}
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => {
-                    setShowConfig(false);
-                    refreshAll();
-                  }}
-                >
-                  Salvar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowConfig(false)}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
+        {/* ── Collapsible panels ── */}
+        <div className="ref-panels">
+          <SpecsPanel
+            open={specsOpen}
+            onToggle={() => setSpecsOpen((x) => !x)}
+            cfg={cfg}
+            setCfg={setCfg}
+            specKeys={specKeys}
+            onSave={() => { setSpecsOpen(false); refreshAll(); }}
+          />
+          <FarmFamaPanel
+            open={famaOpen}
+            onToggle={() => setFamaOpen((x) => !x)}
+            strategy={strategy}
+            strategyLoading={strategyLoading}
+            cfg={cfg}
+            rc={rc}
+          />
         </div>
-      )}
 
-      {showFarmFama && (
-        <div className="modal-backdrop" role="presentation" onClick={() => setShowFarmFama(false)}>
-          <div
-            className="modal modal--full-width"
-            role="dialog"
-            aria-labelledby="farm-fama-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header>
-              <h3 id="farm-fama-title">Farm Fama (Todos os enchantments)</h3>
-              <button
-                type="button"
-                className="modal-close"
-                onClick={() => setShowFarmFama(false)}
-                aria-label="Fechar"
-              >
-                ×
-              </button>
-            </header>
-            {strategyLoading ? (
-              <p>A carregar…</p>
-            ) : strategy?.error ? (
-              <p className="error">{strategy.error}</p>
-            ) : (
-              <TieredFamaTables
-                rows={strategy?.fsLocalFamaAll || strategy?.fsLocalFama}
-                buildRefinedId={rc.buildRefinedId}
-                refinedAlt={rc.refinedAlt}
-                refinedPlaceholder={rc.refinedPlaceholder}
-                foco={cfg.foco}
-              />
+        {/* ── Results ── */}
+        <div className="card results-card">
+          <div className="results-head">
+            <h2 className="results-title">Resultados</h2>
+            {result && (
+              <div className="results-status">
+                {result.strategy && (
+                  <span className="status-chip">
+                    {result.strategy} · <span className="mono">{result.rrrPercent?.toFixed(1)}%</span>
+                  </span>
+                )}
+              </div>
             )}
           </div>
+
+          {loading && <p className="page-loading">Carregando…</p>}
+          {err && <p className="error" style={{ margin: '12px 16px' }}>{err}</p>}
+
+          {result && !loading && (
+            <div className="results-list">
+              {result.rows?.map((row) => (
+                <AccordionRow
+                  key={row.nivel}
+                  row={row}
+                  open={openNivel === row.nivel}
+                  onToggle={() => setOpenNivel((n) => n === row.nivel ? null : row.nivel)}
+                  rc={rc}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
+
+      {/* ── Indicações aside ── */}
+      <IndicacoesPanel
+        strategy={strategy}
+        strategyLoading={strategyLoading}
+        lucroMode={lucroMode}
+        setLucroMode={setLucroMode}
+        cfg={cfg}
+        rc={rc}
+      />
     </div>
   );
 }
