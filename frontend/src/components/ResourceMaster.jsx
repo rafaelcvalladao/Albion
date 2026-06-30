@@ -128,7 +128,7 @@ function loadConfig(storageKey) {
 
 // ─── Shared primitives ────────────────────────────────────────────────────
 
-function ItemImg({ src, alt, size = 28 }) {
+function ItemImg({ src, alt, size = 56 }) {
   return (
     <img
       src={src}
@@ -295,7 +295,7 @@ function FarmFamaPanel({ open, onToggle, strategy, strategyLoading, cfg, rc }) {
                         <ItemImg
                           src={ITEM_ICON_URL(rc.buildRefinedId(tier, level))}
                           alt={r.item}
-                          size={28}
+                          size={56}
                         />
                       </div>
                       <span className="ff2-label mono">{r.item}</span>
@@ -348,15 +348,15 @@ function AccordionRow({ row, open, onToggle, rc }) {
 
         <div className="acc-ing-stack">
           <div className="acc-ing">
-            <ItemImg src={ITEM_ICON_URL(rawId)} alt="raw" size={26} />
+            <ItemImg src={ITEM_ICON_URL(rawId)} alt="raw" size={52} />
             <span className="ing-qty">×{row.qtTronco ?? 4}</span>
           </div>
           <div className="acc-ing acc-ing-dim">
-            <ItemImg src={ITEM_ICON_URL(antId)} alt="ant" size={26} />
+            <ItemImg src={ITEM_ICON_URL(antId)} alt="ant" size={52} />
             <span className="ing-qty">×1</span>
           </div>
           <div className="acc-ing">
-            <ItemImg src={ITEM_ICON_URL(outId)} alt="out" size={26} />
+            <ItemImg src={ITEM_ICON_URL(outId)} alt="out" size={52} />
             <span className="ing-qty">×1</span>
           </div>
         </div>
@@ -402,15 +402,15 @@ function AccordionRow({ row, open, onToggle, rc }) {
                     <th>
                       <div className="acc-th-imgs">
                         <div className="acc-th-img">
-                          <ItemImg src={ITEM_ICON_URL(rawId)} alt="raw" size={40} />
+                          <ItemImg src={ITEM_ICON_URL(rawId)} alt="raw" size={80} />
                           <span>×{row.qtTronco ?? 4}</span>
                         </div>
                         <div className="acc-th-img">
-                          <ItemImg src={ITEM_ICON_URL(antId)} alt="ant" size={40} />
+                          <ItemImg src={ITEM_ICON_URL(antId)} alt="ant" size={80} />
                           <span>×1</span>
                         </div>
                         <div className="acc-th-img">
-                          <ItemImg src={ITEM_ICON_URL(outId)} alt="out" size={40} />
+                          <ItemImg src={ITEM_ICON_URL(outId)} alt="out" size={80} />
                           <span>×1</span>
                         </div>
                       </div>
@@ -426,12 +426,18 @@ function AccordionRow({ row, open, onToggle, rc }) {
                       <td className="acc-city-name">{display}</td>
                       <td>
                         <div className="acc-price-trio">
-                          <span className="mono">{cd.tronco?.toLocaleString('pt-PT') ?? '—'}</span>
-                          <span className="acc-time">{formatTimeAgo(cd.troncoDate)}</span>
-                          <span className="mono">{cd.tabuaAnt?.toLocaleString('pt-PT') ?? '—'}</span>
-                          <span className="acc-time">{formatTimeAgo(cd.tabuaAntDate)}</span>
-                          <span className="mono">{cd.tabua?.toLocaleString('pt-PT') ?? '—'}</span>
-                          <span className="acc-time">{formatTimeAgo(cd.tauaDate)}</span>
+                          <span className="acc-price-cell">
+                            <span className="mono">{cd.tronco?.toLocaleString('pt-PT') ?? '—'}</span>
+                            <span className="acc-time">{formatTimeAgo(cd.troncoDate)}</span>
+                          </span>
+                          <span className="acc-price-cell">
+                            <span className="mono">{cd.tabuaAnt?.toLocaleString('pt-PT') ?? '—'}</span>
+                            <span className="acc-time">{formatTimeAgo(cd.tabuaAntDate)}</span>
+                          </span>
+                          <span className="acc-price-cell">
+                            <span className="mono">{cd.tabua?.toLocaleString('pt-PT') ?? '—'}</span>
+                            <span className="acc-time">{formatTimeAgo(cd.tauaDate)}</span>
+                          </span>
                         </div>
                       </td>
                       <td className={`ff-right mono ${profitClass(cd.lucro)}`}>
@@ -586,7 +592,7 @@ function IndicacoesPanel({ strategy, strategyLoading, lucroMode, setLucroMode, c
                   <ItemImg
                     src={ITEM_ICON_URL(rc.buildRefinedId(tier, level))}
                     alt={r.item}
-                    size={36}
+                    size={72}
                   />
                 </div>
                 <div className="ind-item-mid">
@@ -594,9 +600,7 @@ function IndicacoesPanel({ strategy, strategyLoading, lucroMode, setLucroMode, c
                     <span className="ind-item-name mono">{r.item}</span>
                     <span className={`mono ind-item-val ${lucro != null ? profitClass(lucro) : ''}`}>
                       {lucro != null && lucro > -8e8
-                        ? cfg.foco
-                          ? lucro.toFixed(2)
-                          : Math.round(lucro).toLocaleString('pt-PT')
+                        ? Math.round(lucro).toLocaleString('pt-PT')
                         : '—'}
                     </span>
                   </div>

@@ -425,8 +425,8 @@ export default function BlackMarketAnalyzer() {
                             <img
                               src={`https://render.albiononline.com/v1/item/${op.id}.png?quality=1`}
                               alt={op.nomeBase}
-                              width={28}
-                              height={28}
+                              width={56}
+                              height={56}
                               style={{ display: 'block', borderRadius: 2 }}
                               onError={(e) => { e.target.onerror = null; e.target.style.opacity = '0'; }}
                             />

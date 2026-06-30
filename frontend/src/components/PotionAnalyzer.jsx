@@ -90,7 +90,7 @@ function CityBadge({ name }) {
   );
 }
 
-function ItemImg({ id, size = 28 }) {
+function ItemImg({ id, size = 56 }) {
   return (
     <div className="bm-icon" style={{ width: size, height: size, flexShrink: 0 }}>
       <img
@@ -118,7 +118,7 @@ function IngDetail({ ingredientes, showCity, colSpan }) {
           <div className="poc-detail-list">
             {ingredientes.map(ing => (
               <div key={ing.id} className="poc-detail-item">
-                <ItemImg id={ing.id} size={28} />
+                <ItemImg id={ing.id} size={56} />
                 <span className="poc-detail-name">
                   {ING_NAMES[ing.id] || ing.id.replace(/^T\d_/, '')}
                 </span>
@@ -193,7 +193,7 @@ function SameCityTable({ rows }) {
                             <ICONS.chevronRight size={14} />
                           </span>
                         )}
-                        <ItemImg id={r.output} size={30} />
+                        <ItemImg id={r.output} size={60} />
                         <span className="poc-item-name">{r.potionName}</span>
                       </div>
                     </td>
@@ -273,7 +273,7 @@ function BrecilienTable({ rows }) {
                             <ICONS.chevronRight size={14} />
                           </span>
                         )}
-                        <ItemImg id={r.output} size={30} />
+                        <ItemImg id={r.output} size={60} />
                         <span className="poc-item-name">{r.potionName}</span>
                       </div>
                     </td>

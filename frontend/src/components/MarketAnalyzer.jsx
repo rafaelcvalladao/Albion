@@ -503,14 +503,14 @@ export default function MarketAnalyzer() {
                               src={`https://render.albiononline.com/v1/item/${op.id}.png?quality=1`}
                               alt={op.nomeBase}
                               style={{
-                                width: '32px',
-                                height: '32px',
+                                width: '64px',
+                                height: '64px',
                                 borderRadius: '4px',
                                 border: '1px solid #666',
                               }}
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = 'https://via.placeholder.com/32?text=?';
+                                e.target.src = 'https://via.placeholder.com/64?text=?';
                               }}
                             />
                             <div>

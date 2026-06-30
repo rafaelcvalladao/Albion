@@ -661,7 +661,7 @@
   color: var(--accent);
   margin-left: 2px;
   letter-spacing: 0.02em;
-  top: -0.4em;
+  vertical-align: baseline;
 }
 
 /* ─── Error message ────────────────────────────────────────── */
@@ -1425,8 +1425,8 @@ table.result-table {
 .ff2-item { display: flex; align-items: center; gap: 8px; }
 
 .ff2-icon {
-  width: 28px;
-  height: 28px;
+  width: 56px;
+  height: 56px;
   border-radius: 4px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
@@ -1594,10 +1594,10 @@ table.result-table {
 .acc-table tbody tr:hover td { background: var(--bg-hover); }
 
 .acc-th-imgs {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 12px;
+  align-items: end;
 }
 .acc-th-img {
   display: flex;
@@ -1621,11 +1621,18 @@ table.result-table {
 /* Price trio: 3 columns of price + timestamp */
 .acc-price-trio {
   display: grid;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: repeat(3, 1fr);
   column-gap: 12px;
   row-gap: 1px;
   align-items: baseline;
+  justify-items: center;
   font-size: var(--text-sm);
+}
+.acc-price-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
 }
 
 .acc-time {
@@ -1654,6 +1661,7 @@ table.result-table {
 .acc-best-price {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 1px;
 }
 
@@ -1764,8 +1772,8 @@ table.result-table {
 .ind-item:hover { background: var(--bg-hover); }
 
 .ind-item-icon {
-  width: 36px;
-  height: 36px;
+  width: 72px;
+  height: 72px;
   flex-shrink: 0;
   border-radius: 5px;
   background: var(--bg-elevated);
@@ -1992,7 +2000,7 @@ table.result-table {
 .bm-item-inner { display: flex; align-items: center; gap: 10px; }
 .bm-item-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .bm-icon {
-  width: 34px; height: 34px;
+  width: 68px; height: 68px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: 4px;
