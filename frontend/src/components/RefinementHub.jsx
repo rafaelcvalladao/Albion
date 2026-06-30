@@ -141,9 +141,9 @@ function ItemCell({ resource, item, imgId }) {
         <img
           src={ITEM_ICON_URL(imgId)}
           alt={item}
-          width={24}
-          height={24}
-          style={{ objectFit: 'contain', width: 24, height: 24 }}
+          width={48}
+          height={48}
+          style={{ objectFit: 'contain', width: 48, height: 48 }}
           onError={(e) => { e.currentTarget.style.display = 'none'; }}
         />
       </div>

@@ -591,11 +591,14 @@
 /* Column widths & alignment */
 .rt-num   { width: 36px; color: var(--text-tertiary); font-size: 11px; font-family: var(--font-mono); }
 .rt-tier  { width: 60px; }
-.rt-lucro { text-align: right; font-weight: 600; }
+.rt-lucro { text-align: center; font-weight: 600; }
 .rt-pct   { text-align: right; width: 80px; }
 .rt-vol   { text-align: right; width: 88px; color: var(--text-secondary); }
 .rt-pico  { width: 110px; color: var(--text-tertiary); font-size: 12px; }
-.rt th.rt-lucro, .rt th.rt-pct, .rt th.rt-vol { text-align: right; }
+.rt th.rt-lucro { text-align: center; }
+.rt th.rt-pct, .rt th.rt-vol { text-align: right; }
+.rt th.rt-lucro.rt-sort { justify-content: center; }
+.rt th.rt-pct.rt-sort, .rt th.rt-vol.rt-sort { justify-content: flex-end; }
 .rt th.rt-sort-header { cursor: pointer; }
 
 /* Item cell */
@@ -606,8 +609,8 @@
   min-width: 160px;
 }
 .item-icon {
-  width: 32px;
-  height: 32px;
+  width: 64px;
+  height: 64px;
   border-radius: 4px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
