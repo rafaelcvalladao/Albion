@@ -516,10 +516,21 @@ function AccordionRow({ row, open, onToggle, rc }) {
 // ─── Indicações aside ─────────────────────────────────────────────────────
 
 function IndicacoesPanel({ strategy, strategyLoading, lucroMode, setLucroMode, cfg, rc }) {
-  function getLucro(r) {
+  // Lucro absoluto (em prata) — já reflete "Usar foco" porque cfg.foco é
+  // enviado ao backend e muda a taxa de retorno usada no custo.
+  function getLucroAbs(r) {
     if (lucroMode === 'opt') return r.lucroOpt ?? r.lucro;
     if (lucroMode === 'ot') return r.lucroOT ?? r.lucro;
     return r.lucro;
+  }
+  // Com foco ativo, o indicador principal vira lucro por ponto de foco
+  // necessário para refinar uma unidade (prata/foco), não o lucro absoluto.
+  function getLucro(r) {
+    const abs = getLucroAbs(r);
+    if (cfg.foco) {
+      return r.focoUnidades > 0 && abs > -8e8 ? abs / r.focoUnidades : -9e8;
+    }
+    return abs;
   }
   function getVol(r) {
     if (lucroMode === 'opt') return r.volumeOpt ?? r.volume;
@@ -577,12 +588,13 @@ function IndicacoesPanel({ strategy, strategyLoading, lucroMode, setLucroMode, c
         <ul className="ind-list">
           {rows.map((r) => {
             const lucro = getLucro(r);
+            const lucroAbs = getLucroAbs(r);
             const vol = getVol(r);
             const custo = getCusto(r);
             const peak = getPeak(r);
             const margem =
-              custo && custo > 0 && lucro != null && lucro > -8e8
-                ? (lucro / custo) * 100
+              custo && custo > 0 && lucroAbs != null && lucroAbs > -8e8
+                ? (lucroAbs / custo) * 100
                 : null;
             const { tier, level } = parseTierItem(r.item);
 
@@ -600,9 +612,14 @@ function IndicacoesPanel({ strategy, strategyLoading, lucroMode, setLucroMode, c
                     <span className="ind-item-name mono">{r.item}</span>
                     <span className={`mono ind-item-val ${lucro != null ? profitClass(lucro) : ''}`}>
                       {lucro != null && lucro > -8e8
-                        ? Math.round(lucro).toLocaleString('pt-PT')
+                        ? cfg.foco
+                          ? lucro.toFixed(2)
+                          : Math.round(lucro).toLocaleString('pt-PT')
                         : '—'}
                     </span>
+                    {cfg.foco && lucro != null && lucro > -8e8 && (
+                      <span className="mono acc-muted ind-item-unit">/foco</span>
+                    )}
                   </div>
                   <div className="ind-item-l2">
                     {margem != null && (
